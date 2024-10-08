@@ -68,7 +68,7 @@
   <worldbody>
     <body name="cf2" pos="0 0 0.1" childclass="cf2">
       <freejoint/>
-      <inertial pos="0 0 0" mass="0.027" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5"/>
+      <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
       <camera name="track" pos="-1 0 .5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
       <geom mesh="cf2_0" material="propeller_plastic" class="visual"/>
       <geom mesh="cf2_1" material="medium_gloss_plastic" class="visual"/>
@@ -110,20 +110,20 @@
       <geom mesh="cf2_collision_30" class="collision"/>
       <geom mesh="cf2_collision_31" class="collision"/>
       <site name="imu"/>
-      <!-- Define the four thrust sites at rotor positions -->
-      <site name="thrust1" pos="0.046 0.046 0"/>
-      <site name="thrust2" pos="-0.046 0.046 0"/>
-      <site name="thrust3" pos="-0.046 -0.046 0"/>
-      <site name="thrust4" pos="0.046 -0.046 0"/>
+
+      <site name="thrust1" pos="0.032527 0.032527 0"/>
+      <site name="thrust2" pos="-0.032527 0.032527 0"/>
+      <site name="thrust3" pos="-0.032527 -0.032527 0"/>
+      <site name="thrust4" pos="0.032527 -0.032527 0"/>
+
     </body>
   </worldbody>
 
   <actuator>
-    <!-- Remove the original actuators and define four new thrust motors -->
-    <motor class="cf2" name="thrust1" site="thrust1" ctrlrange="0 0.35" gear="0 0 1 0 0  .0001"/>
-    <motor class="cf2" name="thrust2" site="thrust2" ctrlrange="0 0.35" gear="0 0 1 0 0 -.0001"/>
-    <motor class="cf2" name="thrust3" site="thrust3" ctrlrange="0 0.35" gear="0 0 1 0 0  .0001"/>
-    <motor class="cf2" name="thrust4" site="thrust4" ctrlrange="0 0.35" gear="0 0 1 0 0 -.0001"/>
+    <motor class="cf2" name="thrust1" site="thrust1" ctrlrange="0 0.118" gear="0 0 1 0 0  6e-6"/>
+    <motor class="cf2" name="thrust2" site="thrust2" ctrlrange="0 0.118" gear="0 0 1 0 0 -6e-6"/>
+    <motor class="cf2" name="thrust3" site="thrust3" ctrlrange="0 0.118" gear="0 0 1 0 0  6e-6"/>
+    <motor class="cf2" name="thrust4" site="thrust4" ctrlrange="0 0.118" gear="0 0 1 0 0 -6e-6"/>
   </actuator>
 
   <sensor>
@@ -133,7 +133,7 @@
   </sensor>
 
   <keyframe>
-    <!-- Adjust the control inputs for hovering -->
-    <key name="hover" qpos="0 0 0.1 1 0 0 0" ctrl="0.0662175 0.0662175 0.0662175 0.0662175"/>
+    <!-- Adjusted the control inputs for hovering -->
+    <key name="hover" qpos="0 0 0.1 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/>
   </keyframe>
 </mujoco>
