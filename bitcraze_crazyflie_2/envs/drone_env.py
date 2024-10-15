@@ -178,8 +178,8 @@ class DroneEnv(gym.Env):
     def close(self):
         if self.renderer is not None:
             # Close the renderer
-            if isinstance(self.renderer, mujoco.viewer.Viewer):
-                self.renderer.close()
+            
+            self.renderer.close()
             self.renderer = None
 
     def seed(self, seed=None):
