@@ -1,5 +1,5 @@
-import gym
 import os
+import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 import bitcraze_crazyflie_2  # Ensure your environment is registered

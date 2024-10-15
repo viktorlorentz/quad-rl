@@ -10,10 +10,11 @@ setup(
     license='MIT',
     packages=find_packages(where='.'),
     install_requires=[
-        'gymnasium>=1.0.0',
-        'numpy>=1.18.0',
-        'stable-baselines3>=1.7.0',
-        'mujoco>=2.2.0'
+        'gymnasium>=0.29',
+        'numpy>=1.18',
+        'stable-baselines3>=1.7',
+        'mujoco>=2.2',
+        'tensorboard>=2'
     ],
     package_data={
         'bitcraze_crazyflie_2': ['assets/*'],

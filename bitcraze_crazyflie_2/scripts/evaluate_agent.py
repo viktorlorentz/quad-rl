@@ -1,11 +1,11 @@
-import gym
 import os
+import gymnasium as gym
 from stable_baselines3 import PPO
 import bitcraze_crazyflie_2  # Ensure your environment is registered
 
 def main():
-    # Create the environment
-    env = gym.make('DroneEnv-v0')
+    # Create the environment with rendering enabled
+    env = gym.make('DroneEnv-v0', render_mode='human')
 
     # Path to the saved model
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
@@ -15,15 +15,16 @@ def main():
     model = PPO.load(model_path)
 
     # Evaluate the model
-    obs = env.reset()
-    done = False
+    obs, info = env.reset()
+    terminated = False
+    truncated = False
 
-    while not done:
+    while not (terminated or truncated):
         action, _states = model.predict(obs, deterministic=True)
-        obs, reward, done, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         env.render()
 
     env.close()
 
 if __name__ == '__main__':
-    main()
+        main()
