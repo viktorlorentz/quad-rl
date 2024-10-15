@@ -4,16 +4,15 @@ setup(
     name='bitcraze_crazyflie_2',
     version='0.1.0',
     description='A custom Gym environment for the Bitcraze Crazyflie 2 drone using MuJoCo.',
-    author='Your Name',
-    author_email='your.email@example.com',
-    url='https://github.com/yourusername/bitcraze_crazyflie_2',
+    author='',
+    author_email='',
+    url='https://github.com/',
     license='MIT',
-    packages=find_packages(),
+    packages=find_packages(where='.'),
     install_requires=[
-        'gym>=0.17.2',
+        'gymnasium>=1.0.0',
         'numpy>=1.18.0',
-        'mujoco-py>=2.0.2.13',
-        'stable-baselines3>=1.0',
+        'stable-baselines3>=1.7.0',
         'mujoco>=2.2.0'
     ],
     package_data={
@@ -26,7 +25,5 @@ setup(
             'evaluate-drone=bitcraze_crazyflie_2.scripts.evaluate_agent:main',
         ],
     },
-    classifiers=[
-        'Programming Language :: Python :: 3.8',
-    ],
+    python_requires='>=3.8',
 )
