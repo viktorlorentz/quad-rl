@@ -2,6 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import mujoco
+import mujoco.viewer
 import os
 
 class DroneEnv(gym.Env):
@@ -131,9 +132,16 @@ class DroneEnv(gym.Env):
                 # Initialize viewer
                 self.renderer = mujoco.viewer.launch_passive(self.model, self.data)
             else:
-                # Update the renderer
-                with self.renderer.lock():
-                    self.renderer.sync()
+                # Check if the viewer is still running
+                if self.renderer.is_running():
+                    # Update the renderer
+                    with self.renderer.lock():
+                        self.renderer.sync()
+                else:
+                    # Viewer has been closed by the user
+                    self.renderer = None  # Reset the renderer so it can be reopened if needed
+                    #continue with the next episode
+                    return
         elif self.render_mode == 'rgb_array':
             if self.renderer is None:
                 # Initialize offscreen renderer
@@ -144,6 +152,7 @@ class DroneEnv(gym.Env):
             return img
         else:
             raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
+
 
     def close(self):
         if self.renderer is not None:
