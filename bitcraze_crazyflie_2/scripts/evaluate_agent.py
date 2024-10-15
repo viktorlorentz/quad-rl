@@ -19,10 +19,15 @@ def main():
     terminated = False
     truncated = False
 
+    last_reward = 0.0
+
     while not (terminated or truncated):
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
         env.render()
+        last_reward = reward
+
+    print(f'Final reward: {last_reward}')
 
     env.close()
 

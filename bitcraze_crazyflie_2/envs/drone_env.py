@@ -41,7 +41,7 @@ class DroneEnv(gym.Env):
         self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
 
         # Simulation parameters
-        self.simulation_steps = 10
+        self.simulation_steps = 2
 
         # Seed the environment
         self.np_random = None
@@ -85,17 +85,18 @@ class DroneEnv(gym.Env):
         distance = np.linalg.norm(position - self.target_position)
         reward = -distance
 
-        # Distance to flat rotation
+        # Punish rotation
         orientation = self.data.qpos[3:7]
-        angle = 2.0 * np.arccos(np.abs(orientation[0]))
-        reward -= angle
+        reward -= 0.1 * np.linalg.norm(orientation[1:])
+
+        # Punish angular velocity
+        angular_velocity = self.data.qvel[3:6]
+        reward -= 0.1 * np.linalg.norm(angular_velocity)
+
 
         # Check if terminated or truncated
         terminated = False
         truncated = False
-        if position[2] < 0.0 or position[2] > 2.0:
-            terminated = True
-            reward -= 100
         
         #check if out of bounds
         if np.linalg.norm(position) > 2.0:
@@ -178,7 +179,6 @@ class DroneEnv(gym.Env):
     def close(self):
         if self.renderer is not None:
             # Close the renderer
-            
             self.renderer.close()
             self.renderer = None
 
