@@ -24,8 +24,8 @@ class DroneEnv(gym.Env):
 
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
-            low=np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32),
-            high=np.array([0.11772, 0.11772, 0.11772, 0.11772], dtype=np.float32),
+            low=np.zeros(4, dtype=np.float32),
+            high=np.full(4, 0.118, dtype=np.float32),
             dtype=np.float32
         )
 
@@ -40,8 +40,11 @@ class DroneEnv(gym.Env):
         # Get the ID of the goal site
         self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
 
+        # Get the drone's body ID
+        self.drone_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, 'cf2')
+
         # Simulation parameters
-        self.simulation_steps = 2
+        self.simulation_steps = 5 # 200Hz
 
         # Seed the environment
         self.np_random = None
@@ -80,18 +83,60 @@ class DroneEnv(gym.Env):
         # Get observation
         obs = self._get_obs()
 
-        # Compute reward
+        # Extract position and orientation
         position = self.data.qpos[:3]
-        distance = np.linalg.norm(position - self.target_position)
-        reward = -distance
+        orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
-        # Punish rotation
-        orientation = self.data.qpos[3:7]
-        reward -= 0.1 * np.linalg.norm(orientation[1:])
+        # Compute distance to target position
+        distance = np.linalg.norm(position - self.target_position)**2
 
-        # Punish angular velocity
+        # Compute rotation penalty
+        desired_orientation = np.array([1.0, 0.0, 0.0, 0.0])  # Upright orientation
+
+        # Compute dot product between current orientation and desired orientation
+        dot_product = np.abs(np.dot(orientation, desired_orientation))
+        # Ensure the dot product is within valid range for arccos
+        dot_product = np.clip(dot_product, -1.0, 1.0)
+
+        # Compute the angle between orientations (in radians)
+        angle = 2 * np.arccos(dot_product)
+        rotation_penalty = angle  # Penalty proportional to the angle
+
+        # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
-        reward -= 0.1 * np.linalg.norm(angular_velocity)
+        angular_velocity_magnitude = np.linalg.norm(angular_velocity)
+        angular_velocity_penalty = angular_velocity_magnitude
+
+        # Penalty weights
+        rotation_penalty_weight = 1
+        angular_velocity_penalty_weight = 0.1
+
+        # Compute total reward
+        reward = -distance  # Existing reward based on distance to target
+
+        # Subtract penalties
+        reward -= rotation_penalty_weight * rotation_penalty
+        reward -= angular_velocity_penalty_weight * angular_velocity_penalty
+
+
+        # Check for any contacts involving the drone's body
+        collision = False
+        for i in range(self.data.ncon):
+            contact = self.data.contact[i]
+
+            # Get the body IDs involved in the contact
+            body1 = self.model.geom_bodyid[contact.geom1]
+            body2 = self.model.geom_bodyid[contact.geom2]
+
+            # Check if the drone's body is involved
+            if body1 == self.drone_body_id or body2 == self.drone_body_id:
+                collision = True
+                break  # Exit the loop if a collision is detected
+        
+        # if collision:
+        #     reward -= 10
+
+
 
 
         # Check if terminated or truncated
@@ -99,7 +144,7 @@ class DroneEnv(gym.Env):
         truncated = False
         
         #check if out of bounds
-        if np.linalg.norm(position) > 2.0:
+        if np.linalg.norm(position) > 3.0:
             terminated = True
             reward -= 100
 
@@ -107,7 +152,9 @@ class DroneEnv(gym.Env):
         # Additional info
         info = {
             'position': position.copy(),
-            'distance_to_target': distance
+            'distance_to_target': distance,
+            'rotation_penalty': rotation_penalty,
+            'angular_velocity_penalty': angular_velocity_penalty
         }
 
         # Render if necessary

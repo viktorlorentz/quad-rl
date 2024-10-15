@@ -14,6 +14,13 @@ def main():
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
     os.makedirs(models_dir, exist_ok=True)
     model_path = os.path.join(models_dir, 'ppo_drone')
+    
+    #clear previous checkpoint models
+    for file in os.listdir(models_dir):
+        if file.startswith('ppo_drone_'):
+            os.remove(os.path.join(models_dir, file))
+
+
 
     # Create callbacks
     checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir,
