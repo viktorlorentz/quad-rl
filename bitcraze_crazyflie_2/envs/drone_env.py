@@ -37,12 +37,17 @@ class DroneEnv(gym.Env):
         # Set the target position for hovering
         self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
 
+        # Get the ID of the goal site
+        self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
+
         # Simulation parameters
         self.simulation_steps = 10
 
         # Seed the environment
         self.np_random = None
         self.seed()
+
+        self.goal_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, 'goal_marker')
 
     def _get_obs(self):
         # Get observations
@@ -80,12 +85,23 @@ class DroneEnv(gym.Env):
         distance = np.linalg.norm(position - self.target_position)
         reward = -distance
 
+        # Distance to flat rotation
+        orientation = self.data.qpos[3:7]
+        angle = 2.0 * np.arccos(np.abs(orientation[0]))
+        reward -= angle
+
         # Check if terminated or truncated
         terminated = False
         truncated = False
         if position[2] < 0.0 or position[2] > 2.0:
             terminated = True
             reward -= 100
+        
+        #check if out of bounds
+        if np.linalg.norm(position) > 2.0:
+            terminated = True
+            reward -= 100
+
 
         # Additional info
         info = {
@@ -116,6 +132,14 @@ class DroneEnv(gym.Env):
             hover_key = keyframe_names.index('hover')
             mujoco.mj_resetDataKeyframe(self.model, self.data, hover_key)
 
+        # Update the goal position if necessary
+        self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+
+        self.model.geom_pos[self.goal_geom_id] = self.target_position
+
+        # Update the site position
+        self.model.site_pos[self.goal_site_id] = self.target_position
+
         # Return initial observation and info
         obs = self._get_obs()
         info = {}
@@ -139,9 +163,7 @@ class DroneEnv(gym.Env):
                         self.renderer.sync()
                 else:
                     # Viewer has been closed by the user
-                    self.renderer = None  # Reset the renderer so it can be reopened if needed
-                    #continue with the next episode
-                    return
+                    self.renderer = None  # Reset the renderer
         elif self.render_mode == 'rgb_array':
             if self.renderer is None:
                 # Initialize offscreen renderer
@@ -152,7 +174,6 @@ class DroneEnv(gym.Env):
             return img
         else:
             raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
-
 
     def close(self):
         if self.renderer is not None:

@@ -66,7 +66,7 @@
   </asset>
 
   <worldbody>
-    <body name="cf2" pos="0 0 0.1" childclass="cf2">
+    <body name="cf2" pos="0 0 0.013" childclass="cf2">
       <freejoint/>
       <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
       <camera name="track" pos="-1 0 .5" xyaxes="0 -1 0 1 0 2" mode="trackcom"/>
@@ -134,6 +134,6 @@
 
   <keyframe>
     <!-- Adjusted the control inputs for hovering -->
-    <key name="hover" qpos="0 0 0.1 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/>
+    <!-- <key name="hover" qpos="0 0 0 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/> -->
   </keyframe>
 </mujoco>

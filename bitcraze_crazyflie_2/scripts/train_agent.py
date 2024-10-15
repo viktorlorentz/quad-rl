@@ -16,7 +16,7 @@ def main():
     model_path = os.path.join(models_dir, 'ppo_drone')
 
     # Create callbacks
-    checkpoint_callback = CheckpointCallback(save_freq=5000, save_path=models_dir,
+    checkpoint_callback = CheckpointCallback(save_freq=100000, save_path=models_dir,
                                              name_prefix='ppo_drone')
 
     # # Create and wrap the evaluation environment
@@ -31,7 +31,7 @@ def main():
     model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=models_dir)
 
     # Train the model
-    time_steps = 100000  # Adjust as needed
+    time_steps = 1000000  # Adjust as needed
     model.learn(total_timesteps=time_steps, callback=[checkpoint_callback], progress_bar=True)
 
     # Save the final model
@@ -39,7 +39,7 @@ def main():
 
     # Close the environments
     env.close()
-    eval_env.close()
+    #eval_env.close()
 
 if __name__ == '__main__':
     main()
