@@ -133,7 +133,6 @@
   </sensor>
 
   <keyframe>
-    <!-- Adjusted the control inputs for hovering -->
-    <!-- <key name="hover" qpos="0 0 0 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/> -->
+    <key name="hover" qpos="0 0 .5 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/>
   </keyframe>
 </mujoco>

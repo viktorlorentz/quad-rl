@@ -25,13 +25,13 @@ class DroneEnv(gym.Env):
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
             low=np.zeros(4, dtype=np.float32),
-            high=np.full(4, 0.118, dtype=np.float32),
+            high=np.full(4, 0.11772, dtype=np.float32),
             dtype=np.float32
         )
 
-        # Define observation space
-        obs_low = np.full(13, -np.inf, dtype=np.float32)
-        obs_high = np.full(13, np.inf, dtype=np.float32)
+        # Update observation space to include position error
+        obs_low = np.full(16, -np.inf, dtype=np.float32)
+        obs_high = np.full(16, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         # Set the target position for hovering
@@ -44,7 +44,7 @@ class DroneEnv(gym.Env):
         self.drone_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, 'cf2')
 
         # Simulation parameters
-        self.simulation_steps = 5 # 200Hz
+        self.simulation_steps = 1 # 250Hz
 
         # Seed the environment
         self.np_random = None
@@ -59,12 +59,16 @@ class DroneEnv(gym.Env):
         linear_velocity = self.data.qvel[:3].copy()
         angular_velocity = self.data.qvel[3:6].copy()
 
-        # Combine all observations
+        # Compute position error
+        position_error = self.target_position - position
+
+        # Combine all observations, including the position error
         obs = np.concatenate([
             position,
             orientation,
             linear_velocity,
-            angular_velocity
+            angular_velocity,
+            position_error  # Include position error
         ])
 
         return obs.astype(np.float32)
@@ -88,7 +92,7 @@ class DroneEnv(gym.Env):
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
         # Compute distance to target position
-        distance = np.linalg.norm(position - self.target_position)**2
+        distance = np.linalg.norm(position - self.target_position)
 
         # Compute rotation penalty
         desired_orientation = np.array([1.0, 0.0, 0.0, 0.0])  # Upright orientation
@@ -104,19 +108,18 @@ class DroneEnv(gym.Env):
 
         # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
-        angular_velocity_magnitude = np.linalg.norm(angular_velocity)
-        angular_velocity_penalty = angular_velocity_magnitude
+        angular_velocity_penalty = np.linalg.norm(angular_velocity)
 
-        # Penalty weights
-        rotation_penalty_weight = 1
-        angular_velocity_penalty_weight = 0.1
-
+        # Check if terminated or truncated
+        terminated = False
+        truncated = False
+        reward = 10
         # Compute total reward
-        reward = -distance  # Existing reward based on distance to target
+        reward -= distance  # Existing reward based on distance to target
 
         # Subtract penalties
-        reward -= rotation_penalty_weight * rotation_penalty
-        reward -= angular_velocity_penalty_weight * angular_velocity_penalty
+        reward -= rotation_penalty
+        reward -= 0.1 * angular_velocity_penalty
 
 
         # Check for any contacts involving the drone's body
@@ -133,16 +136,24 @@ class DroneEnv(gym.Env):
                 collision = True
                 break  # Exit the loop if a collision is detected
         
-        # if collision:
-        #     reward -= 10
+        if collision:
+            terminated = True
+            reward -= 100
 
 
 
+        # Normalizing actions to [0, 1]
+        a = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
 
-        # Check if terminated or truncated
-        terminated = False
-        truncated = False
-        
+        k=300
+
+        dgb = (np.exp(-k * (a- 0)**2) + np.exp(-k * (a- 1)**2)) / (1 + np.exp(-k))
+
+        # sum all 4 actions
+        reward -= np.sum(dgb)
+
+
+
         #check if out of bounds
         if np.linalg.norm(position) > 3.0:
             terminated = True
@@ -160,6 +171,7 @@ class DroneEnv(gym.Env):
         # Render if necessary
         if self.render_mode == 'human':
             self.render()
+
 
         return obs, reward, terminated, truncated, info
 
@@ -180,13 +192,12 @@ class DroneEnv(gym.Env):
             hover_key = keyframe_names.index('hover')
             mujoco.mj_resetDataKeyframe(self.model, self.data, hover_key)
 
-        # Update the goal position if necessary
+        # Update the target position if necessary
         self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
 
-        self.model.geom_pos[self.goal_geom_id] = self.target_position
-
-        # Update the site position
+        # Update the goal marker position if you're displaying it
         self.model.site_pos[self.goal_site_id] = self.target_position
+        mujoco.mj_forward(self.model, self.data)
 
         # Return initial observation and info
         obs = self._get_obs()

@@ -9,7 +9,7 @@ def main():
 
     # Path to the saved model
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
-    model_path = os.path.join(models_dir, 'ppo_drone.zip')
+    model_path = os.path.join(models_dir, 'best_model.zip')
 
     # Load the trained model
     model = PPO.load(model_path)
