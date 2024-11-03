@@ -46,9 +46,18 @@ class DroneEnv(gym.Env):
         # Simulation parameters
         self.simulation_steps = 1 # 250Hz
 
+        self.workspace = {
+            'low': np.array([-3.0, -3.0, 0.0]),
+            'high': np.array([3.0, 3.0, 2.5])
+        }
+
         # Seed the environment
         self.np_random = None
         self.seed()
+
+        # Get the drone start position
+        self.start_position = self.data.qpos[:3].copy()
+        
 
         self.goal_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, 'goal_marker')
 
@@ -94,6 +103,7 @@ class DroneEnv(gym.Env):
         # Compute distance to target position
         distance = np.linalg.norm(position - self.target_position)
 
+        
         # Compute rotation penalty
         desired_orientation = np.array([1.0, 0.0, 0.0, 0.0])  # Upright orientation
 
@@ -110,16 +120,36 @@ class DroneEnv(gym.Env):
         angular_velocity = self.data.qvel[3:6]
         angular_velocity_penalty = np.linalg.norm(angular_velocity)
 
+        # Velocity penalty
+        velocity_penalty = np.linalg.norm(self.data.qvel[:3])
+
         # Check if terminated or truncated
         terminated = False
         truncated = False
-        reward = 10
+
+        reward = 4 # alive reward
+        
         # Compute total reward
-        reward -= distance  # Existing reward based on distance to target
+        reward -= distance # Reward proportional to the progress to the target
+
+        # Gaussian reward bonus in goal region
+        if distance < 0.1:
+            reward += 4 * np.exp(-(distance)**2 / 0.01)
+
 
         # Subtract penalties
-        reward -= rotation_penalty
-        reward -= 0.1 * angular_velocity_penalty
+        reward -= 0.5 * rotation_penalty
+        reward -= 0.05 * angular_velocity_penalty**2
+        reward -= 0.01 * velocity_penalty**2
+
+        
+        
+
+        
+        # print( "rotation_penalty: ", rotation_penalty)
+        # print( "angular_velocity_penalty: ", 0.1 * angular_velocity_penalty**2)
+        # print( "distance: ", 2- distance)
+        # print( "reward: ", reward)
 
 
         # Check for any contacts involving the drone's body
@@ -138,7 +168,7 @@ class DroneEnv(gym.Env):
         
         if collision:
             terminated = True
-            reward -= 100
+            reward -= 1000
 
 
 
@@ -150,15 +180,18 @@ class DroneEnv(gym.Env):
         dgb = (np.exp(-k * (a- 0)**2) + np.exp(-k * (a- 1)**2)) / (1 + np.exp(-k))
 
         # sum all 4 actions
-        reward -= np.sum(dgb)
+        reward -= np.sum(dgb)/4
+
+        
+        
+
 
 
 
         #check if out of bounds
-        if np.linalg.norm(position) > 3.0:
+        if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
             terminated = True
-            reward -= 100
-
+            reward -= 1000
 
         # Additional info
         info = {
@@ -171,6 +204,11 @@ class DroneEnv(gym.Env):
         # Render if necessary
         if self.render_mode == 'human':
             self.render()
+
+        # truncate episode if too long
+        if self.data.time > 20:
+            terminated = True
+            truncated = True
 
 
         return obs, reward, terminated, truncated, info
@@ -191,6 +229,14 @@ class DroneEnv(gym.Env):
         if 'hover' in keyframe_names:
             hover_key = keyframe_names.index('hover')
             mujoco.mj_resetDataKeyframe(self.model, self.data, hover_key)
+
+        # add normal noise to the start position
+        noise = self.np_random.normal(0, 0.1, size=3)
+        self.data.qpos[:3] = self.data.qpos[:3].copy() + noise
+
+        # set Start position
+        self.start_position = self.data.qpos[:3].copy()
+
 
         # Update the target position if necessary
         self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
