@@ -8,7 +8,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 def main():
     # Environment ID (Make sure your custom environment is registered)
     env_id = 'DroneEnv-v0'
-    num_envs = 64  # Number of parallel environments
+    num_envs = 96  # Number of parallel environments
 
     # Create the vectorized environment (using SubprocVecEnv for multiprocessing)
     env = make_vec_env(env_id, n_envs=num_envs, vec_env_cls=SubprocVecEnv, monitor_dir="./logs")
@@ -32,7 +32,7 @@ def main():
                                  eval_freq=100000/128, deterministic=True, render=False)
 
     # Initialize the PPO model with the vectorized environment
-    model = PPO('MlpPolicy', env, batch_size=128, device='cpu')
+    model = PPO('MlpPolicy', env, n_steps=2048, batch_size=512, device='cuda')
 
     # Train the model with callbacks
     time_steps = 10_000_000  # Adjust as needed

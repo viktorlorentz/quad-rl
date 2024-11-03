@@ -35,7 +35,7 @@ class DroneEnv(gym.Env):
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         # Set the target position for hovering
-        self.target_position = np.array([0.0, 0.0, 0.5], dtype=np.float32)
+        self.target_position = np.array([0.0, 0.0, 1], dtype=np.float32)
 
         # Get the ID of the goal site
         self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
@@ -126,25 +126,25 @@ class DroneEnv(gym.Env):
         terminated = False
         truncated = False
 
-        reward = 1
+        reward = 2 # stay alive reward
 
         # Compute total reward
-        reward -= distance # Reward proportional to the progress to the target
+        reward -= distance**2 # Reward proportional to the progress to the target
 
      
 
         # Subtract penalties
-        reward -= 0.3 * rotation_penalty
-        reward -= 0.05 * angular_velocity_penalty
+        reward -= 0.5 * rotation_penalty
+        reward -= 0.1 * angular_velocity_penalty
        
 
         
         
 
         
-        # print( "rotation_penalty: ", 0.5 *rotation_penalty)
+        # print( "rotation_penalty: ", 0.2 *rotation_penalty)
         # print( "angular_velocity_penalty: ", 0.1 *angular_velocity_penalty)
-        # print( "distance: ", distance)
+        # print( "distance: ", distance**2)
         # print( "reward: ", reward)
 
 
