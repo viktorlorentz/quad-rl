@@ -44,7 +44,7 @@ class DroneEnv(gym.Env):
         self.drone_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, 'cf2')
 
         # Simulation parameters
-        self.simulation_steps = 1 # 250Hz
+        self.simulation_steps = 1  # 250Hz
 
         self.workspace = {
             'low': np.array([-3.0, -3.0, 0.0]),
@@ -57,7 +57,6 @@ class DroneEnv(gym.Env):
 
         # Get the drone start position
         self.start_position = self.data.qpos[:3].copy()
-        
 
         self.goal_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, 'goal_marker')
 
@@ -221,25 +220,45 @@ class DroneEnv(gym.Env):
         # Reset simulation
         mujoco.mj_resetData(self.model, self.data)
 
-        # Reset to hover keyframe if available
-        keyframe_names = [
-            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_KEY, i)
-            for i in range(self.model.nkey)
-        ]
-        if 'hover' in keyframe_names:
-            hover_key = keyframe_names.index('hover')
-            mujoco.mj_resetDataKeyframe(self.model, self.data, hover_key)
+        # Randomize initial position around the target position
+        position_std_dev = 0.1  # Standard deviation of 0.1 meters
+        random_position = self.np_random.normal(loc=self.target_position, scale=position_std_dev)
+        # Clip the position to be within the workspace bounds
+        random_position = np.clip(random_position, self.workspace['low'], self.workspace['high'])
+        self.data.qpos[:3] = random_position
 
-        # add normal noise to the start position
-        noise = self.np_random.normal(0, 0.1, size=3)
-        self.data.qpos[:3] = self.data.qpos[:3].copy() + noise
+        # Randomize initial orientation around upright orientation
+        orientation_std_dev = np.deg2rad(30)  # Standard deviation of 5 degrees
+        roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
+        pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
+        yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
-        # set Start position
-        self.start_position = self.data.qpos[:3].copy()
+        # Convert Euler angles to quaternion
+        cy = np.cos(yaw * 0.5)
+        sy = np.sin(yaw * 0.5)
+        cp = np.cos(pitch * 0.5)
+        sp = np.sin(pitch * 0.5)
+        cr = np.cos(roll * 0.5)
+        sr = np.sin(roll * 0.5)
 
+        q = np.array([
+            cr * cp * cy + sr * sp * sy,  # w
+            sr * cp * cy - cr * sp * sy,  # x
+            cr * sp * cy + sr * cp * sy,  # y
+            cr * cp * sy - sr * sp * cy   # z
+        ])
 
-        # Update the target position if necessary
-        self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        # Ensure the quaternion is normalized
+        q /= np.linalg.norm(q)
+
+        self.data.qpos[3:7] = q
+
+        # Reset velocities to zero
+        self.data.qvel[:] = 0
+
+        # Randomize initial actions in the action space
+        initial_action = self.action_space.sample()
+        self.data.ctrl[:] = initial_action
 
         # Update the goal marker position if you're displaying it
         self.model.site_pos[self.goal_site_id] = self.target_position
