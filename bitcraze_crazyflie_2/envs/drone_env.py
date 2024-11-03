@@ -35,7 +35,7 @@ class DroneEnv(gym.Env):
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         # Set the target position for hovering
-        self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        self.target_position = np.array([0.0, 0.0, 0.5], dtype=np.float32)
 
         # Get the ID of the goal site
         self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
@@ -126,28 +126,25 @@ class DroneEnv(gym.Env):
         terminated = False
         truncated = False
 
-        reward = 4 # alive reward
-        
+        reward = 1
+
         # Compute total reward
         reward -= distance # Reward proportional to the progress to the target
 
-        # Gaussian reward bonus in goal region
-        if distance < 0.1:
-            reward += 4 * np.exp(-(distance)**2 / 0.01)
-
+     
 
         # Subtract penalties
-        reward -= 0.5 * rotation_penalty
-        reward -= 0.05 * angular_velocity_penalty**2
-        reward -= 0.01 * velocity_penalty**2
+        reward -= 0.3 * rotation_penalty
+        reward -= 0.05 * angular_velocity_penalty
+       
 
         
         
 
         
-        # print( "rotation_penalty: ", rotation_penalty)
-        # print( "angular_velocity_penalty: ", 0.1 * angular_velocity_penalty**2)
-        # print( "distance: ", 2- distance)
+        # print( "rotation_penalty: ", 0.5 *rotation_penalty)
+        # print( "angular_velocity_penalty: ", 0.1 *angular_velocity_penalty)
+        # print( "distance: ", distance)
         # print( "reward: ", reward)
 
 
@@ -167,19 +164,19 @@ class DroneEnv(gym.Env):
         
         if collision:
             terminated = True
-            reward -= 1000
+            reward -= 100
 
 
 
         # Normalizing actions to [0, 1]
-        a = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
+        # a = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
 
-        k=300
+        # k=300
 
-        dgb = (np.exp(-k * (a- 0)**2) + np.exp(-k * (a- 1)**2)) / (1 + np.exp(-k))
+        # dgb = (np.exp(-k * (a- 0)**2) + np.exp(-k * (a- 1)**2)) / (1 + np.exp(-k))
 
-        # sum all 4 actions
-        reward -= np.sum(dgb)/4
+        # # sum all 4 actions
+        # reward -= np.sum(dgb)/4
 
         
         
@@ -190,7 +187,7 @@ class DroneEnv(gym.Env):
         #check if out of bounds
         if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
             terminated = True
-            reward -= 1000
+            reward -= 100
 
         # Additional info
         info = {
