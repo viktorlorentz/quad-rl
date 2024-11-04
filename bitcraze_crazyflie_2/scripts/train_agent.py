@@ -8,10 +8,10 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 def main():
     env_id = 'DroneEnv-v0'
 
-    num_envs = 16  # Adjusted number of environments
-    n_steps = 1024  # Increased n_steps
+    num_envs = 64  # Adjusted number of environments
+    n_steps = 512  # Increased n_steps
     total_timesteps_per_update = num_envs * n_steps  # 32 * 1024 = 32,768
-    batch_size = 2048  # Should be a factor of total_timesteps_per_update
+    batch_size = 256  # Should be a factor of total_timesteps_per_update
 
     env = make_vec_env(env_id, n_envs=num_envs, vec_env_cls=SubprocVecEnv, monitor_dir="./logs")
     eval_env = make_vec_env(env_id, n_envs=1, vec_env_cls=SubprocVecEnv, seed=0)

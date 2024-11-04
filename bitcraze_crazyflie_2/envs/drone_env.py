@@ -47,8 +47,8 @@ class DroneEnv(gym.Env):
         self.simulation_steps = 1  # 250Hz
 
         self.workspace = {
-            'low': np.array([-10.0, -10.0, 0.0]),
-            'high': np.array([10.0, 10.0, 5])
+            'low': np.array([-3.0, -3.0, 0.0]),
+            'high': np.array([3.0, 3.0, 5])
         }
 
         # Seed the environment
@@ -70,6 +70,10 @@ class DroneEnv(gym.Env):
         # Compute position error
         position_error = self.target_position - position
 
+        #TODO Read IMU data
+        
+
+       
         # Combine all observations, including the position error
         obs = np.concatenate([
             position,
