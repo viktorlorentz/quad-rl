@@ -70,8 +70,12 @@ class DroneEnv(gym.Env):
         # Compute position error
         position_error = self.target_position - position
 
-        #TODO Read IMU data
-        
+        # # Get sensor data from IMU sensors (gyroscope and accelerometer)
+        # sensor_data = self.data.sensordata
+
+        # # Ensure sensor data indexing matches your model
+        # gyro_data = sensor_data[0:3].copy()  # Gyroscope data (3 values)
+        # acc_data = sensor_data[3:6].copy()   # Accelerometer data (3 values)
 
        
         # Combine all observations, including the position error
@@ -152,7 +156,7 @@ class DroneEnv(gym.Env):
         reward = 1 # stay alive reward
 
         reward -= 0.5 * distance_z
-        reward -= 0.1 * distance_xy
+        reward -= 0.2 * distance_xy
         reward -= rotation_penalty
         reward -= 0.05 * abs(z_angular_velocity)
                 

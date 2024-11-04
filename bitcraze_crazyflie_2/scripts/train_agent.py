@@ -5,12 +5,20 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
+def linear_schedule(initial_value):
+    """
+    Linear learning rate schedule.
+    """
+    def scheduler(progress_remaining):
+        return progress_remaining * initial_value
+    return scheduler
+
 def main():
     env_id = 'DroneEnv-v0'
 
-    num_envs = 64  # Adjusted number of environments
-    n_steps = 512  # Increased n_steps
-    total_timesteps_per_update = num_envs * n_steps  # 32 * 1024 = 32,768
+    num_envs = 32  # Adjusted number of environments
+    n_steps = 1024  # Increased n_steps
+    total_timesteps_per_update = num_envs * n_steps  # 64 * 1024 = 65,536
     batch_size = 256  # Should be a factor of total_timesteps_per_update
 
     env = make_vec_env(env_id, n_envs=num_envs, vec_env_cls=SubprocVecEnv, monitor_dir="./logs")
@@ -38,7 +46,7 @@ def main():
 
     policy_kwargs = dict(
         activation_fn=torch.nn.ReLU,
-        net_arch=dict(pi=[256, 256], vf=[256, 256])
+        net_arch=dict(pi=[64, 64, 64], vf=[64, 64, 64])
     )
 
     model = PPO(
@@ -46,11 +54,15 @@ def main():
         env,
         n_steps=n_steps,
         batch_size=batch_size,
+        learning_rate=linear_schedule(1e-4),  # Adjusted learning rate with schedule
         device='auto',
-        policy_kwargs=policy_kwargs
+        policy_kwargs=policy_kwargs,
+        tensorboard_log="./logs",
+
     )
 
-    time_steps = 10_000_000
+
+    time_steps = 30_000_000
     model.learn(
         total_timesteps=time_steps,
         callback=[checkpoint_callback, eval_callback],
