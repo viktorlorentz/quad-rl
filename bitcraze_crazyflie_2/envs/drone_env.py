@@ -103,38 +103,39 @@ class DroneEnv(gym.Env):
         distance = np.linalg.norm(position - self.target_position)
 
         
-        # Compute rotation penalty
-        desired_orientation = np.array([1.0, 0.0, 0.0, 0.0])  # Upright orientation
+       # Compute rotation penalty, ignoring rotation around z-axis
+        # Compute the body z-axis in world coordinates
+        body_z_axis = np.array([0, 0, 1], dtype=np.float64)
+        world_z_axis = np.zeros(3, dtype=np.float64)
 
-        # Compute dot product between current orientation and desired orientation
-        dot_product = np.abs(np.dot(orientation, desired_orientation))
-        # Ensure the dot product is within valid range for arccos
-        dot_product = np.clip(dot_product, -1.0, 1.0)
+        mujoco.mju_rotVecQuat(world_z_axis, body_z_axis, orientation)
 
-        # Compute the angle between orientations (in radians)
-        angle = 2 * np.arccos(dot_product)
+        # Normalize world_z_axis
+        world_z_axis /= np.linalg.norm(world_z_axis)
+
+        # Compute the angle between world_z_axis and global z-axis
+        cos_theta = np.clip(world_z_axis[2], -1.0, 1.0)
+        angle = np.arccos(cos_theta)
+
         rotation_penalty = angle  # Penalty proportional to the angle
 
         # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
         angular_velocity_penalty = np.linalg.norm(angular_velocity)
 
-        # Velocity penalty
-        velocity_penalty = np.linalg.norm(self.data.qvel[:3])
 
         # Check if terminated or truncated
         terminated = False
         truncated = False
 
-        reward = 1 # stay alive reward
+        
 
         # Compute total reward
         distance_z = np.abs(position[2] - self.target_position[2])
 
         distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
 
-        reward -= 0.8 * distance_z # Reward proportional to the progress to the target
-        reward -= 0.2 * distance_xy # Reward proportional to the progress to the target
+        
 
      
 
@@ -143,19 +144,27 @@ class DroneEnv(gym.Env):
 
         # angular velocity around z axis
         z_angular_velocity = angular_velocity[2]
-        reward -= 0.1 * z_angular_velocity
-        
+       
+        reward = 1 # stay alive reward
+
+        reward -= 0.5 * distance_z
+        reward -= 0.1 * distance_xy
+        reward -= rotation_penalty
+        reward -= 0.05 * abs(z_angular_velocity)
+                
        
 
         
         
 
         
-        print( "rotation_penalty: ", rotation_penalty)
-        # print( "angular_velocity_penalty: ", 0.1 *angular_velocity_penalty)
-        # print( "distance: ", distance**2)
-        # print( "reward: ", reward)
-
+        # log all reward components with weights
+        # print(f"distance_z: {distance_z} * -0.8 = {distance_z * -0.8}")
+        # print(f"distance_xy: {distance_xy} * -0.2 = {distance_xy * -0.2}")
+        # print(f"rotation_penalty: (4*{rotation_penalty}) = {(-4*rotation_penalty)}")
+        # print(f"z_angular_velocity: {z_angular_velocity} * -0.1 = {z_angular_velocity * -0.1}")
+        # print(f"reward: {reward}")
+        # print("")
 
         # Check for any contacts involving the drone's body
         collision = False
@@ -173,7 +182,7 @@ class DroneEnv(gym.Env):
         
         if collision:
             terminated = True
-            reward -= 100
+            reward -= 10
 
 
 
@@ -196,7 +205,7 @@ class DroneEnv(gym.Env):
         #check if out of bounds
         if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
             terminated = True
-            reward -= 100
+            reward -= 10
 
         # Additional info
         info = {
@@ -234,29 +243,18 @@ class DroneEnv(gym.Env):
         self.data.qpos[:3] = random_position
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(30)  # Standard deviation of 5 degrees
+        orientation_std_dev = np.deg2rad(10)  # Standard deviation of 10 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
-        # Convert Euler angles to quaternion
-        cy = np.cos(yaw * 0.5)
-        sy = np.sin(yaw * 0.5)
-        cp = np.cos(pitch * 0.5)
-        sp = np.sin(pitch * 0.5)
-        cr = np.cos(roll * 0.5)
-        sr = np.sin(roll * 0.5)
+        # Convert Euler angles to quaternion using mju_euler2Quat
+        euler = np.array([roll, pitch, yaw])
+        q = np.zeros(4)
+        seq = 'xyz'  # Intrinsic rotations around x, y, z
 
-        q = np.array([
-            cr * cp * cy + sr * sp * sy,  # w
-            sr * cp * cy - cr * sp * sy,  # x
-            cr * sp * cy + sr * cp * sy,  # y
-            cr * cp * sy - sr * sp * cy   # z
-        ])
-
-        # Ensure the quaternion is normalized
-        q /= np.linalg.norm(q)
-
+        mujoco.mju_euler2Quat(q, euler, seq)
+        mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
 
         # Reset velocities to zero
@@ -279,7 +277,7 @@ class DroneEnv(gym.Env):
             self.render()
 
         return obs, info
-
+    
     def render(self):
         if self.render_mode == 'human':
             if self.renderer is None:

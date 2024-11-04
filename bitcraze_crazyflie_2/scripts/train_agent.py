@@ -34,7 +34,7 @@ def main():
 
     # Initialize the PPO model with the vectorized environment
     policy_kwargs = dict(activation_fn=torch.nn.ReLU,
-                           net_arch=dict(pi=[128, 128], vf=[64,64])
+                           net_arch=dict(pi=[128, 256], vf=[128, 256])
                         )
     model = PPO('MlpPolicy', env, n_steps=32, batch_size=64, device='cpu', policy_kwargs=policy_kwargs)
 
