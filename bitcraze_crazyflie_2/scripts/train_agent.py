@@ -4,6 +4,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv
+import torch
 
 def main():
     # Environment ID (Make sure your custom environment is registered)
@@ -29,10 +30,13 @@ def main():
     # Create callbacks for checkpointing and evaluation
     checkpoint_callback = CheckpointCallback(save_freq=1000000/128, save_path=models_dir, name_prefix='ppo_drone')
     eval_callback = EvalCallback(eval_env, best_model_save_path=models_dir, log_path=models_dir, 
-                                 eval_freq=100000/128, deterministic=True, render=False)
+                                 eval_freq=10000/128, deterministic=True, render=False)
 
     # Initialize the PPO model with the vectorized environment
-    model = PPO('MlpPolicy', env, n_steps=2048, batch_size=512, device='cuda')
+    policy_kwargs = dict(activation_fn=torch.nn.ReLU,
+                           net_arch=dict(pi=[128, 128], vf=[64,64])
+                        )
+    model = PPO('MlpPolicy', env, n_steps=32, batch_size=64, device='cpu', policy_kwargs=policy_kwargs)
 
     # Train the model with callbacks
     time_steps = 10_000_000  # Adjust as needed

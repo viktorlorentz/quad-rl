@@ -126,23 +126,32 @@ class DroneEnv(gym.Env):
         terminated = False
         truncated = False
 
-        reward = 2 # stay alive reward
+        reward = 1 # stay alive reward
 
         # Compute total reward
-        reward -= distance**2 # Reward proportional to the progress to the target
+        distance_z = np.abs(position[2] - self.target_position[2])
+
+        distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
+
+        reward -= 0.8 * distance_z # Reward proportional to the progress to the target
+        reward -= 0.2 * distance_xy # Reward proportional to the progress to the target
 
      
 
         # Subtract penalties
-        reward -= 0.5 * rotation_penalty
-        reward -= 0.1 * angular_velocity_penalty
+        # reward -= 0.5 * rotation_penalty
+
+        # angular velocity around z axis
+        z_angular_velocity = angular_velocity[2]
+        reward -= 0.1 * z_angular_velocity
+        
        
 
         
         
 
         
-        # print( "rotation_penalty: ", 0.2 *rotation_penalty)
+        print( "rotation_penalty: ", rotation_penalty)
         # print( "angular_velocity_penalty: ", 0.1 *angular_velocity_penalty)
         # print( "distance: ", distance**2)
         # print( "reward: ", reward)
