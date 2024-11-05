@@ -5,12 +5,19 @@ import mujoco
 import mujoco.viewer
 import os
 from scipy.spatial.transform import Rotation as R
+from gymnasium.envs.registration import register
 
 class DroneEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, reward_coefficients=None):
         super(DroneEnv, self).__init__()
+
+        register(
+            id='DroneEnv-v0',
+            entry_point='envs.drone_env:DroneEnv',
+            kwargs={'reward_coefficients': None}  # Default kwargs
+        )
 
         # Path to your MuJoCo XML model
         model_path = os.path.join(os.path.dirname(__file__), '..', 'scene.xml')
@@ -61,6 +68,22 @@ class DroneEnv(gym.Env):
 
         self.goal_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, 'goal_marker')
 
+        # Reward function coefficients
+        if reward_coefficients is None:
+            # Default coefficients
+            self.reward_coefficients = {
+                "distance_z": 0.5,
+                "distance_xy": 0.2,
+                "rotation_penalty": 1.0,
+                "z_angular_velocity": 0.05,
+                "angular_velocity": 0.1,
+                "collision_penalty": 10.0,
+                "out_of_bounds_penalty": 10.0,
+                "alive_reward": 1.0,
+            }
+        else:
+            self.reward_coefficients = reward_coefficients
+
     def _get_obs(self):
         # Get observations
         position = self.data.qpos[:3].copy()
@@ -100,7 +123,7 @@ class DroneEnv(gym.Env):
         action = np.clip(action, self.action_space.low, self.action_space.high)
 
         # Apply action
-        #self.data.ctrl[:] = action
+        # self.data.ctrl[:] = action
 
         # Step simulation
         for _ in range(self.simulation_steps):
@@ -142,112 +165,62 @@ class DroneEnv(gym.Env):
         
         # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
+        z_angular_velocity = angular_velocity[2]
         angular_velocity_penalty = np.linalg.norm(angular_velocity)
 
-
-        # Check if terminated or truncated
-        terminated = False
-        truncated = False
-
-        
+        # Compute position error
         position_error = obs[9:12]
-        #print(f"position_error: {position_error}")
-        # Compute total reward
         distance_z = np.abs(position_error[2])
-
         distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
 
-        distance_x = np.abs(position_error[0])
-        distance_y = np.abs(position_error[1])
-        
+        # Initialize reward
+        reward = self.reward_coefficients["alive_reward"]  # Stay alive reward
 
-     
+        # Subtract penalties and distances
+        reward -= self.reward_coefficients["distance_z"] * distance_z
+        reward -= self.reward_coefficients["distance_xy"] * distance_xy
+        reward -= self.reward_coefficients["rotation_penalty"] * rotation_penalty
+        reward -= self.reward_coefficients["z_angular_velocity"] * abs(z_angular_velocity)
+        reward -= self.reward_coefficients["angular_velocity"] * angular_velocity_penalty
 
-        # Subtract penalties
-        # reward -= 0.5 * rotation_penalty
-
-        # angular velocity around z axis
-        z_angular_velocity = angular_velocity[2]
-       
-        reward = 1 # stay alive reward
-
-        reward -= 0.5 * distance_z
-        #reward -= 0.05 * (distance_x + distance_y)
-        reward -= 0.2 * distance_xy
-        reward -= rotation_penalty
-        reward -= 0.05 * abs(z_angular_velocity)
-                
-       
-
-        
-        
-
-        
-        # log all reward components with weights
-        # print(f"distance_z: {distance_z} * -0.5 = {distance_z * -0.5}")
-        # print(f"distance_xy: {(distance_x + distance_y)} * -0.2 = {(distance_x + distance_y) * -0.2}")
-        # print(f"rotation_penalty: {rotation_penalty} * -4 = {rotation_penalty * -4}")
-        # print(f"z_angular_velocity: {z_angular_velocity} * -0.05 = {z_angular_velocity * -0.05}")
-        # print(f"reward: {reward}")
-
-        # Check for any contacts involving the drone's body
+        # Check for collisions
         collision = False
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-
-            # Get the body IDs involved in the contact
             body1 = self.model.geom_bodyid[contact.geom1]
             body2 = self.model.geom_bodyid[contact.geom2]
-
-            # Check if the drone's body is involved
             if body1 == self.drone_body_id or body2 == self.drone_body_id:
                 collision = True
                 break  # Exit the loop if a collision is detected
-        
+
+        terminated = False
+        truncated = False
+
         if collision:
             terminated = True
-            reward -= 10
+            reward -= self.reward_coefficients["collision_penalty"]
 
-
-
-        # Normalizing actions to [0, 1]
-        # a = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
-
-        # k=300
-
-        # dgb = (np.exp(-k * (a- 0)**2) + np.exp(-k * (a- 1)**2)) / (1 + np.exp(-k))
-
-        # # sum all 4 actions
-        # reward -= np.sum(dgb)/4
-
-        
-        
-
-
-
-
-        #check if out of bounds
+        # Check if out of bounds
         if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
-            #terminated = True
-            reward -= 10
+            # terminated = True  # Uncomment if you want to terminate
+            reward -= self.reward_coefficients["out_of_bounds_penalty"]
 
         # Additional info
         info = {
             'position': position.copy(),
             'distance_to_target': distance_z,
             'rotation_penalty': rotation_penalty,
-            'angular_velocity_penalty': angular_velocity_penalty
+            'angular_velocity': angular_velocity.copy()
         }
 
         # Render if necessary
         if self.render_mode == 'human':
             self.render()
 
-        # truncate episode if too long
+        # Truncate episode if too long
         if self.data.time > 20:
             terminated = True
             truncated = True
-
 
         return obs, reward, terminated, truncated, info
 
@@ -301,7 +274,7 @@ class DroneEnv(gym.Env):
             self.render()
 
         return obs, info
-    
+
     def render(self):
         if self.render_mode == 'human':
             if self.renderer is None:

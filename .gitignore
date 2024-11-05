@@ -28,3 +28,6 @@ mjkey.txt
 
 # Other
 .DS_Store
+
+
+wandb/
