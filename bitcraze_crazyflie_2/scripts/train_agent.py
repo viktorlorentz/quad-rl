@@ -11,10 +11,9 @@ from stable_baselines3.common.monitor import Monitor
 from wandb.integration.sb3 import WandbCallback
 
 def main():
-    env_id = 'DroneEnv-v0'
 
     # Define parameters
-    num_envs = 32  # Adjusted number of environments
+    num_envs = 1  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
     time_steps = 2_000_000  # Total training timesteps
@@ -60,7 +59,7 @@ def main():
 
     # Initialize wandb run
     run = wandb.init(
-        project="drone_project",  # Replace with your project name
+        project="single_quad_rl",  # Replace with your project name
         config=config,
         sync_tensorboard=True,  # Auto-upload SB3's tensorboard metrics
         monitor_gym=True,       # Auto-upload videos of agent playing the game
@@ -89,7 +88,7 @@ def main():
         return _init
 
     # Create the vectorized environments
-    envs = [make_env(env_id, i, reward_coefficients=config["reward_coefficients"]) for i in range(config["num_envs"])]
+    envs = [make_env('DroneEnv-v0', i, reward_coefficients=config["reward_coefficients"]) for i in range(config["num_envs"])]
     env = SubprocVecEnv(envs)
 
     # Wrap the environment with VecVideoRecorder to record videos

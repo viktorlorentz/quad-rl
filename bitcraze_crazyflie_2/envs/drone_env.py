@@ -1,34 +1,53 @@
+import os
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import mujoco
-import mujoco.viewer
-import os
+
+from typing import Dict, Union
 from scipy.spatial.transform import Rotation as R
-from gymnasium.envs.registration import register
+from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 
-class DroneEnv(gym.Env):
-    metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
 
-    def __init__(self, render_mode=None, reward_coefficients=None):
-        super(DroneEnv, self).__init__()
 
-        register(
-            id='DroneEnv-v0',
-            entry_point='envs.drone_env:DroneEnv',
-            kwargs={'reward_coefficients': None}  # Default kwargs
-        )
+DEFAULT_CAMERA_CONFIG = {
+    "trackbodyid": 0,
+    "distance": 2.04,
+}
+
+class DroneEnv(MujocoEnv):
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+            "depth_array",
+            "rgbd_tuple",
+        ],
+    }
+ 
+    def __init__(
+        self,
+        reward_coefficients=None,
+        default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
+        policy_freq=200,             # Default policy frequency (Hz)
+        sim_steps_per_action=2,       # Default simulation steps between policy executions
+        **kwargs,
+    ):
+        
 
         # Path to your MuJoCo XML model
         model_path = os.path.join(os.path.dirname(__file__), '..', 'scene.xml')
+        
+        # Set parameters
+        self.policy_freq = policy_freq
+        self.sim_steps_per_action = sim_steps_per_action
 
-        # Load the MuJoCo model
-        self.model = mujoco.MjModel.from_xml_path(model_path)
-        self.data = mujoco.MjData(self.model)
+        # Compute time per action
+        self.time_per_action = 1.0 / self.policy_freq  # Time between policy executions
 
-        # Renderer attributes
-        self.render_mode = render_mode
-        self.renderer = None
+        # Set frame_skip to sim_steps_per_action
+        frame_skip = self.sim_steps_per_action
+
 
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
@@ -41,9 +60,34 @@ class DroneEnv(gym.Env):
         obs_low = np.full(12, -np.inf, dtype=np.float32)
         obs_high = np.full(12, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
+        
+        # Initialize MujocoEnv
+        MujocoEnv.__init__(
+            self,
+            model_path=model_path,
+            frame_skip = frame_skip,
+            observation_space=self.observation_space,
+            default_camera_config=default_camera_config,
+            **kwargs,
+        )
 
+        self.metadata = {
+            "render_modes": [
+                "human",
+                "rgb_array",
+                "depth_array",
+                "rgbd_tuple",
+            ],
+            "render_fps": int(np.round(1.0 / self.dt)),
+        }
+
+        
+
+        # Set the simulation timestep
+        self.model.opt.timestep = self.time_per_action / self.sim_steps_per_action
+        
         # Set the target position for hovering
-        self.target_position = np.array([0.0, 0.0, 1], dtype=np.float32)
+        self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
 
         # Get the ID of the goal site
         self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
@@ -52,11 +96,9 @@ class DroneEnv(gym.Env):
         self.drone_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, 'cf2')
 
         # Simulation parameters
-        self.simulation_steps = 1  # 250Hz
-
         self.workspace = {
             'low': np.array([-3.0, -3.0, 0.0]),
-            'high': np.array([3.0, 3.0, 5])
+            'high': np.array([3.0, 3.0, 5.0])
         }
 
         # Seed the environment
@@ -66,6 +108,7 @@ class DroneEnv(gym.Env):
         # Get the drone start position
         self.start_position = self.data.qpos[:3].copy()
 
+        # Get the goal geometry ID
         self.goal_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, 'goal_marker')
 
         # Reward function coefficients
@@ -83,6 +126,8 @@ class DroneEnv(gym.Env):
             }
         else:
             self.reward_coefficients = reward_coefficients
+
+
 
     def _get_obs(self):
         # Get observations
@@ -122,12 +167,8 @@ class DroneEnv(gym.Env):
         # Clip action
         action = np.clip(action, self.action_space.low, self.action_space.high)
 
-        # Apply action
-        # self.data.ctrl[:] = action
-
-        # Step simulation
-        for _ in range(self.simulation_steps):
-            mujoco.mj_step(self.model, self.data)
+        # Apply action and step simulation
+        self.do_simulation(action, self.frame_skip)
 
         # Get observation
         obs = self._get_obs()
@@ -213,7 +254,6 @@ class DroneEnv(gym.Env):
             'angular_velocity': angular_velocity.copy()
         }
 
-        # Render if necessary
         if self.render_mode == 'human':
             self.render()
 
@@ -224,14 +264,7 @@ class DroneEnv(gym.Env):
 
         return obs, reward, terminated, truncated, info
 
-    def reset(self, seed=None, options=None):
-        # Handle seed
-        super().reset(seed=seed)
-        self.np_random, seed = gym.utils.seeding.np_random(seed)
-
-        # Reset simulation
-        mujoco.mj_resetData(self.model, self.data)
-
+    def reset_model(self):
         # Randomize initial position around the target position
         position_std_dev = 0.1  # Standard deviation of 0.1 meters
         random_position = self.np_random.normal(loc=self.target_position, scale=position_std_dev)
@@ -245,7 +278,7 @@ class DroneEnv(gym.Env):
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
-        # Convert Euler angles to quaternion using mju_euler2Quat
+        # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
         q = np.zeros(4)
         seq = 'xyz'  # Intrinsic rotations around x, y, z
@@ -262,50 +295,11 @@ class DroneEnv(gym.Env):
         self.data.ctrl[:] = initial_action
 
         # Update the goal marker position if you're displaying it
-        self.model.site_pos[self.goal_site_id] = self.target_position
+        if self.goal_site_id is not None:
+            self.model.site_pos[self.goal_site_id] = self.target_position
         mujoco.mj_forward(self.model, self.data)
 
-        # Return initial observation and info
+        # Return initial observation
         obs = self._get_obs()
-        info = {}
+        return obs
 
-        # Render if necessary
-        if self.render_mode == 'human':
-            self.render()
-
-        return obs, info
-
-    def render(self):
-        if self.render_mode == 'human':
-            if self.renderer is None:
-                # Initialize viewer
-                self.renderer = mujoco.viewer.launch_passive(self.model, self.data)
-            else:
-                # Check if the viewer is still running
-                if self.renderer.is_running():
-                    # Update the renderer
-                    with self.renderer.lock():
-                        self.renderer.sync()
-                else:
-                    # Viewer has been closed by the user
-                    self.renderer = None  # Reset the renderer
-        elif self.render_mode == 'rgb_array':
-            if self.renderer is None:
-                # Initialize offscreen renderer
-                self.renderer = mujoco.Renderer(self.model)
-            # Render the scene
-            self.renderer.update_scene(self.data)
-            img = self.renderer.render()
-            return img
-        else:
-            raise NotImplementedError(f"Render mode '{self.render_mode}' is not supported.")
-
-    def close(self):
-        if self.renderer is not None:
-            # Close the renderer
-            self.renderer.close()
-            self.renderer = None
-
-    def seed(self, seed=None):
-        self.np_random, seed = gym.utils.seeding.np_random(seed)
-        return [seed]
