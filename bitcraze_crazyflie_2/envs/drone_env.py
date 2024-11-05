@@ -4,6 +4,7 @@ import numpy as np
 import mujoco
 import mujoco.viewer
 import os
+from scipy.spatial.transform import Rotation as R
 
 class DroneEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
@@ -30,8 +31,8 @@ class DroneEnv(gym.Env):
         )
 
         # Update observation space to include position error
-        obs_low = np.full(16, -np.inf, dtype=np.float32)
-        obs_high = np.full(16, np.inf, dtype=np.float32)
+        obs_low = np.full(12, -np.inf, dtype=np.float32)
+        obs_high = np.full(12, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         # Set the target position for hovering
@@ -63,28 +64,33 @@ class DroneEnv(gym.Env):
     def _get_obs(self):
         # Get observations
         position = self.data.qpos[:3].copy()
-        orientation = self.data.qpos[3:7].copy()
+        orientation = self.data.qpos[3:7].copy()  # Quaternion [w, x, y, z]
         linear_velocity = self.data.qvel[:3].copy()
         angular_velocity = self.data.qvel[3:6].copy()
 
-        # Compute position error
-        position_error = self.target_position - position
+        # Convert quaternion to Euler angles using scipy
+        # MuJoCo quaternions are [w, x, y, z], scipy expects [x, y, z, w]
+        orientation_q = np.array([orientation[1], orientation[2], orientation[3], orientation[0]])
+        r = R.from_quat(orientation_q)
+        orientation_euler = r.as_euler('xyz', degrees=False)
 
-        # # Get sensor data from IMU sensors (gyroscope and accelerometer)
-        # sensor_data = self.data.sensordata
+        # Compute position error in world coordinates
+        position_error_world = self.target_position - position
 
-        # # Ensure sensor data indexing matches your model
-        # gyro_data = sensor_data[0:3].copy()  # Gyroscope data (3 values)
-        # acc_data = sensor_data[3:6].copy()   # Accelerometer data (3 values)
+        # Compute conjugate quaternion (inverse rotation)
+        conj_quat = np.zeros(4)
+        mujoco.mju_negQuat(conj_quat, orientation)
 
-       
-        # Combine all observations, including the position error
+        # Rotate position error vector into drone's local frame
+        position_error_local = np.zeros(3)
+        mujoco.mju_rotVecQuat(position_error_local, position_error_world, conj_quat)
+
+        # Combine all observations, including the position error in local frame
         obs = np.concatenate([
-            position,
-            orientation,
+            orientation_euler,
             linear_velocity,
             angular_velocity,
-            position_error  # Include position error
+            position_error_local  # Include position error in drone's local frame
         ])
 
         return obs.astype(np.float32)
@@ -94,7 +100,7 @@ class DroneEnv(gym.Env):
         action = np.clip(action, self.action_space.low, self.action_space.high)
 
         # Apply action
-        self.data.ctrl[:] = action
+        #self.data.ctrl[:] = action
 
         # Step simulation
         for _ in range(self.simulation_steps):
@@ -108,7 +114,7 @@ class DroneEnv(gym.Env):
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
         # Compute distance to target position
-        distance = np.linalg.norm(position - self.target_position)
+        #distance = np.linalg.norm(position - self.target_position)
 
         
        # Compute rotation penalty, ignoring rotation around z-axis
@@ -124,9 +130,16 @@ class DroneEnv(gym.Env):
         # Compute the angle between world_z_axis and global z-axis
         cos_theta = np.clip(world_z_axis[2], -1.0, 1.0)
         angle = np.arccos(cos_theta)
-
         rotation_penalty = angle  # Penalty proportional to the angle
 
+     
+        #orientation_euler = obs[:3]
+
+     
+
+        # # penalize roll and pitch
+        #rotation_penalty = np.abs(orientation_euler[0]) + np.abs(orientation_euler[1])
+        
         # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
         angular_velocity_penalty = np.linalg.norm(angular_velocity)
@@ -137,12 +150,15 @@ class DroneEnv(gym.Env):
         truncated = False
 
         
-
+        position_error = obs[9:12]
+        #print(f"position_error: {position_error}")
         # Compute total reward
-        distance_z = np.abs(position[2] - self.target_position[2])
+        distance_z = np.abs(position_error[2])
 
         distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
 
+        distance_x = np.abs(position_error[0])
+        distance_y = np.abs(position_error[1])
         
 
      
@@ -156,6 +172,7 @@ class DroneEnv(gym.Env):
         reward = 1 # stay alive reward
 
         reward -= 0.5 * distance_z
+        #reward -= 0.05 * (distance_x + distance_y)
         reward -= 0.2 * distance_xy
         reward -= rotation_penalty
         reward -= 0.05 * abs(z_angular_velocity)
@@ -167,12 +184,11 @@ class DroneEnv(gym.Env):
 
         
         # log all reward components with weights
-        # print(f"distance_z: {distance_z} * -0.8 = {distance_z * -0.8}")
-        # print(f"distance_xy: {distance_xy} * -0.2 = {distance_xy * -0.2}")
-        # print(f"rotation_penalty: (4*{rotation_penalty}) = {(-4*rotation_penalty)}")
-        # print(f"z_angular_velocity: {z_angular_velocity} * -0.1 = {z_angular_velocity * -0.1}")
+        # print(f"distance_z: {distance_z} * -0.5 = {distance_z * -0.5}")
+        # print(f"distance_xy: {(distance_x + distance_y)} * -0.2 = {(distance_x + distance_y) * -0.2}")
+        # print(f"rotation_penalty: {rotation_penalty} * -4 = {rotation_penalty * -4}")
+        # print(f"z_angular_velocity: {z_angular_velocity} * -0.05 = {z_angular_velocity * -0.05}")
         # print(f"reward: {reward}")
-        # print("")
 
         # Check for any contacts involving the drone's body
         collision = False
@@ -212,13 +228,13 @@ class DroneEnv(gym.Env):
 
         #check if out of bounds
         if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
-            terminated = True
+            #terminated = True
             reward -= 10
 
         # Additional info
         info = {
             'position': position.copy(),
-            'distance_to_target': distance,
+            'distance_to_target': distance_z,
             'rotation_penalty': rotation_penalty,
             'angular_velocity_penalty': angular_velocity_penalty
         }
