@@ -20,10 +20,10 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 8  # Adjusted number of environments
+    num_envs = 4  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
-    time_steps = 100_000  # Total training timesteps
+    time_steps = 3_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
@@ -107,13 +107,9 @@ def main():
         env_id,
         n_envs=num_envs,
         vec_env_cls=SubprocVecEnv,
-        seed=0,
-        env_kwargs={"reward_coefficients": config["reward_coefficients"]},
+        env_kwargs={"reward_coefficients": config["reward_coefficients"], "render_mode":None},
         monitor_dir=f"monitor/{run.id}",
-    )
-
-    env = VecVideoRecorder(
-        env, "videos", record_video_trigger=lambda x: x % 10000 == 0, video_length=200
+        
     )
 
     # env = VecVideoRecorder(
@@ -142,16 +138,40 @@ def main():
     #     reward_coefficients=config["reward_coefficients"],
     # )
 
+    def trigger(t):
+        if t % 30 == 0:
+            # save video to global variable
+
+            return True
+        if t % 30 == 1:
+            video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
+            run.log({"videos": wandb.Video(video)})
+
     eval_env = make_vec_env(
-        env_id, n_envs=4, vec_env_cls=SubprocVecEnv, seed=0, env_kwargs={"reward_coefficients": config["reward_coefficients"]},
-        #wrapper_class = VecVideoRecorder, wrapper_kwargs = {"record_video_trigger": lambda x: x % config["n_steps"]*10 == 0, "video_length": 200, "name_prefix": "rl-video", "video_folder": f"videos/{run.id}"}
+        env_id,
+        n_envs=1,
+        vec_env_cls=SubprocVecEnv,
+        seed=0,
+        env_kwargs={"reward_coefficients": config["reward_coefficients"]},
+        wrapper_class=gym.wrappers.RecordVideo,
+        wrapper_kwargs={
+            "video_folder": f"videos/{run.id}",
+            "episode_trigger": trigger,
+        },
     )
+
+    # eval_env = gym.wrappers.RecordVideo(
+    #     eval_env,
+    #     video_folder=f"videos/{run.id}",
+    #     episode_trigger=lambda x: x % 10 == 0,
+    #     disable_logger=False,
+    # )
 
     # eval_env = VecVideoRecorder(
     #     eval_env,
-    #     f"wandb/videos/{run.id}",
+    #     f"videos/{run.id}",
     #     record_video_trigger= lambda x: x % (config["n_steps"]*10) == 0,  # Record a video every 2000 steps
-    #     video_length=200,  # Length of recorded video
+    #     video_length=2000,  # Length of recorded video
     #     name_prefix="rl-video"
     # )
 
@@ -216,7 +236,14 @@ def main():
     model.save(model_path)
     env.close()
     eval_env.close()
+
     run.finish()
+
+    # delete video directory with files
+    video_dir = f"videos/{run.id}"
+    for file in os.listdir(video_dir):
+        os.remove(os.path.join(video_dir, file))
+    os.rmdir(video_dir)
 
 
 if __name__ == "__main__":
