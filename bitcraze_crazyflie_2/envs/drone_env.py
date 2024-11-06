@@ -9,10 +9,9 @@ from scipy.spatial.transform import Rotation as R
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 
 
-
 DEFAULT_CAMERA_CONFIG = {
     "trackbodyid": 0,
-    "distance": 2.04,
+    "distance": 2.0,
 }
 
 class DroneEnv(MujocoEnv):
@@ -23,13 +22,13 @@ class DroneEnv(MujocoEnv):
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
         policy_freq=200,             # Default policy frequency (Hz)
         sim_steps_per_action=2,       # Default simulation steps between policy executions
+        render_mode=None,
         **kwargs,
     ):
-        
 
         # Path to your MuJoCo XML model
         model_path = os.path.join(os.path.dirname(__file__), '..', 'scene.xml')
-        
+
         # Set parameters
         self.policy_freq = policy_freq
         self.sim_steps_per_action = sim_steps_per_action
@@ -39,7 +38,6 @@ class DroneEnv(MujocoEnv):
 
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
-
 
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
@@ -53,15 +51,12 @@ class DroneEnv(MujocoEnv):
         obs_high = np.full(12, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
-
         self.metadata["render_modes"] = [
             "human",
             "rgb_array",
             "depth_array",
         ]
-        
 
-        
         # Initialize MujocoEnv
         MujocoEnv.__init__(
             self,
@@ -69,14 +64,15 @@ class DroneEnv(MujocoEnv):
             frame_skip = frame_skip,
             observation_space=self.observation_space,
             default_camera_config=default_camera_config,
+            render_mode=render_mode,
             **kwargs,
         )
 
-        self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
-
         # Set the simulation timestep
         self.model.opt.timestep = self.time_per_action / self.sim_steps_per_action
-        
+
+        self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
+
         # Set the target position for hovering
         self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
 
@@ -113,8 +109,6 @@ class DroneEnv(MujocoEnv):
             }
         else:
             self.reward_coefficients = reward_coefficients
-
-
 
     def _get_obs(self):
         # Get observations
@@ -165,10 +159,9 @@ class DroneEnv(MujocoEnv):
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
         # Compute distance to target position
-        #distance = np.linalg.norm(position - self.target_position)
+        # distance = np.linalg.norm(position - self.target_position)
 
-        
-       # Compute rotation penalty, ignoring rotation around z-axis
+        # Compute rotation penalty, ignoring rotation around z-axis
         # Compute the body z-axis in world coordinates
         body_z_axis = np.array([0, 0, 1], dtype=np.float64)
         world_z_axis = np.zeros(3, dtype=np.float64)
@@ -183,14 +176,11 @@ class DroneEnv(MujocoEnv):
         angle = np.arccos(cos_theta)
         rotation_penalty = angle  # Penalty proportional to the angle
 
-     
-        #orientation_euler = obs[:3]
-
-     
+        # orientation_euler = obs[:3]
 
         # # penalize roll and pitch
-        #rotation_penalty = np.abs(orientation_euler[0]) + np.abs(orientation_euler[1])
-        
+        # rotation_penalty = np.abs(orientation_euler[0]) + np.abs(orientation_euler[1])
+
         # Compute angular velocity penalty
         angular_velocity = self.data.qvel[3:6]
         z_angular_velocity = angular_velocity[2]
@@ -230,7 +220,7 @@ class DroneEnv(MujocoEnv):
 
         # Check if out of bounds
         if not np.all(self.workspace['low'] <= position) or not np.all(position <= self.workspace['high']):
-            # terminated = True  # Uncomment if you want to terminate
+            terminated = True  # Uncomment if you want to terminate
             reward -= self.reward_coefficients["out_of_bounds_penalty"]
 
         # Additional info
@@ -260,7 +250,7 @@ class DroneEnv(MujocoEnv):
         self.data.qpos[:3] = random_position
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(10)  # Standard deviation of 10 degrees
+        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 10 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
@@ -289,4 +279,3 @@ class DroneEnv(MujocoEnv):
         # Return initial observation
         obs = self._get_obs()
         return obs
-

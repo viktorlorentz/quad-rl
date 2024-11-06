@@ -3,10 +3,13 @@ import bitcraze_crazyflie_2.envs.drone_env
 import gymnasium as gym
 import torch
 import wandb
+import time
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecVideoRecorder
+
+from stable_baselines3.common.env_util import make_vec_env
 
 from stable_baselines3.common.monitor import Monitor
 from wandb.integration.sb3 import WandbCallback
@@ -17,10 +20,10 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 1  # Adjusted number of environments
+    num_envs = 8  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
-    time_steps = 2_000_000  # Total training timesteps
+    time_steps = 100_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
@@ -61,6 +64,7 @@ def main():
     # Initialize wandb run
     run = wandb.init(
         project="single_quad_rl",  # Replace with your project name
+        name=f"single_quad_rl_{int(time.time())}",
         config=config,
         sync_tensorboard=True,  # Auto-upload SB3's tensorboard metrics
         monitor_gym=True,  # Auto-upload videos of agent playing the game
@@ -73,12 +77,10 @@ def main():
     # Build policy_kwargs with correct net_arch
     policy_kwargs = dict(
         activation_fn=activation_fn,
-        net_arch=[
-            dict(
-                pi=config["policy_kwargs"]["net_arch"]["pi"],
-                vf=config["policy_kwargs"]["net_arch"]["vf"],
-            )
-        ],
+        net_arch=dict(
+            pi=config["policy_kwargs"]["net_arch"]["pi"],
+            vf=config["policy_kwargs"]["net_arch"]["vf"],
+        ),
     )
 
     # # Define the environment creation function
@@ -94,12 +96,34 @@ def main():
     # envs = [make_env('DroneEnv-v0', i, reward_coefficients=config["reward_coefficients"]) for i in range(config["num_envs"])]
     # env = SubprocVecEnv(envs)
 
-    env = gym.make_vec(
+    # env = gym.make_vec(
+    #     env_id,
+    #     num_envs=num_envs,
+    #     vectorization_mode="async",
+    #     reward_coefficients=config["reward_coefficients"],
+    # )
+
+    env = make_vec_env(
         env_id,
-        num_envs=num_envs,
-        vectorization_mode="async",
-        reward_coefficients=config["reward_coefficients"],
+        n_envs=num_envs,
+        vec_env_cls=SubprocVecEnv,
+        seed=0,
+        env_kwargs={"reward_coefficients": config["reward_coefficients"]},
+        monitor_dir=f"monitor/{run.id}",
     )
+
+    env = VecVideoRecorder(
+        env, "videos", record_video_trigger=lambda x: x % 10000 == 0, video_length=200
+    )
+
+    # env = VecVideoRecorder(
+    #     env,
+    #     f"videos/{run.id}",
+    #     record_video_trigger=lambda x: x % config["n_steps"] * 100
+    #     == 0,  # Record a video every 2000 steps
+    #     video_length=2000,  # Length of recorded video
+    #     name_prefix="rl-video",
+    # )
 
     # # Wrap the environment with VecVideoRecorder to record videos
     # env = VecVideoRecorder(
@@ -111,17 +135,22 @@ def main():
     # )
 
     # Create the evaluation environment
-    eval_env = gym.make_vec(
-        env_id,
-        num_envs=1,
-        vectorization_mode="async",
-        reward_coefficients=config["reward_coefficients"],
+    # eval_env = gym.make_vec(
+    #     env_id,
+    #     num_envs=1,
+    #     vectorization_mode="async",
+    #     reward_coefficients=config["reward_coefficients"],
+    # )
+
+    eval_env = make_vec_env(
+        env_id, n_envs=4, vec_env_cls=SubprocVecEnv, seed=0, env_kwargs={"reward_coefficients": config["reward_coefficients"]},
+        #wrapper_class = VecVideoRecorder, wrapper_kwargs = {"record_video_trigger": lambda x: x % config["n_steps"]*10 == 0, "video_length": 200, "name_prefix": "rl-video", "video_folder": f"videos/{run.id}"}
     )
 
     # eval_env = VecVideoRecorder(
     #     eval_env,
-    #     f"videos/{run.id}",
-    #     record_video_trigger=lambda x: x % config["n_steps"]*10 == 0,  # Record a video every 2000 steps
+    #     f"wandb/videos/{run.id}",
+    #     record_video_trigger= lambda x: x % (config["n_steps"]*10) == 0,  # Record a video every 2000 steps
     #     video_length=200,  # Length of recorded video
     #     name_prefix="rl-video"
     # )
@@ -141,10 +170,10 @@ def main():
             os.remove(os.path.join(models_dir, file))
 
     eval_callback = EvalCallback(
-        eval_env,
+        eval_env=eval_env,
         best_model_save_path=models_dir,
         log_path=models_dir,
-        eval_freq=config["n_steps"] * 10,  # Evaluate every update
+        eval_freq=config["n_steps"] ,  # Evaluate every update
         deterministic=True,
         render=False,
     )
