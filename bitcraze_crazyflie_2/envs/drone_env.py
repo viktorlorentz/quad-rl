@@ -16,15 +16,7 @@ DEFAULT_CAMERA_CONFIG = {
 }
 
 class DroneEnv(MujocoEnv):
-    metadata = {
-        "render_modes": [
-            "human",
-            "rgb_array",
-            "depth_array",
-            "rgbd_tuple",
-        ],
-    }
- 
+
     def __init__(
         self,
         reward_coefficients=None,
@@ -60,6 +52,15 @@ class DroneEnv(MujocoEnv):
         obs_low = np.full(12, -np.inf, dtype=np.float32)
         obs_high = np.full(12, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
+
+
+        self.metadata["render_modes"] = [
+            "human",
+            "rgb_array",
+            "depth_array",
+        ]
+        
+
         
         # Initialize MujocoEnv
         MujocoEnv.__init__(
@@ -71,17 +72,7 @@ class DroneEnv(MujocoEnv):
             **kwargs,
         )
 
-        self.metadata = {
-            "render_modes": [
-                "human",
-                "rgb_array",
-                "depth_array",
-                "rgbd_tuple",
-            ],
-            "render_fps": int(np.round(1.0 / self.dt)),
-        }
-
-        
+        self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
 
         # Set the simulation timestep
         self.model.opt.timestep = self.time_per_action / self.sim_steps_per_action
@@ -100,10 +91,6 @@ class DroneEnv(MujocoEnv):
             'low': np.array([-3.0, -3.0, 0.0]),
             'high': np.array([3.0, 3.0, 5.0])
         }
-
-        # Seed the environment
-        self.np_random = None
-        self.seed()
 
         # Get the drone start position
         self.start_position = self.data.qpos[:3].copy()
