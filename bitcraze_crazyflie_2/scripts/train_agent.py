@@ -20,7 +20,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 2  # Adjusted number of environments
+    num_envs = 8  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
     time_steps = 2_000_000  # Total training timesteps

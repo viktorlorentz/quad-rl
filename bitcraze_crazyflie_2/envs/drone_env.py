@@ -258,6 +258,11 @@ class DroneEnv(MujocoEnv):
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
+        #ramdomize velocity
+        self.data.qvel[:3] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
+        self.data.qvel[3:6] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
+
+
         # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
         q = np.zeros(4)
