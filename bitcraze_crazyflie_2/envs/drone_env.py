@@ -47,8 +47,8 @@ class DroneEnv(MujocoEnv):
         )
 
         # Update observation space to include position error
-        obs_low = np.full(12, -np.inf, dtype=np.float32)
-        obs_high = np.full(12, np.inf, dtype=np.float32)
+        obs_low = np.full(18, -np.inf, dtype=np.float32)
+        obs_high = np.full(18, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         self.metadata["render_modes"] = [
@@ -121,7 +121,10 @@ class DroneEnv(MujocoEnv):
         # MuJoCo quaternions are [w, x, y, z], scipy expects [x, y, z, w]
         orientation_q = np.array([orientation[1], orientation[2], orientation[3], orientation[0]])
         r = R.from_quat(orientation_q)
-        orientation_euler = r.as_euler('xyz', degrees=False)
+        #orientation_euler = r.as_euler('xyz', degrees=False)
+
+        orientation_rot = r.as_matrix()
+
 
         # Compute position error in world coordinates
         position_error_world = self.target_position - position
@@ -136,7 +139,7 @@ class DroneEnv(MujocoEnv):
 
         # Combine all observations, including the position error in local frame
         obs = np.concatenate([
-            orientation_euler,
+            orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array wiht 9 elements
             linear_velocity,
             angular_velocity,
             position_error_local  # Include position error in drone's local frame

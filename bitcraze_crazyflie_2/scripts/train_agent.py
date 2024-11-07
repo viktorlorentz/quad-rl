@@ -20,18 +20,18 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 4  # Adjusted number of environments
+    num_envs = 2  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
-    time_steps = 3_000_000  # Total training timesteps
+    time_steps = 2_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
         "distance_z": 0.5,
         "distance_xy": 0.2,
-        "rotation_penalty": 1.0,
+        "rotation_penalty": 5.0,
         "z_angular_velocity": 0.05,
-        "angular_velocity": 0.1,
+        "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
@@ -139,11 +139,11 @@ def main():
     # )
 
     def trigger(t):
-        if t % 30 == 0:
+        if t % 50 == 0:
             # save video to global variable
 
             return True
-        if t % 30 == 1:
+        if t % 50 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
             run.log({"videos": wandb.Video(video)})
 
