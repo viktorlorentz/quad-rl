@@ -111,6 +111,7 @@ class DroneEnv(MujocoEnv):
                 "out_of_bounds_penalty": 10.0,
                 "alive_reward": 1.0,
                 "linear_velocity": 0.1,
+                "goal_bonus": 5.0,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -173,7 +174,7 @@ class DroneEnv(MujocoEnv):
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
         # Compute distance to target position
-        #distance = np.linalg.norm(position - self.target_position)
+        distance = np.linalg.norm(position - self.target_position)
 
         # Compute rotation penalty, ignoring rotation around z-axis
         # Compute the body z-axis in world coordinates
@@ -201,8 +202,7 @@ class DroneEnv(MujocoEnv):
         angular_velocity_penalty = np.linalg.norm(angular_velocity)
 
         # Compute position error
-        position_error = obs[9:12]
-        distance_z = np.abs(position_error[2])
+        distance_z = np.abs(position[2] - self.target_position[2])
         distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
 
         # Initialize reward
@@ -216,9 +216,12 @@ class DroneEnv(MujocoEnv):
         reward -= self.reward_coefficients["angular_velocity"] * angular_velocity_penalty
         reward -= self.reward_coefficients["linear_velocity"] * np.linalg.norm(self.data.qvel[:3])
 
-        # # gauss over distance
-        # if distance < 0.08:
-        #     reward +=  np.exp(-distance**2 / 0.03**2)*5
+        # gauss over distance
+        if distance < 0.1:
+            reward += (
+                self.reward_coefficients["goal_bonus"] * np.exp(-(distance**2) / 0.05**2)
+                
+            )
 
         # Check for collisions
         collision = False
@@ -254,7 +257,7 @@ class DroneEnv(MujocoEnv):
             self.render()
 
         # Truncate episode if too long
-        if self.data.time > 20:
+        if self.data.time > 10:
             terminated = True
             truncated = True
 
@@ -262,21 +265,21 @@ class DroneEnv(MujocoEnv):
 
     def reset_model(self):
         # Randomize initial position around the target position
-        position_std_dev = 0.1  # Standard deviation of 0.1 meters
+        position_std_dev = 0.5  # Standard deviation in meters
         random_position = self.np_random.normal(loc=self.target_position, scale=position_std_dev)
         # Clip the position to be within the workspace bounds
         random_position = np.clip(random_position, self.workspace['low'], self.workspace['high'])
         self.data.qpos[:3] = random_position
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 10 degrees
+        orientation_std_dev = np.deg2rad(30)  # Standard deviation of 10 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
         # ramdomize velocity
-        self.data.qvel[:3] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
-        self.data.qvel[3:6] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
+        self.data.qvel[:3] = self.np_random.uniform(low=-0.4, high=0.4, size=3) # Random linear velocity in x, y, z directions (m/s) 
+        self.data.qvel[3:6] = self.np_random.uniform(low=-0.1, high=0.1, size=3) # Random angular velocity in x, y, z directions (rad/s)
 
         # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
@@ -287,8 +290,6 @@ class DroneEnv(MujocoEnv):
         mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
 
-        # Reset velocities to zero
-        self.data.qvel[:] = 0
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()

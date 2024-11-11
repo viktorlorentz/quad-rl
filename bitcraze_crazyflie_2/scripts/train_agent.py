@@ -20,22 +20,23 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 8  # Adjusted number of environments
-    n_steps = 1024  # Increased n_steps
-    batch_size = 256  # Should be a factor of total_timesteps_per_update
-    time_steps = 1_000_000  # Total training timesteps
+    num_envs = 8  
+    n_steps = 1024  
+    batch_size = 512  # Should be a factor of total_timesteps_per_update
+    time_steps = 1_200_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 0.5,
-        "distance_xy": 0.5,
+        "distance_z": 1.5,
+        "distance_xy": 1.0,
         "rotation_penalty": 2.0,
-        "z_angular_velocity": 0.05,
+        "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
-        "linear_velocity": 0.1,
+        "linear_velocity": 0.0,
+        "goal_bonus": 10.0
     }
 
     # Config for wandb (include important parameters for sweeps)
@@ -214,7 +215,7 @@ def main():
         clip_range=config["clip_range"],
         clip_range_vf=config["clip_range_vf"],
         normalize_advantage=config["normalize_advantage"],
-        device="auto",
+        device="cpu",
         policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
     )
