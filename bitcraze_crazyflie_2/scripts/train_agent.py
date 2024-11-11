@@ -20,15 +20,15 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 8  
-    n_steps = 1024  
+    num_envs = 16  
+    n_steps = 512  
     batch_size = 512  # Should be a factor of total_timesteps_per_update
     time_steps = 1_200_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 1.5,
-        "distance_xy": 1.0,
+        "distance_z": 0.8,
+        "distance_xy": 0.5,
         "rotation_penalty": 2.0,
         "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
