@@ -112,6 +112,7 @@ class DroneEnv(MujocoEnv):
                 "alive_reward": 1.0,
                 "linear_velocity": 0.1,
                 "goal_bonus": 5.0,
+                "distance" : 0
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -211,6 +212,7 @@ class DroneEnv(MujocoEnv):
         # Subtract penalties and distances
         reward -= self.reward_coefficients["distance_z"] * distance_z
         reward -= self.reward_coefficients["distance_xy"] * distance_xy
+        reward -= self.reward_coefficients["distance"] * distance
         reward -= self.reward_coefficients["rotation_penalty"] * rotation_penalty
         reward -= self.reward_coefficients["z_angular_velocity"] * abs(z_angular_velocity)
         reward -= self.reward_coefficients["angular_velocity"] * angular_velocity_penalty
@@ -257,7 +259,7 @@ class DroneEnv(MujocoEnv):
             self.render()
 
         # Truncate episode if too long
-        if self.data.time > 10:
+        if self.data.time > 20:
             terminated = True
             truncated = True
 

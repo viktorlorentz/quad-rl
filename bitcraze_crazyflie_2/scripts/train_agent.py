@@ -23,20 +23,21 @@ def main():
     num_envs = 16  
     n_steps = 512  
     batch_size = 512  # Should be a factor of total_timesteps_per_update
-    time_steps = 1_200_000  # Total training timesteps
+    time_steps = 2_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 0.8,
-        "distance_xy": 0.5,
+        "distance_z": 1.0,
+        "distance_xy": 1.0,
         "rotation_penalty": 2.0,
         "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
-        "linear_velocity": 0.0,
-        "goal_bonus": 10.0
+        "linear_velocity": 0.1,
+        "goal_bonus": 10.0,
+        "distance" : 0
     }
 
     # Config for wandb (include important parameters for sweeps)
@@ -57,7 +58,7 @@ def main():
         "clip_range_vf": None,
         "normalize_advantage": True,
         "policy_kwargs": {
-            "activation_fn": "ReLU",
+            "activation_fn": "Tanh",
             "net_arch": {"pi": [128, 128], "vf": [128, 128]},
         },
         "reward_coefficients": reward_coefficients,  # Add reward coefficients to config
