@@ -23,18 +23,19 @@ def main():
     num_envs = 8  # Adjusted number of environments
     n_steps = 1024  # Increased n_steps
     batch_size = 256  # Should be a factor of total_timesteps_per_update
-    time_steps = 2_000_000  # Total training timesteps
+    time_steps = 1_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
         "distance_z": 0.5,
-        "distance_xy": 0.2,
-        "rotation_penalty": 5.0,
+        "distance_xy": 0.5,
+        "rotation_penalty": 2.0,
         "z_angular_velocity": 0.05,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
+        "linear_velocity": 0.1,
     }
 
     # Config for wandb (include important parameters for sweeps)

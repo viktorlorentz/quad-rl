@@ -20,14 +20,20 @@ class DroneEnv(MujocoEnv):
         self,
         reward_coefficients=None,
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
-        policy_freq=200,             # Default policy frequency (Hz)
-        sim_steps_per_action=2,       # Default simulation steps between policy executions
+        policy_freq=200,  # Default policy frequency (Hz)
+        sim_steps_per_action=2,  # Default simulation steps between policy executions
         render_mode=None,
-        **kwargs,
+        visual_options={
+            mujoco.mjtVisFlag.mjVIS_ACTUATOR: True,
+            mujoco.mjtVisFlag.mjVIS_ACTIVATION: True,
+        },
+        ** kwargs,
     ):
 
         # Path to your MuJoCo XML model
         model_path = os.path.join(os.path.dirname(__file__), '..', 'scene.xml')
+
+        self.DEFAULT_CAMERA_CONFIG = default_camera_config
 
         # Set parameters
         self.policy_freq = policy_freq
@@ -55,7 +61,7 @@ class DroneEnv(MujocoEnv):
             "human",
             "rgb_array",
             "depth_array",
-        ]
+        ]  
 
         # Initialize MujocoEnv
         MujocoEnv.__init__(
@@ -65,6 +71,7 @@ class DroneEnv(MujocoEnv):
             observation_space=self.observation_space,
             default_camera_config=default_camera_config,
             render_mode=render_mode,
+            visual_options=visual_options,
             **kwargs,
         )
 
@@ -75,9 +82,6 @@ class DroneEnv(MujocoEnv):
 
         # Set the target position for hovering
         self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
-
-        # Get the ID of the goal site
-        self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_site')
 
         # Get the drone's body ID
         self.drone_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, 'cf2')
@@ -106,6 +110,7 @@ class DroneEnv(MujocoEnv):
                 "collision_penalty": 10.0,
                 "out_of_bounds_penalty": 10.0,
                 "alive_reward": 1.0,
+                "linear_velocity": 0.1,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -115,16 +120,16 @@ class DroneEnv(MujocoEnv):
         position = self.data.qpos[:3].copy()
         orientation = self.data.qpos[3:7].copy()  # Quaternion [w, x, y, z]
         linear_velocity = self.data.qvel[:3].copy()
-        angular_velocity = self.data.qvel[3:6].copy()
+        local_angular_velocity = self.data.qvel[3:6].copy()
+        # local. See: https://github.com/google-deepmind/mujoco/issues/691
 
         # Convert quaternion to Euler angles using scipy
         # MuJoCo quaternions are [w, x, y, z], scipy expects [x, y, z, w]
         orientation_q = np.array([orientation[1], orientation[2], orientation[3], orientation[0]])
         r = R.from_quat(orientation_q)
-        #orientation_euler = r.as_euler('xyz', degrees=False)
+        # orientation_euler = r.as_euler('xyz', degrees=False)
 
         orientation_rot = r.as_matrix()
-
 
         # Compute position error in world coordinates
         position_error_world = self.target_position - position
@@ -137,13 +142,19 @@ class DroneEnv(MujocoEnv):
         position_error_local = np.zeros(3)
         mujoco.mju_rotVecQuat(position_error_local, position_error_world, conj_quat)
 
+        # Rotate linear velocity into drone's local frame
+        linear_velocity_local = np.zeros(3)
+        mujoco.mju_rotVecQuat(linear_velocity_local, linear_velocity, conj_quat)
+
         # Combine all observations, including the position error in local frame
-        obs = np.concatenate([
-            orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array wiht 9 elements
-            linear_velocity,
-            angular_velocity,
-            position_error_local  # Include position error in drone's local frame
-        ])
+        obs = np.concatenate(
+            [
+                orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array wiht 9 elements
+                linear_velocity_local,
+                local_angular_velocity,
+                position_error_local,  # Include position error in drone's local frame
+            ]
+        )
 
         return obs.astype(np.float32)
 
@@ -162,7 +173,7 @@ class DroneEnv(MujocoEnv):
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
 
         # Compute distance to target position
-        # distance = np.linalg.norm(position - self.target_position)
+        #distance = np.linalg.norm(position - self.target_position)
 
         # Compute rotation penalty, ignoring rotation around z-axis
         # Compute the body z-axis in world coordinates
@@ -203,6 +214,11 @@ class DroneEnv(MujocoEnv):
         reward -= self.reward_coefficients["rotation_penalty"] * rotation_penalty
         reward -= self.reward_coefficients["z_angular_velocity"] * abs(z_angular_velocity)
         reward -= self.reward_coefficients["angular_velocity"] * angular_velocity_penalty
+        reward -= self.reward_coefficients["linear_velocity"] * np.linalg.norm(self.data.qvel[:3])
+
+        # # gauss over distance
+        # if distance < 0.08:
+        #     reward +=  np.exp(-distance**2 / 0.03**2)*5
 
         # Check for collisions
         collision = False
@@ -258,10 +274,9 @@ class DroneEnv(MujocoEnv):
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
-        #ramdomize velocity
+        # ramdomize velocity
         self.data.qvel[:3] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
         self.data.qvel[3:6] = self.np_random.uniform(low=-0.1, high=0.1, size=3)
-
 
         # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
@@ -280,8 +295,10 @@ class DroneEnv(MujocoEnv):
         self.data.ctrl[:] = initial_action
 
         # Update the goal marker position if you're displaying it
-        if self.goal_site_id is not None:
-            self.model.site_pos[self.goal_site_id] = self.target_position
+        # TODO This is broken and moves actuators
+        # self.goal_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, 'goal_marker')
+        # self.model.site_pos[self.goal_site_id] = self.target_position
+
         mujoco.mj_forward(self.model, self.data)
 
         # Return initial observation
