@@ -27,14 +27,14 @@ def main():
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 1.2,
-        "distance_xy": 0.7,
+        "distance_z": 1.0,
+        "distance_xy": 1.0,
         "rotation_penalty": 2.0,
         "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 1000.0,
+        "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
         "linear_velocity": 0.5,
         "goal_bonus": 20.0,
