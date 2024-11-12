@@ -20,24 +20,25 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 16  
-    n_steps = 512  
+    num_envs = 8  
+    n_steps = 1024  
     batch_size = 512  # Should be a factor of total_timesteps_per_update
-    time_steps = 1_000_000  # Total training timesteps
+    time_steps = 3_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 1.0,
-        "distance_xy": 1.0,
+        "distance_z": 0.5,
+        "distance_xy": 0.5,
         "rotation_penalty": 2.0,
         "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
+        "terminate_collision": True,
         "out_of_bounds_penalty": 10.0,
         "alive_reward": 1.0,
-        "linear_velocity": 0.1,
+        "linear_velocity": 0.5,
         "goal_bonus": 20.0,
-        "distance" : 0.0
+        "distance" : 0.0,
     }
 
     # Config for wandb (include important parameters for sweeps)

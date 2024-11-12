@@ -108,6 +108,7 @@ class DroneEnv(MujocoEnv):
                 "z_angular_velocity": 0.05,
                 "angular_velocity": 0.1,
                 "collision_penalty": 10.0,
+                "terminate_collision": False,
                 "out_of_bounds_penalty": 10.0,
                 "alive_reward": 1.0,
                 "linear_velocity": 0.1,
@@ -209,6 +210,12 @@ class DroneEnv(MujocoEnv):
         # Initialize reward
         reward = self.reward_coefficients["alive_reward"]  # Stay alive reward
 
+        # if episode longer than 5s focus on position tracking
+        if self.data.time > 5:
+            reward -= min(self.data.time, 10) * distance
+            reward -= 1 * abs(z_angular_velocity)
+            reward -= 2 * np.linalg.norm(self.data.qvel[:3])
+
         # Subtract penalties and distances
         reward -= self.reward_coefficients["distance_z"] * distance_z
         reward -= self.reward_coefficients["distance_xy"] * distance_xy
@@ -239,7 +246,7 @@ class DroneEnv(MujocoEnv):
         truncated = False
 
         if collision:
-            terminated = True
+            terminated = self.reward_coefficients["terminate_collision"]
             reward -= self.reward_coefficients["collision_penalty"]
 
         # Check if out of bounds
@@ -291,7 +298,6 @@ class DroneEnv(MujocoEnv):
         mujoco.mju_euler2Quat(q, euler, seq)
         mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
-
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
