@@ -20,28 +20,28 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 8  
+    num_envs = 16  
     n_steps = 512  
     batch_size = 512  # Should be a factor of total_timesteps_per_update
     time_steps = 1_000_000  # Total training timesteps
 
     # Reward function coefficients
     reward_coefficients = {
-        "distance_z": 0.0,
-        "distance_xy": 0.0,
-        "rotation_penalty": 3.0,
+        "distance_z": 1.0,
+        "distance_xy": 1.0,
+        "rotation_penalty": 2.0,
         "z_angular_velocity": 0.2,
         "angular_velocity": 0.01,
         "collision_penalty": 10.0,
         "out_of_bounds_penalty": 10.0,
-        "alive_reward": 3.0,
-        "linear_velocity": 0.5,
+        "alive_reward": 1.0,
+        "linear_velocity": 0.1,
         "goal_bonus": 20.0,
-        "distance" : 2.0
+        "distance" : 0.0
     }
 
     # Config for wandb (include important parameters for sweeps)
-    config = {
+    default_config = {
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
         "env_name": env_id,
@@ -68,11 +68,12 @@ def main():
     run = wandb.init(
         project="single_quad_rl",  # Replace with your project name
         name=f"single_quad_rl_{int(time.time())}",
-        config=config,
+        config=default_config,
         sync_tensorboard=True,  # Auto-upload SB3's tensorboard metrics
         monitor_gym=True,  # Auto-upload videos of agent playing the game
         save_code=True,  # Optional
     )
+    config = wandb.config
 
     # Map activation function name from config to actual function
     activation_fn = getattr(torch.nn, config["policy_kwargs"]["activation_fn"])

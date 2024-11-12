@@ -1,0 +1,96 @@
+method: bayes
+metric:
+  goal: maximize
+  name: eval/mean_reward
+parameters:
+  batch_size:
+    values: [64, 128, 256, 512, 1024, 2048]
+  n_steps:
+    values: [64, 128, 256, 512, 1024, 2048]
+  clip_range:
+    distribution: uniform
+    max: 0.4
+    min: 0.1
+  env_name:
+    distribution: categorical
+    values:
+      - DroneEnv-v0
+  gae_lambda:
+    distribution: uniform
+    max: 1.9
+    min: 0.475
+  gamma:
+    distribution: uniform
+    max: 1.98
+    min: 0.495
+  learning_rate:
+    distribution: uniform
+    max: 0.006
+    min: 0.00015
+  max_grad_norm:
+    distribution: uniform
+    max: 1
+    min: 0.25
+  normalize_advantage:
+    distribution: categorical
+    values:
+      - "true"
+      - "false"
+  num_envs:
+    distribution: int_uniform
+    max: 16
+    min: 1
+  policy_kwargs:
+    parameters:
+      activation_fn:
+        distribution: categorical
+        values:
+          - ReLU
+          - Tanh
+  policy_type:
+    distribution: categorical
+    values:
+      - MlpPolicy
+  # reward_coefficients:
+  #   parameters:
+  #     alive_reward:
+  #       distribution: int_uniform
+  #       max: 2
+  #       min: 1
+  #     angular_velocity:
+  #       distribution: uniform
+  #       max: 0.2
+  #       min: 0.05
+  #     collision_penalty:
+  #       distribution: int_uniform
+  #       max: 20
+  #       min: 5
+  #     distance_xy:
+  #       distribution: uniform
+  #       max: 0.4
+  #       min: 0.1
+  #     distance_z:
+  #       distribution: uniform
+  #       max: 1
+  #       min: 0.25
+  #     out_of_bounds_penalty:
+  #       distribution: int_uniform
+  #       max: 20
+  #       min: 5
+  #     rotation_penalty:
+  #       distribution: int_uniform
+  #       max: 2
+  #       min: 1
+  #     z_angular_velocity:
+  #       distribution: uniform
+  #       max: 0.1
+  #       min: 0.025
+  # total_timesteps:
+  #   distribution: int_uniform
+  #   max: 2000000
+  #   min: 500000
+  vf_coef:
+    distribution: uniform
+    max: 1
+    min: 0.25
+program: scripts/train_agent.py
