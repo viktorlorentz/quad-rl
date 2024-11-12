@@ -15,34 +15,62 @@ from wandb.integration.sb3 import WandbCallback
 # Define the custom callback for logging reward components
 class RewardLoggingCallback(BaseCallback):
     """
-    Custom callback for logging reward components to wandb.
+    Custom callback for logging episode-average reward components and position tracking to wandb.
+    Only uses the first environment for tracking.
     """
 
     def __init__(self, verbose=0):
         super(RewardLoggingCallback, self).__init__(verbose)
+        self.episode_rewards = {}
+        self.episode_length = 0
+        self.episode_distance_sum = 0.0  # To accumulate distance_to_target per episode
 
     def _on_step(self) -> bool:
-        # infos is a list of dicts, one for each environment
+        # Get locals
         infos = self.locals.get("infos", [])
+        dones = self.locals.get("dones", [])
 
-        # Aggregate reward components across all environments
-        reward_components = {}
-        for info in infos:
-            if "reward_components" in info:
-                for key, value in info["reward_components"].items():
-                    if key not in reward_components:
-                        reward_components["reward/" + key] = []
-                    reward_components["reward/" + key].append(value)
+        # Only consider the first environment (index 0)
+        info = infos[0]
+        done = dones[0]
 
-        # Compute mean of each component across environments
-        if reward_components:
-            mean_reward_components = {
-                key: sum(values) / len(values)
-                for key, values in reward_components.items()
+        # If 'reward_components' is in info, accumulate them
+        if "reward_components" in info:
+            for key, value in info["reward_components"].items():
+                if key not in self.episode_rewards:
+                    self.episode_rewards["reward/" + key] = 0.0
+                self.episode_rewards["reward/" + key] += value
+
+        # Accumulate distance_to_target
+        if "distance_to_target" in info:
+            self.episode_distance_sum += info["distance_to_target"]
+
+        # Increment episode length
+        self.episode_length += 1
+
+        if done:
+            # Compute average reward components for this episode
+            avg_reward_components = {
+                key: value / self.episode_length
+                for key, value in self.episode_rewards.items()
             }
 
+            # Compute average position tracking
+            position_tracking = self.episode_distance_sum / self.episode_length
+
+            # Add position_tracking to the log data
+            avg_reward_components["position_tracking"] = position_tracking
+
+            # Optionally, add episode length to the log
+            avg_reward_components["episode_length"] = self.episode_length
+
             # Log to wandb
-            wandb.log(mean_reward_components, commit=False)
+            wandb.log(avg_reward_components, commit=False)
+
+            # Reset episode data
+            self.episode_rewards = {}
+            self.episode_length = 0
+            self.episode_distance_sum = 0.0
 
         return True
 
