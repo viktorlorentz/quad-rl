@@ -48,7 +48,7 @@ class RewardLoggingCallback(BaseCallback):
         # Increment episode length
         self.episode_length += 1
 
-        if done:
+        if done and len(self.episode_rewards) > 0:
             # Compute average reward components for this episode
             avg_reward_components = {
                 key: value / self.episode_length
@@ -57,6 +57,11 @@ class RewardLoggingCallback(BaseCallback):
 
             # Compute average position tracking
             position_tracking = self.episode_distance_sum / self.episode_length
+
+
+            if self.episode_length < 1000:
+                position_tracking = 1002- self.episode_length
+
 
             # Add position_tracking to the log data
             avg_reward_components["position_tracking"] = position_tracking

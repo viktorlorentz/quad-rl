@@ -1,7 +1,7 @@
 method: bayes
 metric:
-  goal: maximize
-  name: eval/mean_reward
+  goal: minimize
+  name: position_tracking
 parameters:
   batch_size:
     values: [64, 128, 256, 512, 1024, 2048]
@@ -51,44 +51,61 @@ parameters:
     distribution: categorical
     values:
       - MlpPolicy
-  # reward_coefficients:
-  #   parameters:
-  #     alive_reward:
-  #       distribution: int_uniform
-  #       max: 2
-  #       min: 1
-  #     angular_velocity:
-  #       distribution: uniform
-  #       max: 0.2
-  #       min: 0.05
-  #     collision_penalty:
-  #       distribution: int_uniform
-  #       max: 20
-  #       min: 5
-  #     distance_xy:
-  #       distribution: uniform
-  #       max: 0.4
-  #       min: 0.1
-  #     distance_z:
-  #       distribution: uniform
-  #       max: 1
-  #       min: 0.25
-  #     out_of_bounds_penalty:
-  #       distribution: int_uniform
-  #       max: 20
-  #       min: 5
-  #     rotation_penalty:
-  #       distribution: int_uniform
-  #       max: 2
-  #       min: 1
-  #     z_angular_velocity:
-  #       distribution: uniform
-  #       max: 0.1
-  #       min: 0.025
-  # total_timesteps:
-  #   distribution: int_uniform
-  #   max: 2000000
-  #   min: 500000
+  reward_coefficients:
+    parameters:
+      alive_reward:
+        distribution: uniform
+        min: 0.0
+        max: 5.0
+      angular_velocity:
+        distribution: uniform
+        min: 0.0
+        max: 0.5
+      collision_penalty:
+        distribution: uniform
+        min: 0.0
+        max: 200.0
+      distance_xy:
+        distribution: uniform
+        min: 0.0
+        max: 1.0
+      distance_z:
+        distribution: uniform
+        min: 0.0
+        max: 1.0
+      out_of_bounds_penalty:
+        distribution: uniform
+        min: 0.0
+        max: 200.0
+      rotation_penalty:
+        distribution: uniform
+        min: 0.0
+        max: 5.0
+      z_angular_velocity:
+        distribution: uniform
+        min: 0.0
+        max: 0.5
+      linear_velocity:
+        distribution: uniform
+        min: 0.0
+        max: 1.0
+      goal_bonus:
+        distribution: uniform
+        min: 0.0
+        max: 50.0
+      distance:
+        distribution: uniform
+        min: 0.0
+        max: 3.0
+      terminate_collision:
+        distribution: categorical
+        values:
+          - "true"
+          - "false"
+  total_timesteps:
+    distribution: int_uniform
+    min: 500000
+    max: 2000000
   ent_coef:
     distribution: uniform
     min: 1e-8
