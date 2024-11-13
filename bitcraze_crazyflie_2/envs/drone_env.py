@@ -287,12 +287,12 @@ class DroneEnv(MujocoEnv):
         reward_components["alive_reward"] = reward
 
         # Additional penalties after 5 seconds in hover
-        if time > 5:
-            time_factor = min(time-5, 5)
+        # if time > 5:
+        #     time_factor = min(time-5, 5)
 
-            rc["distance_xy"] *= time_factor * 0.5
-            rc["distance_z"] *= time_factor * 3
-            rc["z_angular_velocity"] *= 2 * time_factor
+        #     rc["distance_xy"] *= time_factor * 0.5
+        #     rc["distance_z"] *= time_factor * 3
+        #     rc["z_angular_velocity"] *= 2 * time_factor
 
         # Subtract penalties and distances
         distance_z_penalty = rc["distance_z"] * distance_z
