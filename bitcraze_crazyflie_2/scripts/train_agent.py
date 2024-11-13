@@ -58,10 +58,10 @@ class RewardLoggingCallback(BaseCallback):
             # Compute average position tracking
             position_tracking = self.episode_distance_sum / self.episode_length
 
-
-            if self.episode_length < 1000:
-                position_tracking = 1002- self.episode_length
-
+            # this makes sure that it hovers first before tracking
+            # any metric above 1 means its not hovering
+            if self.episode_length < 3000:
+                position_tracking =  1 + (3000-self.episode_length)/3000 
 
             # Add position_tracking to the log data
             avg_reward_components["position_tracking"] = position_tracking
@@ -85,10 +85,10 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    num_envs = 16
+    n_envs = 16
     n_steps = 512
     batch_size = 512
-    time_steps = 3_000_000
+    time_steps = 1_500_000
 
     # Reward function coefficients
     reward_coefficients = {
@@ -112,7 +112,7 @@ def main():
         "total_timesteps": time_steps,
         "env_name": env_id,
         "n_steps": n_steps,
-        "num_envs": num_envs,
+        "n_envs": n_envs,
         "batch_size": batch_size,
         "learning_rate": 3e-4,
         "gamma": 0.99,
@@ -156,7 +156,7 @@ def main():
     # Create the vectorized environments
     env = make_vec_env(
         env_id,
-        n_envs=num_envs,
+        n_envs=n_envs,
         vec_env_cls=SubprocVecEnv,
         env_kwargs={
             "reward_coefficients": config["reward_coefficients"],

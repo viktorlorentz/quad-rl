@@ -36,7 +36,7 @@ parameters:
     values:
       - "true"
       - "false"
-  num_envs:
+  n_envs:
     distribution: int_uniform
     max: 16
     min: 1
@@ -47,6 +47,14 @@ parameters:
         values:
           - ReLU
           - Tanh
+      net_arch:
+        distribution: categorical
+        values:
+          - {"pi": [64, 64], "vf": [64, 64]}
+          - {"pi": [128, 128], "vf": [128, 128]}
+          - {"pi": [256, 256], "vf": [256, 256]}
+          - {"pi": [64, 64, 64], "vf": [64, 64, 64]}
+          - {"pi": [128, 128, 128], "vf": [128, 128, 128]}
   policy_type:
     distribution: categorical
     values:
@@ -96,12 +104,7 @@ parameters:
       distance:
         distribution: uniform
         min: 0.0
-        max: 3.0
-      terminate_collision:
-        distribution: categorical
-        values:
-          - "true"
-          - "false"
+        max: 3.0  
   total_timesteps:
     distribution: int_uniform
     min: 500000

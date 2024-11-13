@@ -282,7 +282,7 @@ class DroneEnv(MujocoEnv):
         # Initialize reward components
         reward_components = {}
 
-        rc = self.reward_coefficients
+        rc = self.reward_coefficients.copy()
         reward = rc["alive_reward"]
         reward_components["alive_reward"] = reward
 
@@ -291,8 +291,9 @@ class DroneEnv(MujocoEnv):
             time_factor = min(time-5, 5)
 
             rc["distance_xy"] *= time_factor * 0.5
-            rc["distance_z"] *= time_factor * 2
+            rc["distance_z"] *= time_factor * 3
             rc["z_angular_velocity"] *= 2 * time_factor
+
         # Subtract penalties and distances
         distance_z_penalty = rc["distance_z"] * distance_z
         reward -= distance_z_penalty
