@@ -168,11 +168,11 @@ def main():
     # Create the evaluation environment
 
     def trigger(t):
-        if t % 50 == 0:
+        if t % 100 == 0:
             # save video to global variable
 
             return True
-        if t % 50 == 1:
+        if t % 100 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
             run.log({"videos": wandb.Video(video)})
 
