@@ -61,7 +61,7 @@ class RewardLoggingCallback(BaseCallback):
             # this makes sure that it hovers first before tracking
             # any metric above 1 means its not hovering
             if self.episode_length < 3000:
-                position_tracking =  1 + (3000-self.episode_length)/3000 
+                position_tracking = 1 + (3000 - self.episode_length) / 3000
 
             # Add position_tracking to the log data
             avg_reward_components["position_tracking"] = position_tracking
@@ -85,47 +85,47 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 16
-    n_steps = 512
-    batch_size = 512
-    time_steps = 1_500_000
+    n_envs = 6
+    n_steps = 1024
+    batch_size = 2048
+    time_steps = 1_000_000
 
     # Reward function coefficients
-    reward_coefficients = {
-        "distance_z": 1.0,
-        "distance_xy": 1.0,
-        "rotation_penalty": 2.0,
-        "z_angular_velocity": 0.2,
-        "angular_velocity": 0.01,
-        "collision_penalty": 10.0,
+    reward_coefficients = {  # based on single_quad_rl_1731931528
+        "distance": 1.3,
+        "distance_z": 0.23,
+        "goal_bonus": 11.6,
+        "distance_xy": 0.8,
+        "alive_reward": 2.2,
+        "linear_velocity": 0.67,
+        "angular_velocity": 0.12,
+        "rotation_penalty": 1.85,
+        "collision_penalty": 68,
+        "z_angular_velocity": 0.07,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 10.0,
-        "alive_reward": 1.0,
-        "linear_velocity": 0.5,
-        "goal_bonus": 20.0,
-        "distance": 0.0,
+        "out_of_bounds_penalty": 37,
     }
 
     # Config for wandb
-    default_config = {
+    default_config = {  # based on single_quad_rl_1731931528
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
         "env_name": env_id,
         "n_steps": n_steps,
         "n_envs": n_envs,
         "batch_size": batch_size,
-        "learning_rate": 3e-4,
+        "learning_rate": 0.005,
         "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "ent_coef": 0.0,
-        "vf_coef": 0.5,
-        "max_grad_norm": 0.5,
-        "clip_range": 0.2,
+        "gae_lambda": 0.88,
+        "ent_coef": 0.017,
+        "vf_coef": 0.25,
+        "max_grad_norm": 0.87,
+        "clip_range": 0.164,
         "clip_range_vf": None,
         "normalize_advantage": True,
         "policy_kwargs": {
-            "activation_fn": "Tanh",
-            "net_arch": {"pi": [128, 128], "vf": [128, 128]},
+            "activation_fn": "ReLU",
+            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         },
         "reward_coefficients": reward_coefficients,
     }
@@ -168,11 +168,11 @@ def main():
     # Create the evaluation environment
 
     def trigger(t):
-        if t % 100 == 0:
+        if t % 30 == 0:
             # save video to global variable
 
             return True
-        if t % 100 == 1:
+        if t % 30 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
             run.log({"videos": wandb.Video(video)})
 
