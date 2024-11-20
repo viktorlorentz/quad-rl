@@ -248,7 +248,8 @@ class DroneEnv(MujocoEnv):
         out_of_bounds,
     ):
         # Compute distance to target position
-        distance = np.linalg.norm(position - self.target_position)
+        position_error = self.target_position - position
+        distance = np.linalg.norm(position_error)
 
         # Compute rotation penalty
 
@@ -326,9 +327,14 @@ class DroneEnv(MujocoEnv):
         reward_components["angular_velocity_penalty"] = -angular_vel_penalty
 
         # Linear velocity penalty
+        # linear_vel_penalty = rc[
+        #     "linear_velocity"
+        # ] * np.linalg.norm(linear_velocity)
+
+        # move towards target
         linear_vel_penalty = rc[
             "linear_velocity"
-        ] * np.linalg.norm(linear_velocity)
+        ] * np.linalg.norm(position_error - linear_velocity) # this makes sure the linear velocity is towards the target
         reward -= linear_vel_penalty
         reward_components["linear_velocity_penalty"] = -linear_vel_penalty
 
