@@ -92,12 +92,13 @@ def main():
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
-        "distance": 1.3,
-        "distance_z": 0.23,
-        "goal_bonus": 11.6,
-        "distance_xy": 0.8,
-        "alive_reward": 2.2,
-        "linear_velocity": 5,
+        "distance": 0,
+        "distance_z": 5,
+        "goal_bonus": 40,
+        "distance_xy": 5,
+        "alive_reward": 10,
+        "linear_velocity": 2,
+        "velocity_towards_target": 2,
         "angular_velocity": 0.12,
         "rotation_penalty": 1.85,
         "collision_penalty": 30,

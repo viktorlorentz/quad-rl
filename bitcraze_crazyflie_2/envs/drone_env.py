@@ -22,7 +22,7 @@ class DroneEnv(MujocoEnv):
         policy_freq=200,  # Policy frequency in Hz
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
-        visual_options= None,
+        visual_options=None,
         **kwargs,
     ):
         # Path to the MuJoCo XML model
@@ -49,6 +49,7 @@ class DroneEnv(MujocoEnv):
 
         # Define observation space
         obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
+                    # IMU data 
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -119,6 +120,7 @@ class DroneEnv(MujocoEnv):
                 "linear_velocity": 0.1,
                 "goal_bonus": 5.0,
                 "distance": 0,
+                "velocity_towards_target" : 4,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -156,6 +158,9 @@ class DroneEnv(MujocoEnv):
         linear_velocity_local = np.zeros(3)
         mujoco.mju_rotVecQuat(linear_velocity_local, linear_velocity, conj_quat)
 
+
+        #TODO get imu data
+
         # Combine all observations, including the position error in local frame
         obs = np.concatenate(
             [
@@ -163,6 +168,7 @@ class DroneEnv(MujocoEnv):
                 linear_velocity_local,
                 local_angular_velocity,
                 position_error_local,  # Include position error in drone's local frame
+                #TODO add imu data
             ]
         )
 
@@ -283,17 +289,16 @@ class DroneEnv(MujocoEnv):
         # Initialize reward components
         reward_components = {}
 
-        rc = self.reward_coefficients.copy()
+        rc = self.reward_coefficients
         reward = rc["alive_reward"]
         reward_components["alive_reward"] = reward
 
         # Additional penalties after 5 seconds in hover
         # if time > 5:
-        #     time_factor = min(time-5, 5)
+        #     time_factor = min(time - 3, 20)
 
-        #     rc["distance_xy"] *= time_factor * 0.5
-        #     rc["distance_z"] *= time_factor * 3
-        #     rc["z_angular_velocity"] *= 2 * time_factor
+        #     rc["distance"] *= (time_factor*0.5) **2
+        #     rc["velocity_towards_target"] *= (time_factor*0.5)**2
 
         # Subtract penalties and distances
         distance_z_penalty = rc["distance_z"] * distance_z
@@ -308,41 +313,49 @@ class DroneEnv(MujocoEnv):
         reward -= distance_penalty
         reward_components["distance_penalty"] = -distance_penalty
 
-        rotation_penalty_value = (
-            rc["rotation_penalty"] * rotation_penalty
-        )
+        rotation_penalty_value = rc["rotation_penalty"] * rotation_penalty
         reward -= rotation_penalty_value
         reward_components["rotation_penalty"] = -rotation_penalty_value
 
-        z_ang_vel_penalty = rc["z_angular_velocity"] * abs(
-            z_angular_velocity
-        )
+        z_ang_vel_penalty = rc["z_angular_velocity"] * abs(z_angular_velocity)
         reward -= z_ang_vel_penalty
         reward_components["z_angular_velocity_penalty"] = -z_ang_vel_penalty
 
-        angular_vel_penalty = (
-            rc["angular_velocity"] * angular_velocity_penalty
-        )
+        angular_vel_penalty = rc["angular_velocity"] * angular_velocity_penalty
         reward -= angular_vel_penalty
         reward_components["angular_velocity_penalty"] = -angular_vel_penalty
 
-        # Linear velocity penalty
-        # linear_vel_penalty = rc[
-        #     "linear_velocity"
-        # ] * np.linalg.norm(linear_velocity)
-
         # move towards target
-        linear_vel_penalty = rc[
-            "linear_velocity"
-        ] * np.linalg.norm(position_error - linear_velocity) # this makes sure the linear velocity is towards the target
+        # Compute the unit vector towards the target
+        if distance > 1e-8:
+            desired_direction = position_error / distance
+        else:
+            desired_direction = np.zeros_like(position_error)
+
+        # Compute the velocity towards the target
+        velocity_towards_target = np.dot(linear_velocity, desired_direction)
+
+        reward += rc["velocity_towards_target"] * velocity_towards_target
+        reward_components["velocity_towards_target"] = rc["velocity_towards_target"] * velocity_towards_target
+
+        # # Penalize if moving away from the target
+        # if velocity_towards_target < 0:
+        #     velocity_penalty = rc["linear_velocity"] * abs(velocity_towards_target)
+        #     reward -= velocity_penalty
+        #     reward_components["linear_velocity"] = -velocity_penalty
+        # else:
+        #     reward_components["linear_velocity"] = 0
+
+        # Linear velocity penalty
+        linear_vel_penalty = rc["linear_velocity"] * (np.linalg.norm(
+            velocity_towards_target
+        )-distance)
         reward -= linear_vel_penalty
         reward_components["linear_velocity_penalty"] = -linear_vel_penalty
 
         # Goal bonus
-        if distance < 0.1:
-            goal_bonus = rc["goal_bonus"] * np.exp(
-                -(distance**2) / 0.05**2
-            )
+        if distance < 0.04:
+            goal_bonus = rc["goal_bonus"] * np.exp(-(distance**2) / 0.01**2)
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus
         else:
