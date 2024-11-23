@@ -3,43 +3,6 @@ metric:
   goal: minimize
   name: position_tracking
 parameters:
-  batch_size:
-    values: [64, 128, 256, 512, 1024, 2048]
-  n_steps:
-    values: [64, 128, 256, 512, 1024, 2048]
-  clip_range:
-    distribution: uniform
-    max: 0.4
-    min: 0.1
-  env_name:
-    distribution: categorical
-    values:
-      - DroneEnv-v0
-  gae_lambda:
-    distribution: uniform
-    min: 0.8
-    max: 1.0
-  gamma:
-    distribution: uniform
-    min: 0.9
-    max: 0.999
-  learning_rate:
-    distribution: uniform
-    min: 1e-5
-    max: 1e-2
-  max_grad_norm:
-    distribution: uniform
-    max: 1
-    min: 0.25
-  normalize_advantage:
-    distribution: categorical
-    values:
-      - "true"
-      - "false"
-  n_envs:
-    distribution: int_uniform
-    max: 16
-    min: 1
   policy_kwargs:
     parameters:
       activation_fn:
@@ -52,69 +15,23 @@ parameters:
         values:
           - {"pi": [64, 64], "vf": [64, 64]}
           - {"pi": [128, 128], "vf": [128, 128]}
-          - {"pi": [256, 256], "vf": [256, 256]}
           - {"pi": [64, 64, 64], "vf": [64, 64, 64]}
-          - {"pi": [128, 128, 128], "vf": [128, 128, 128]}
-  policy_type:
-    distribution: categorical
-    values:
-      - MlpPolicy
   reward_coefficients:
     parameters:
       alive_reward:
         distribution: uniform
-        min: 0.0
-        max: 5.0
-      angular_velocity:
-        distribution: uniform
-        min: 0.0
-        max: 0.5
-      collision_penalty:
-        distribution: uniform
-        min: 0.0
-        max: 200.0
-      distance_xy:
-        distribution: uniform
-        min: 0.0
-        max: 1.0
-      distance_z:
-        distribution: uniform
-        min: 0.0
-        max: 1.0
-      out_of_bounds_penalty:
-        distribution: uniform
-        min: 0.0
-        max: 200.0
-      rotation_penalty:
-        distribution: uniform
-        min: 0.0
-        max: 5.0
-      z_angular_velocity:
-        distribution: uniform
-        min: 0.0
-        max: 0.5
+        min: 4.0
+        max: 20.0
       linear_velocity:
         distribution: uniform
         min: 0.0
-        max: 1.0
-      goal_bonus:
-        distribution: uniform
-        min: 0.0
-        max: 50.0
+        max: 7.0
       distance:
         distribution: uniform
+        min: 5.0
+        max: 30.0
+      velocity_towards_target:
+        distribution: uniform
         min: 0.0
-        max: 3.0  
-  total_timesteps:
-    distribution: int_uniform
-    min: 500000
-    max: 2000000
-  ent_coef:
-    distribution: uniform
-    min: 1e-8
-    max: 0.1
-  vf_coef:
-    distribution: uniform
-    min: 0.1
-    max: 1.0
+        max: 10.0
 program: scripts/train_agent.py

@@ -49,7 +49,7 @@ class DroneEnv(MujocoEnv):
 
         # Define observation space
         obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
-        # IMU data
+        # with imu: imu_gyro_data (3), imu_acc_data (3), position_error_local (3)
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
