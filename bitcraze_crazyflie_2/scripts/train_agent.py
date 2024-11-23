@@ -4,6 +4,7 @@ import gymnasium as gym
 import torch
 import wandb
 import time
+import gc
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
@@ -92,13 +93,13 @@ def main():
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
-        "distance": 0,
-        "distance_z": 5,
+        "distance": 10,
+        "distance_z": 0,
         "goal_bonus": 40,
-        "distance_xy": 5,
-        "alive_reward": 10,
-        "linear_velocity": 2,
-        "velocity_towards_target": 2,
+        "distance_xy": 0,
+        "alive_reward": 7,
+        "linear_velocity": 3,
+        "velocity_towards_target": 4,
         "angular_velocity": 0.12,
         "rotation_penalty": 1.85,
         "collision_penalty": 30,
@@ -176,6 +177,7 @@ def main():
         if t % 30 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
             run.log({"videos": wandb.Video(video)})
+            gc.collect()
 
     eval_env = make_vec_env(
         env_id,
