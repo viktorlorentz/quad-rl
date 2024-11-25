@@ -165,11 +165,10 @@ class DroneEnv(MujocoEnv):
         # Combine all observations, including the position error in local frame
         obs = np.concatenate(
             [
-                orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
+                # orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
                 # linear_velocity_local,
                 # local_angular_velocity,
-                # position_error_local,  # Include position error in drone's local frame
-                # TODO add imu data
+                position_error_local,  # Include position error in drone's local frame
                 imu_gyro_data,
                 imu_acc_data,
             ]
@@ -312,7 +311,7 @@ class DroneEnv(MujocoEnv):
         reward -= distance_xy_penalty
         reward_components["distance_xy_penalty"] = -distance_xy_penalty
 
-        distance_penalty = rc["distance"] * distance #* max((time-10)*0.1,1)
+        distance_penalty = rc["distance"] * distance  # * max((time-10)*0.1,1)
         reward -= distance_penalty
         reward_components["distance_penalty"] = -distance_penalty
 
