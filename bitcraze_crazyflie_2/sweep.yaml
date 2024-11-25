@@ -3,6 +3,10 @@ metric:
   goal: minimize
   name: position_tracking
 parameters:
+  total_timesteps:
+    distribution: int_uniform
+    min: 1000000
+    max: 5000000
   policy_kwargs:
     parameters:
       activation_fn:

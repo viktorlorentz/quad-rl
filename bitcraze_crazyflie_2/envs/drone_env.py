@@ -48,7 +48,7 @@ class DroneEnv(MujocoEnv):
         )
 
         # Define observation space
-        obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
+        obs_dim = 9  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
         # with imu: imu_gyro_data (3), imu_acc_data (3), position_error_local (3)
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
@@ -166,10 +166,12 @@ class DroneEnv(MujocoEnv):
         obs = np.concatenate(
             [
                 orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
-                linear_velocity_local,
-                local_angular_velocity,
-                position_error_local,  # Include position error in drone's local frame
+                # linear_velocity_local,
+                # local_angular_velocity,
+                # position_error_local,  # Include position error in drone's local frame
                 # TODO add imu data
+                imu_gyro_data,
+                imu_acc_data,
             ]
         )
 
