@@ -23,6 +23,7 @@ class DroneEnv(MujocoEnv):
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
+        target_move_prob=0.01,  # Probability of target moving when drone reaches it
         **kwargs,
     ):
         # Path to the MuJoCo XML model
@@ -49,7 +50,6 @@ class DroneEnv(MujocoEnv):
 
         # Define observation space
         obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
-        # with imu: imu_gyro_data (3), imu_acc_data (3), position_error_local (3)
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -111,7 +111,7 @@ class DroneEnv(MujocoEnv):
                 "distance_z": 0.5,
                 "distance_xy": 0.2,
                 "rotation_penalty": 1.0,
-                "z_angular_velocity": 0.05,
+                "z_angular_velocity": 0.1,
                 "angular_velocity": 0.1,
                 "collision_penalty": 10.0,
                 "terminate_collision": False,
@@ -124,6 +124,9 @@ class DroneEnv(MujocoEnv):
             }
         else:
             self.reward_coefficients = reward_coefficients
+
+        # Set the target move probability
+        self.target_move_prob = target_move_prob
 
     def _get_obs(self):
         # Get observations
@@ -228,7 +231,7 @@ class DroneEnv(MujocoEnv):
             terminated = True  # Terminate the episode
 
         # Truncate episode if too long
-        if self.data.time > 20:
+        if self.data.time > 60:
             terminated = True
             truncated = True
 
@@ -295,13 +298,6 @@ class DroneEnv(MujocoEnv):
         reward = rc["alive_reward"]
         reward_components["alive_reward"] = reward
 
-        # Additional penalties after 5 seconds in hover
-        # if time > 5:
-        #     time_factor = min(time - 3, 20)
-
-        #     rc["distance"] *= (time_factor*0.5) **2
-        #     rc["velocity_towards_target"] *= (time_factor*0.5)**2
-
         # Subtract penalties and distances
         distance_z_penalty = rc["distance_z"] * distance_z
         reward -= distance_z_penalty
@@ -311,7 +307,7 @@ class DroneEnv(MujocoEnv):
         reward -= distance_xy_penalty
         reward_components["distance_xy_penalty"] = -distance_xy_penalty
 
-        distance_penalty = rc["distance"] * distance  # * max((time-10)*0.1,1)
+        distance_penalty = rc["distance"] * distance
         reward -= distance_penalty
         reward_components["distance_penalty"] = -distance_penalty
 
@@ -327,7 +323,7 @@ class DroneEnv(MujocoEnv):
         reward -= angular_vel_penalty
         reward_components["angular_velocity_penalty"] = -angular_vel_penalty
 
-        # move towards target
+        # Move towards target
         # Compute the unit vector towards the target
         if distance > 1e-8:
             desired_direction = position_error / distance
@@ -342,14 +338,6 @@ class DroneEnv(MujocoEnv):
             rc["velocity_towards_target"] * velocity_towards_target
         )
 
-        # # Penalize if moving away from the target
-        # if velocity_towards_target < 0:
-        #     velocity_penalty = rc["linear_velocity"] * abs(velocity_towards_target)
-        #     reward -= velocity_penalty
-        #     reward_components["linear_velocity"] = -velocity_penalty
-        # else:
-        #     reward_components["linear_velocity"] = 0
-
         # Linear velocity penalty
         linear_vel_penalty = rc["linear_velocity"] * (
             np.linalg.norm(velocity_towards_target) - distance
@@ -360,7 +348,19 @@ class DroneEnv(MujocoEnv):
         # Goal bonus
         if distance < 0.1:
             goal_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.008**2) # exact peek at position
-            goal_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
+            goal_bonus += 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
+
+            # Move the target if good tracking
+            if distance < 0.01:
+                if self.np_random.uniform() < self.target_move_prob:
+                    # Move the target to a new random position
+                    self.target_position = self.np_random.uniform(
+                        low=self.workspace["low"] + 0.1, high=self.workspace["high"] - 0.1
+                    )
+                    # Update the goal marker's position if applicable
+                    self.model.geom_pos[self.goal_geom_id] = self.target_position
+
+
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus
         else:
@@ -431,8 +431,8 @@ class DroneEnv(MujocoEnv):
         initial_action = self.action_space.sample()
         self.data.ctrl[:] = initial_action
 
-        # Update the goal marker position if you're displaying it
-        # TODO: Update goal marker if needed
+        # Update the goal marker position
+        self.model.geom_pos[self.goal_geom_id] = self.target_position
 
         mujoco.mj_forward(self.model, self.data)
 
