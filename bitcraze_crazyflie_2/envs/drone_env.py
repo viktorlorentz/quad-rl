@@ -48,7 +48,7 @@ class DroneEnv(MujocoEnv):
         )
 
         # Define observation space
-        obs_dim = 9  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
+        obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
         # with imu: imu_gyro_data (3), imu_acc_data (3), position_error_local (3)
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
@@ -165,12 +165,12 @@ class DroneEnv(MujocoEnv):
         # Combine all observations, including the position error in local frame
         obs = np.concatenate(
             [
-                # orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
-                # linear_velocity_local,
-                # local_angular_velocity,
+                orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
+                linear_velocity_local,
+                local_angular_velocity,
                 position_error_local,  # Include position error in drone's local frame
-                imu_gyro_data,
-                imu_acc_data,
+                # imu_gyro_data,
+                # imu_acc_data,
             ]
         )
 
@@ -358,8 +358,9 @@ class DroneEnv(MujocoEnv):
         reward_components["linear_velocity_penalty"] = -linear_vel_penalty
 
         # Goal bonus
-        if distance < 0.04:
-            goal_bonus = rc["goal_bonus"] * np.exp(-(distance**2) / 0.01**2)
+        if distance < 0.1:
+            goal_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.008**2) # exact peek at position
+            goal_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus
         else:

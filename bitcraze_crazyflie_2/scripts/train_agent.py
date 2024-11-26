@@ -86,26 +86,26 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 6
+    n_envs = 8
     n_steps = 1024
-    batch_size = 2048
+    batch_size = 1024
     time_steps = 1_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
-        "distance": 10,
-        "distance_z": 0,
-        "goal_bonus": 40,
-        "distance_xy": 0,
-        "alive_reward": 7,
-        "linear_velocity": 3,
-        "velocity_towards_target": 4,
-        "angular_velocity": 0.12,
-        "rotation_penalty": 1.85,
-        "collision_penalty": 30,
-        "z_angular_velocity": 0.07,
+        "distance": 1,
+        "distance_z": 0.5,
+        "goal_bonus": 20,
+        "distance_xy": 0.9,
+        "alive_reward": 5,
+        "linear_velocity": 0.6,
+        "angular_velocity": 0.3,
+        "rotation_penalty": 1,
+        "collision_penalty": 200,
+        "z_angular_velocity": 0.17,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 37,
+        "out_of_bounds_penalty": 5,
+        "velocity_towards_target": 0,
     }
 
     # Config for wandb
@@ -116,17 +116,17 @@ def main():
         "n_steps": n_steps,
         "n_envs": n_envs,
         "batch_size": batch_size,
-        "learning_rate": 0.005,
-        "gamma": 0.99,
-        "gae_lambda": 0.88,
-        "ent_coef": 0.017,
+        "learning_rate": 0.0012,
+        "gamma": 0.98,
+        "gae_lambda": 0.83,
+        "ent_coef": 0.05,
         "vf_coef": 0.25,
-        "max_grad_norm": 0.87,
-        "clip_range": 0.164,
+        "max_grad_norm": 0.78,
+        "clip_range": 0.22,
         "clip_range_vf": None,
         "normalize_advantage": True,
         "policy_kwargs": {
-            "activation_fn": "ReLU",
+            "activation_fn": "Tanh",
             "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         },
         "reward_coefficients": reward_coefficients,
@@ -170,11 +170,11 @@ def main():
     # Create the evaluation environment
 
     def trigger(t):
-        if t % 30 == 0:
+        if t % 150 == 0:
             # save video to global variable
 
             return True
-        if t % 30 == 1:
+        if t % 150 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
             run.log({"videos": wandb.Video(video)})
             gc.collect()
