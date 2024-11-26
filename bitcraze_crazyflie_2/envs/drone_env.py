@@ -41,6 +41,9 @@ class DroneEnv(MujocoEnv):
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
 
+        self.max_time = 15
+        self.total_max_time = 100
+
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
             low=np.zeros(4, dtype=np.float32),
@@ -231,7 +234,7 @@ class DroneEnv(MujocoEnv):
             terminated = True  # Terminate the episode
 
         # Truncate episode if too long
-        if self.data.time > 60:
+        if self.data.time > self.max_time or self.data.time > self.total_max_time:
             terminated = True
             truncated = True
 
@@ -360,6 +363,7 @@ class DroneEnv(MujocoEnv):
                     # Update the goal marker's position if applicable
                     self.model.geom_pos[self.goal_geom_id] = self.target_position
 
+                    self.max_time += 10 # add more time to reach the target
 
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus
