@@ -23,7 +23,7 @@ class DroneEnv(MujocoEnv):
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
-        target_move_prob=0.01,  # Probability of target moving when drone reaches it
+        target_move_prob=0.005,  # Probability of target moving when drone reaches it
         **kwargs,
     ):
         # Path to the MuJoCo XML model
@@ -354,7 +354,7 @@ class DroneEnv(MujocoEnv):
             goal_bonus += 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
 
             # Move the target if good tracking
-            if distance < 0.02:
+            if distance < 0.03:
                 if self.np_random.uniform() < self.target_move_prob:
                     # Move the target to a new random position
                     self.target_position = self.np_random.uniform(
