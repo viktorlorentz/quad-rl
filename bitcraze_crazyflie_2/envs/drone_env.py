@@ -41,7 +41,7 @@ class DroneEnv(MujocoEnv):
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
 
-        self.max_time = 15
+        self.max_time = 20
         self.total_max_time = 100
 
         # Define action space: thrust inputs for the four motors
@@ -354,7 +354,7 @@ class DroneEnv(MujocoEnv):
             goal_bonus += 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
 
             # Move the target if good tracking
-            if distance < 0.01:
+            if distance < 0.02:
                 if self.np_random.uniform() < self.target_move_prob:
                     # Move the target to a new random position
                     self.target_position = self.np_random.uniform(
@@ -364,6 +364,7 @@ class DroneEnv(MujocoEnv):
                     self.model.geom_pos[self.goal_geom_id] = self.target_position
 
                     self.max_time += 10 # add more time to reach the target
+                    goal_bonus += 1000 * rc["goal_bonus"] # add more bonus for reaching the target and to prevent policy avoiding it
 
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus

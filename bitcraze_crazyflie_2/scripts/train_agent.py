@@ -130,6 +130,7 @@ def main():
             "net_arch": {"pi": [64, 64], "vf": [64, 64]},
         },
         "reward_coefficients": reward_coefficients,
+        "policy_freq": 200
     }
 
     # Initialize wandb run
@@ -163,6 +164,7 @@ def main():
         env_kwargs={
             "reward_coefficients": config["reward_coefficients"],
             "render_mode": None,
+            "policy_freq": config["policy_freq"],
         },
         monitor_dir=f"monitor/{run.id}",
     )

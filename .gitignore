@@ -34,3 +34,5 @@ wandb/
 videos/
 monitor/
 runs/
+
+*.onnx
