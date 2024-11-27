@@ -111,10 +111,10 @@
       <geom mesh="cf2_collision_31" class="collision"/>
       <site name="imu"/>
 
-      <site name="thrust1" pos="0.032527 0.032527 0"/>
-      <site name="thrust2" pos="-0.032527 0.032527 0"/>
-      <site name="thrust3" pos="-0.032527 -0.032527 0"/>
-      <site name="thrust4" pos="0.032527 -0.032527 0"/>
+      <site name="thrust1" pos="0.032527 -0.032527 0"/>
+      <site name="thrust2" pos="-0.032527 -0.032527 0"/>
+      <site name="thrust3" pos="-0.032527 0.032527 0"/>
+      <site name="thrust4" pos="0.032527 0.032527 0"/>
 
     </body>
   </worldbody>
