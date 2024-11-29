@@ -6,10 +6,14 @@ import wandb
 import time
 import gc
 
+import numpy as np
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecVideoRecorder
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.policies import ActorCriticPolicy
+from torch import nn
 from wandb.integration.sb3 import WandbCallback
 
 
@@ -25,6 +29,8 @@ class RewardLoggingCallback(BaseCallback):
         self.episode_rewards = {}
         self.episode_length = 0
         self.episode_distance_sum = 0.0  # To accumulate distance_to_target per episode
+        self.actions_sum = 0
+        self.actions_hist = np.zeros(20)
 
     def _on_step(self) -> bool:
         # Get locals
@@ -46,12 +52,19 @@ class RewardLoggingCallback(BaseCallback):
         if "distance_to_target" in info:
             self.episode_distance_sum += info["distance_to_target"]
 
+        # Accumulate actions
+        if "action" in info:
+            self.actions_sum += sum(info["action"]) / 4
+            self.actions_hist += np.histogram(
+                info["action"], bins=20, range=(0, 0.118)
+            )[0]
+
         # Increment episode length
         self.episode_length += 1
 
-        if done and len(self.episode_rewards) > 0:
+        if len(self.episode_rewards) > 0 and done:
             # Compute average reward components for this episode
-            avg_reward_components = {
+            additional_metrics = {
                 key: value / self.episode_length
                 for key, value in self.episode_rewards.items()
             }
@@ -65,20 +78,43 @@ class RewardLoggingCallback(BaseCallback):
                 position_tracking = 1 + (3000 - self.episode_length) / 3000
 
             # Add position_tracking to the log data
-            avg_reward_components["position_tracking"] = position_tracking
+            additional_metrics["position_tracking"] = position_tracking
 
-            # Optionally, add episode length to the log
-            avg_reward_components["episode_length"] = self.episode_length
+            # Optionally, add mean episode length to the log
+            additional_metrics["episode_length"] = self.episode_length
+
+            # Log distribution of actions as histogram
+            additional_metrics["actions/mean"] = self.actions_sum / self.episode_length
+
+            # actions binned into 20
+            self.actions_hist = self.actions_hist / np.sum(self.actions_hist)
+            additional_metrics["actions/hist"] = wandb.Histogram(
+                np_histogram=(self.actions_hist, np.linspace(0, 0.118, 21))
+            )
+
+            # action satuarion (actions that are in first and last bin)
+            additional_metrics["actions/saturation"] = (
+                self.actions_hist[0] + self.actions_hist[-1]
+            )
 
             # Log to wandb
-            wandb.log(avg_reward_components, commit=False)
+            wandb.log(additional_metrics, commit=False)
 
             # Reset episode data
             self.episode_rewards = {}
             self.episode_length = 0
             self.episode_distance_sum = 0.0
+            self.actions_sum = 0
+            self.actions_hist = np.zeros(20)
 
         return True
+
+
+class CustomActorCriticPolicy(ActorCriticPolicy):
+    def _build(self, lr_schedule):
+        super()._build(lr_schedule)
+        # Wrap the existing action_net with tanh activation
+        self.action_net = nn.Sequential(self.action_net, nn.Tanh())
 
 
 def main():
@@ -106,6 +142,8 @@ def main():
         "terminate_collision": True,
         "out_of_bounds_penalty": 5,
         "velocity_towards_target": 5,
+        "action_saturation": 50,
+        "smooth_action": 0
     }
 
     # Config for wandb
@@ -125,12 +163,14 @@ def main():
         "clip_range": 0.22,
         "clip_range_vf": None,
         "normalize_advantage": True,
+        "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
             "net_arch": {"pi": [64, 64], "vf": [64, 64]},
+            "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
-        "policy_freq": 200
+        "policy_freq": 200,
     }
 
     # Initialize wandb run
@@ -154,6 +194,7 @@ def main():
             pi=config["policy_kwargs"]["net_arch"]["pi"],
             vf=config["policy_kwargs"]["net_arch"]["vf"],
         ),
+        squash_output=config["policy_kwargs"]["squash_output"],
     )
 
     # Create the vectorized environments
@@ -215,7 +256,7 @@ def main():
 
     # Create the PPO model with all specified parameters
     model = PPO(
-        policy=config["policy_type"],
+        policy=config["policy_type"],  # CustomActorCriticPolicy,
         env=env,
         n_steps=config["n_steps"],
         batch_size=config["batch_size"],
@@ -228,6 +269,7 @@ def main():
         clip_range=config["clip_range"],
         clip_range_vf=config["clip_range_vf"],
         normalize_advantage=config["normalize_advantage"],
+        use_sde=config["use_sde"],
         device="cpu",
         policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",

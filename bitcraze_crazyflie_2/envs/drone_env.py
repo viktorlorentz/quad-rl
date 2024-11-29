@@ -124,6 +124,8 @@ class DroneEnv(MujocoEnv):
                 "goal_bonus": 5.0,
                 "distance": 0,
                 "velocity_towards_target": 4,
+                "action_saturation": 1,
+                "smooth_action": 0,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -223,6 +225,7 @@ class DroneEnv(MujocoEnv):
             time,
             collision,
             out_of_bounds,
+            action,
         )
 
         # Determine termination conditions
@@ -243,6 +246,7 @@ class DroneEnv(MujocoEnv):
             "position": position.copy(),
             "angular_velocity": angular_velocity.copy(),
             "reward_components": reward_components,
+            "action": action,
         }
         info.update(additional_info)
 
@@ -260,6 +264,7 @@ class DroneEnv(MujocoEnv):
         time,
         collision,
         out_of_bounds,
+        action,
     ):
         # Compute distance to target position
         position_error = self.target_position - position
@@ -294,6 +299,15 @@ class DroneEnv(MujocoEnv):
         distance_z = np.abs(position[2] - self.target_position[2])
         distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
 
+        # Compute action saturation penalty
+        action_saturation = (
+            np.sum(
+                np.exp(-0.5 * ((action + 0.01) / 0.005) ** 2)
+                + np.exp(-0.5 * ((action - self.action_space.high - 0.01) / 0.005) ** 2)
+            )
+            / 4
+        )
+
         # Initialize reward components
         reward_components = {}
 
@@ -326,6 +340,17 @@ class DroneEnv(MujocoEnv):
         reward -= angular_vel_penalty
         reward_components["angular_velocity_penalty"] = -angular_vel_penalty
 
+        action_saturation_penalty = rc["action_saturation"] * action_saturation
+        reward -= action_saturation_penalty
+        reward_components["action_saturation_penalty"] = -action_saturation_penalty
+
+        # Smooth action penalty
+        if hasattr(self, "last_action"):
+            action_difference_penalty = rc["smooth_action"] *np.sum((action - self.last_action) ** 2)
+            reward -= action_difference_penalty
+            reward_components["action_difference_penalty"] =- action_difference_penalty
+        self.last_action = action
+
         # Move towards target
         # Compute the unit vector towards the target
         if distance > 1e-8:
@@ -350,7 +375,9 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         if distance < 0.1:
-            goal_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.008**2) # exact peek at position
+            goal_bonus = (
+                0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.008**2)
+            )  # exact peek at position
             goal_bonus += 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.04**2)
 
             # Move the target if good tracking
@@ -358,13 +385,16 @@ class DroneEnv(MujocoEnv):
                 if self.np_random.uniform() < self.target_move_prob:
                     # Move the target to a new random position
                     self.target_position = self.np_random.uniform(
-                        low=self.workspace["low"] + 0.1, high=self.workspace["high"] - 0.1
+                        low=self.workspace["low"] + 0.1,
+                        high=self.workspace["high"] - 0.1,
                     )
                     # Update the goal marker's position if applicable
                     self.model.geom_pos[self.goal_geom_id] = self.target_position
 
-                    self.max_time += 10 # add more time to reach the target
-                    goal_bonus += 1000 * rc["goal_bonus"] # add more bonus for reaching the target and to prevent policy avoiding it
+                    self.max_time += 10  # add more time to reach the target
+                    goal_bonus += (
+                        1000 * rc["goal_bonus"]
+                    )  # add more bonus for reaching the target and to prevent policy avoiding it
 
             reward += goal_bonus
             reward_components["goal_bonus"] = goal_bonus
