@@ -1,7 +1,9 @@
 <mujoco model="cf2">
   <option integrator="RK4" density="1.225" viscosity="1.8e-5"/>
 
-  <compiler inertiafromgeom="false" meshdir="assets" autolimits="true"/>
+  <!-- <compiler inertiafromgeom="false" meshdir="assets" autolimits="true"/> -->
+  <compiler meshdir="assets" autolimits="true"/>
+
 
   <default>
     <default class="cf2">
@@ -116,6 +118,24 @@
       <site name="thrust3" pos="-0.032527 0.032527 0"/>
       <site name="thrust4" pos="0.032527 0.032527 0"/>
 
+
+
+      <body pos="0 0 0">
+        <composite type="grid" count="20" spacing="0.01" offset="0.1 0 0">
+
+          <joint kind="main" damping=".001" />
+          <tendon kind="main" solreffix="0.001" width="0.005" damping="0.1"/>
+
+          <geom type="capsule" mass="0.00002" size=".005" rgba=".8 .2 .1 1" condim="1"/>
+
+          <pin coord="0" />
+
+        </composite>
+
+      </body>
+      
+
+
     </body>
   </worldbody>
 
@@ -132,7 +152,7 @@
     <framequat name="body_quat" objtype="site" objname="imu"/>
   </sensor>
 
-  <keyframe>
+  <!-- <keyframe>
     <key name="hover" qpos="0 0 1 1 0 0 0" ctrl="0.083385 0.083385 0.083385 0.083385"/>
-  </keyframe>
+  </keyframe> -->
 </mujoco>

@@ -445,13 +445,7 @@ class DroneEnv(MujocoEnv):
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
-        # Randomize velocity
-        self.data.qvel[:3] = self.np_random.uniform(
-            low=-0.4, high=0.4, size=3
-        )  # Random linear velocity
-        self.data.qvel[3:6] = self.np_random.uniform(
-            low=-0.1, high=0.1, size=3
-        )  # Random angular velocity
+       
 
         # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
@@ -461,6 +455,23 @@ class DroneEnv(MujocoEnv):
         mujoco.mju_euler2Quat(q, euler, seq)
         mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
+
+        # warmup sim to stabilize rope
+        for _ in range(200):
+            self.do_simulation(np.zeros(4), self.frame_skip)
+            #reset qpos
+            self.data.qpos[:3] = random_position
+            self.data.qpos[3:7] = q
+
+
+        # Randomize velocity
+        self.data.qvel[:3] = self.np_random.uniform(
+            low=-0.4, high=0.4, size=3
+        )  # Random linear velocity
+        self.data.qvel[3:6] = self.np_random.uniform(
+            low=-0.1, high=0.1, size=3
+        )  # Random angular velocity
+         
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
