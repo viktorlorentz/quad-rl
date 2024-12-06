@@ -6,7 +6,7 @@
 
     <body name="payload" pos="0.2 0 0">
       <freejoint/>
-      <geom type="sphere" mass="0.01" size=".01" rgba="0 0.8 0 1" pos="-0.005 -0.005 -0.005" />
+      <geom type="sphere" mass="0.003" size=".01" rgba="0 0.8 0 1" pos="-0.005 -0.005 -0.005" />
     </body>
     
   </worldbody>
