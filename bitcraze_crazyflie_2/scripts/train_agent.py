@@ -125,7 +125,7 @@ def main():
     n_envs = 8
     n_steps = 1024
     batch_size = 128
-    time_steps = 1_500_000
+    time_steps = 1_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -133,12 +133,12 @@ def main():
         "distance_z": 0.5,
         "goal_bonus": 20,
         "distance_xy": 0.9,
-        "alive_reward": 10,
+        "alive_reward": 20,
         "linear_velocity": 0.6,
         "angular_velocity": 0.3,
         "rotation_penalty": 1,
         "collision_penalty": 200,
-        "z_angular_velocity": 0.3,
+        "z_angular_velocity": 0.8,
         "terminate_collision": True,
         "out_of_bounds_penalty": 5,
         "velocity_towards_target": 5,

@@ -210,7 +210,6 @@ class DroneEnv(MujocoEnv):
 
         # Check for collisions
         collision = False
-        print(self.data.ncon)
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
             body1 = self.model.geom_bodyid[contact.geom1]
