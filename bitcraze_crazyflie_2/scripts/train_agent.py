@@ -1,5 +1,5 @@
 import os
-import bitcraze_crazyflie_2.envs.drone_env
+import envs.drone_env
 import gymnasium as gym
 import torch
 import wandb
