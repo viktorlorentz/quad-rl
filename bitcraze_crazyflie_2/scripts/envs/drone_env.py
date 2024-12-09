@@ -27,7 +27,7 @@ class DroneEnv(MujocoEnv):
         **kwargs,
     ):
         # Path to the MuJoCo XML model
-        model_path = os.path.join(os.path.dirname(__file__), "..", "scene.xml")
+        model_path = os.path.join(os.path.dirname(__file__), "..","..", "scene.xml")
 
         self.DEFAULT_CAMERA_CONFIG = default_camera_config
 

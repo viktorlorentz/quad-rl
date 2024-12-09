@@ -1,5 +1,5 @@
 import os
-import envs.drone_env
+from envs.drone_env import DroneEnv
 import gymnasium as gym
 import torch
 import wandb
@@ -197,9 +197,15 @@ def main():
         squash_output=config["policy_kwargs"]["squash_output"],
     )
 
+    env_obj = DroneEnv( 
+        reward_coefficients= config["reward_coefficients"], 
+        render_mode=None, 
+        policy_freq=config["policy_freq"]
+        )
+
     # Create the vectorized environments
     env = make_vec_env(
-        env_id,
+        env_obj,
         n_envs=n_envs,
         vec_env_cls=SubprocVecEnv,
         env_kwargs={
@@ -222,8 +228,14 @@ def main():
             run.log({"videos": wandb.Video(video)})
             gc.collect()
 
+    eval_env_obj = DroneEnv(
+        reward_coefficients=config["reward_coefficients"],
+        render_mode="human",
+        policy_freq=config["policy_freq"],
+    )
+
     eval_env = make_vec_env(
-        env_id,
+        eval_env_obj,
         n_envs=1,
         vec_env_cls=SubprocVecEnv,
         seed=0,
@@ -273,6 +285,7 @@ def main():
         device="cpu",
         policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
+        verbose=1,
     )
 
     # Start training with wandb and custom callbacks
