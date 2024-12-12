@@ -23,11 +23,15 @@ class DroneEnv(MujocoEnv):
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
+        env_config={},
         target_move_prob=0.005,  # Probability of target moving when drone reaches it
         **kwargs,
     ):
         # Path to the MuJoCo XML model
-        model_path = os.path.join(os.path.dirname(__file__), "..", "scene.xml")
+        model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene_payload.xml")
+        if not env_config.get("connect_payload", True):
+            model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
+            
 
         self.DEFAULT_CAMERA_CONFIG = default_camera_config
 
@@ -45,7 +49,6 @@ class DroneEnv(MujocoEnv):
         self.total_max_time = 100
 
         self.warmup_time = 0.3  # 1s warmup time
-
 
         # Define observation space
         obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
@@ -198,19 +201,17 @@ class DroneEnv(MujocoEnv):
         obs = self.noise_observation(obs, noise_level=0.01)
 
         return obs.astype(np.float32)
-    
+
     def noise_observation(self, obs, noise_level=0.01):
-    
+
         obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
         return obs
 
     def step(self, action):
-    
+
         action = (0.5 * (action + 1.0) * self.max_thrust)
-       
 
         action = np.clip(action, 0,self.max_thrust)
-   
 
         # Apply action and step simulation
         self.do_simulation(action, self.frame_skip)

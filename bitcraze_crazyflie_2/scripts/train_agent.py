@@ -173,7 +173,7 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 200,
         "env_config": {
-            "connect_payload": True,
+            "connect_payload": False,
         }
     }
 
@@ -210,6 +210,7 @@ def main():
             "reward_coefficients": config["reward_coefficients"],
             "render_mode": None,
             "policy_freq": config["policy_freq"],
+            "env_config": config["env_config"],
         },
         monitor_dir=f"monitor/{run.id}",
     )
@@ -231,7 +232,11 @@ def main():
         n_envs=1,
         vec_env_cls=SubprocVecEnv,
         seed=0,
-        env_kwargs={"reward_coefficients": config["reward_coefficients"], "render_mode": "rgb_array"},
+        env_kwargs={
+            "reward_coefficients": config["reward_coefficients"],
+            "render_mode": "rgb_array",
+            "env_config": config["env_config"],
+        },
         wrapper_class=gym.wrappers.RecordVideo,
         wrapper_kwargs={
             "video_folder": f"videos/{run.id}",
