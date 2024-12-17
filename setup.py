@@ -15,7 +15,6 @@ setup(
         'stable-baselines3[extra]==2.4.0',
         'wandb==0.19.0',
         'scipy==1.10.1',
-        'imageio==2.35.1',
         'tensorboard==2.14.0',
         'numpy>=1.25',
         'tqdm==4.67.1',

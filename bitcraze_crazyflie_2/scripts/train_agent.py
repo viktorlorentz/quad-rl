@@ -125,7 +125,7 @@ def main():
     n_envs = 8
     n_steps = 1024
     batch_size = 256
-    time_steps = 1_500_000
+    time_steps = 2_500_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -144,7 +144,7 @@ def main():
         "velocity_towards_target": 5,
         "action_saturation": 160,
         "smooth_action": 0,
-        "energy_penalty": 1,
+        "energy_penalty": 0.05,
     }
 
     # Config for wandb
@@ -171,7 +171,7 @@ def main():
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
-        "policy_freq": 200,
+        "policy_freq": 250,
         "env_config": {
             "connect_payload": False,
         }
@@ -296,7 +296,7 @@ def main():
                 verbose=2,
             ),
         ],
-        #progress_bar=True,
+        progress_bar=True,
     )
 
     # Save the final model

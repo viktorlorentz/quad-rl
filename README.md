@@ -13,7 +13,7 @@ git clone https://github.com/  TODO
 ### 2. Create and Activate the Conda Environment
 
 ```bash
-conda create -n quad-rl python=3.8
+conda create -n quad-rl python=3.9
 conda activate quad-rl
 ```
 
