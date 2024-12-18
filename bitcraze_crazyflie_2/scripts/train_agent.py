@@ -97,6 +97,12 @@ class RewardLoggingCallback(BaseCallback):
                 self.actions_hist[0] + self.actions_hist[-1]
             )
 
+            # Add saturation penalty to position tracking
+
+            saturation_penalty = 2 * max(additional_metrics["actions/saturation"]-0.1, 0)
+
+            additional_metrics["position_tracking"] += saturation_penalty
+
             # Log to wandb
             wandb.log(additional_metrics, commit=False)
 
