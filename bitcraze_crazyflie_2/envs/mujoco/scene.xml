@@ -1,5 +1,10 @@
 <mujoco model="CF2 scene">
+  
+  
   <include file="cf2.xml"/>
+
+
+
 
   <!-- 250 Hz -->
   <option timestep="0.004"/>

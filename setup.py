@@ -10,11 +10,16 @@ setup(
     license='MIT',
     packages=find_packages(where='.'),
     install_requires=[
-        'gymnasium>=0.29',
-        'numpy>=1.18',
-        'stable-baselines3>=1.7',
-        'mujoco>=2.2',
-        'tensorboard>=2'
+        'gymnasium[other]==1.0.0',
+        'mujoco==3.2.3',
+        'stable-baselines3==2.4.0',
+        'wandb==0.19.0',
+        'scipy==1.10.1',
+        'tensorboard==2.14.0',
+        'numpy>=1.25',
+        'tqdm==4.67.1',
+        'rich==13.9.4',
+        'moviepy>=1.0.0'
     ],
     package_data={
         'bitcraze_crazyflie_2': ['assets/*'],
@@ -26,5 +31,5 @@ setup(
             'evaluate-drone=bitcraze_crazyflie_2.scripts.evaluate_agent:main',
         ],
     },
-    python_requires='>=3.8',
+    python_requires='>=3.10',
 )

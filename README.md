@@ -13,7 +13,7 @@ git clone https://github.com/  TODO
 ### 2. Create and Activate the Conda Environment
 
 ```bash
-conda create -n quad-rl python=3.8
+conda create -n quad-rl python=3.9
 conda activate quad-rl
 ```
 
@@ -58,6 +58,24 @@ evaluate-drone
 ```
 
 This will run the trained agent in the environment and render its behavior.
+
+## Docker
+
+To build the Docker image, navigate to the project root directory and run:
+
+```bash
+docker build -t quad-rl-image .
+```
+
+To run the Docker container with the Wandb api key, use the following command:
+
+```bash
+docker run -it -e WANDB_API_KEY=your_api_key_here quad-rl-image
+```
+
+Replace `your_api_key_here` with your actual Weights & Biases API key.
+
+
 
 ### Monitoring Training with TensorBoard
 

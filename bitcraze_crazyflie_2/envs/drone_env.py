@@ -23,11 +23,15 @@ class DroneEnv(MujocoEnv):
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
+        env_config={},
         target_move_prob=0.005,  # Probability of target moving when drone reaches it
         **kwargs,
     ):
         # Path to the MuJoCo XML model
-        model_path = os.path.join(os.path.dirname(__file__), "..", "scene.xml")
+        model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene_payload.xml")
+        if not env_config.get("connect_payload", True):
+            model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
+            
 
         self.DEFAULT_CAMERA_CONFIG = default_camera_config
 
@@ -44,12 +48,7 @@ class DroneEnv(MujocoEnv):
         self.max_time = 20
         self.total_max_time = 100
 
-        # Define action space: thrust inputs for the four motors
-        self.action_space = spaces.Box(
-            low=np.zeros(4, dtype=np.float32),
-            high=np.full(4, 0.11772, dtype=np.float32),
-            dtype=np.float32,
-        )
+        self.warmup_time = 0.3  # 1s warmup time
 
         # Define observation space
         obs_dim = 18  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3)
@@ -80,13 +79,24 @@ class DroneEnv(MujocoEnv):
             **kwargs,
         )
 
+
+
+        self.max_thrust = 0.11772
+
+        # Define action space: thrust inputs for the four motors
+        self.action_space = spaces.Box(
+            low=np.full(4, -1, dtype=np.float32),
+            high=np.full(4, 1, dtype=np.float32),
+            dtype=np.float32,
+        )
+
         # Set the simulation timestep
         self.model.opt.timestep = self.time_per_action / self.sim_steps_per_action
 
         self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
 
         # Set the target position for hovering
-        self.target_position = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        self.target_position = np.array([0.0, 0.0, 1.5], dtype=np.float32)
 
         # Get the drone's body ID
         self.drone_body_id = mujoco.mj_name2id(
@@ -107,6 +117,11 @@ class DroneEnv(MujocoEnv):
             self.model, mujoco.mjtObj.mjOBJ_GEOM, "goal_marker"
         )
 
+        # Get payload body ID
+        self.payload_body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, "payload"
+        )
+
         # Reward function coefficients
         if reward_coefficients is None:
             # Default coefficients
@@ -124,8 +139,9 @@ class DroneEnv(MujocoEnv):
                 "goal_bonus": 5.0,
                 "distance": 0,
                 "velocity_towards_target": 4,
-                "action_saturation": 1,
-                "smooth_action": 0,
+                "action_saturation": 100,
+                "smooth_action": 100,
+                "energy_penalty": 1,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -182,11 +198,20 @@ class DroneEnv(MujocoEnv):
             ]
         )
 
+        obs = self.noise_observation(obs, noise_level=0.01)
+
         return obs.astype(np.float32)
 
+    def noise_observation(self, obs, noise_level=0.01):
+
+        obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
+        return obs
+
     def step(self, action):
-        # Clip action
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+
+        action = (0.5 * (action + 1.0) * self.max_thrust)
+
+        action = np.clip(action, 0,self.max_thrust)
 
         # Apply action and step simulation
         self.do_simulation(action, self.frame_skip)
@@ -207,6 +232,7 @@ class DroneEnv(MujocoEnv):
             contact = self.data.contact[i]
             body1 = self.model.geom_bodyid[contact.geom1]
             body2 = self.model.geom_bodyid[contact.geom2]
+
             if body1 == self.drone_body_id or body2 == self.drone_body_id:
                 collision = True
                 break  # Exit the loop if a collision is detected
@@ -217,7 +243,7 @@ class DroneEnv(MujocoEnv):
         )
 
         # Compute reward
-        reward, reward_components, additional_info = self.compute_reward(
+        reward, reward_components, additional_info = self.calc_reward(
             position,
             orientation,
             angular_velocity,
@@ -237,7 +263,10 @@ class DroneEnv(MujocoEnv):
             terminated = True  # Terminate the episode
 
         # Truncate episode if too long
-        if self.data.time > self.max_time or self.data.time > self.total_max_time:
+        if (
+            self.data.time - self.warmup_time > self.max_time
+            or self.data.time - self.warmup_time > self.total_max_time
+        ):
             terminated = True
             truncated = True
 
@@ -255,7 +284,7 @@ class DroneEnv(MujocoEnv):
 
         return obs, reward, terminated, truncated, info
 
-    def compute_reward(
+    def calc_reward(
         self,
         position,
         orientation,
@@ -302,8 +331,8 @@ class DroneEnv(MujocoEnv):
         # Compute action saturation penalty
         action_saturation = (
             np.sum(
-                np.exp(-0.5 * ((action + 0.01) / 0.005) ** 2)
-                + np.exp(-0.5 * ((action - self.action_space.high - 0.01) / 0.005) ** 2)
+                np.max(np.exp(-0.5 * ((action + 0.001) / 0.001) ** 2)
+                + np.exp(-0.5 * ((action - self.max_thrust - 0.001) / 0.001) ** 2) - 0.01, 0)
             )
             / 4
         )
@@ -344,11 +373,17 @@ class DroneEnv(MujocoEnv):
         reward -= action_saturation_penalty
         reward_components["action_saturation_penalty"] = -action_saturation_penalty
 
+        action_energy_penalty = rc["energy_penalty"] * np.sum(action)
+        reward -= action_energy_penalty
+        reward_components["action_energy_penalty"] = -action_energy_penalty
+
         # Smooth action penalty
         if hasattr(self, "last_action"):
-            action_difference_penalty = rc["smooth_action"] *np.sum((action - self.last_action) ** 2)
+            action_difference_penalty = rc["smooth_action"] * np.linalg.norm(
+                (action - self.last_action)
+            )
             reward -= action_difference_penalty
-            reward_components["action_difference_penalty"] =- action_difference_penalty
+            reward_components["action_difference_penalty"] = -action_difference_penalty
         self.last_action = action
 
         # Move towards target
@@ -429,9 +464,9 @@ class DroneEnv(MujocoEnv):
 
     def reset_model(self):
         # Randomize initial position around the target position
-        position_std_dev = 0.5  # Standard deviation in meters
+        position_std_dev = 0.2  # Standard deviation in meters
         random_position = self.np_random.normal(
-            loc=self.target_position, scale=position_std_dev
+            loc=self.target_position- np.array([0.4,0,0]), scale=position_std_dev
         )
         # Clip the position to be within the workspace bounds
         random_position = np.clip(
@@ -440,18 +475,10 @@ class DroneEnv(MujocoEnv):
         self.data.qpos[:3] = random_position
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(30)  # Standard deviation of 30 degrees
+        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
-
-        # Randomize velocity
-        self.data.qvel[:3] = self.np_random.uniform(
-            low=-0.4, high=0.4, size=3
-        )  # Random linear velocity
-        self.data.qvel[3:6] = self.np_random.uniform(
-            low=-0.1, high=0.1, size=3
-        )  # Random angular velocity
 
         # Convert Euler angles to quaternion
         euler = np.array([roll, pitch, yaw])
@@ -461,6 +488,30 @@ class DroneEnv(MujocoEnv):
         mujoco.mju_euler2Quat(q, euler, seq)
         mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
+
+        # set payload position
+        payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+        payload_qpos_index = self.model.jnt_qposadr[payload_joint_id]
+        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = (
+            random_position + np.array([0, 0, -0.15])
+        )
+
+        # warmup sim to stabilize rope
+        while self.data.time < self.warmup_time:
+            self.do_simulation(np.zeros(4), 10)
+            # reset qpos
+            self.data.qpos[:3] = random_position
+            self.data.qpos[3:7] = q
+
+        self.warmup_time = self.data.time
+
+        # Randomize velocity
+        self.data.qvel[:3] = self.np_random.uniform(
+            low=-0.4, high=0.4, size=3
+        )  # Random linear velocity
+        self.data.qvel[3:6] = self.np_random.uniform(
+            low=-0.1, high=0.1, size=3
+        )  # Random angular velocity
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()

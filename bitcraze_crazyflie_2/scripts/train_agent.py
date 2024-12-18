@@ -1,5 +1,5 @@
 import os
-import bitcraze_crazyflie_2.envs.drone_env
+from bitcraze_crazyflie_2.envs.drone_env import DroneEnv
 import gymnasium as gym
 import torch
 import wandb
@@ -124,8 +124,8 @@ def main():
     # Define parameters
     n_envs = 8
     n_steps = 1024
-    batch_size = 128
-    time_steps = 1_000_000
+    batch_size = 256
+    time_steps = 2_500_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -133,7 +133,7 @@ def main():
         "distance_z": 0.5,
         "goal_bonus": 20,
         "distance_xy": 0.9,
-        "alive_reward": 5,
+        "alive_reward": 20,
         "linear_velocity": 0.6,
         "angular_velocity": 0.3,
         "rotation_penalty": 1,
@@ -142,8 +142,9 @@ def main():
         "terminate_collision": True,
         "out_of_bounds_penalty": 5,
         "velocity_towards_target": 5,
-        "action_saturation": 50,
-        "smooth_action": 0
+        "action_saturation": 160,
+        "smooth_action": 0,
+        "energy_penalty": 0.05,
     }
 
     # Config for wandb
@@ -159,7 +160,7 @@ def main():
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
         "vf_coef": 0.25,
-        "max_grad_norm": 0.78,
+        "max_grad_norm": 0.5,
         "clip_range": 0.22,
         "clip_range_vf": None,
         "normalize_advantage": True,
@@ -170,7 +171,10 @@ def main():
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
-        "policy_freq": 200,
+        "policy_freq": 250,
+        "env_config": {
+            "connect_payload": False,
+        }
     }
 
     # Initialize wandb run
@@ -199,13 +203,14 @@ def main():
 
     # Create the vectorized environments
     env = make_vec_env(
-        env_id,
+        DroneEnv,
         n_envs=n_envs,
         vec_env_cls=SubprocVecEnv,
         env_kwargs={
             "reward_coefficients": config["reward_coefficients"],
             "render_mode": None,
             "policy_freq": config["policy_freq"],
+            "env_config": config["env_config"],
         },
         monitor_dir=f"monitor/{run.id}",
     )
@@ -223,11 +228,15 @@ def main():
             gc.collect()
 
     eval_env = make_vec_env(
-        env_id,
+        DroneEnv,
         n_envs=1,
         vec_env_cls=SubprocVecEnv,
         seed=0,
-        env_kwargs={"reward_coefficients": config["reward_coefficients"]},
+        env_kwargs={
+            "reward_coefficients": config["reward_coefficients"],
+            "render_mode": "rgb_array",
+            "env_config": config["env_config"],
+        },
         wrapper_class=gym.wrappers.RecordVideo,
         wrapper_kwargs={
             "video_folder": f"videos/{run.id}",
