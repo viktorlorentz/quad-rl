@@ -520,6 +520,18 @@ class DroneEnv(MujocoEnv):
         # Update the goal marker position
         self.model.geom_pos[self.goal_geom_id] = self.target_position
 
+        # Randomize obstacle positions
+        for i in range(1, 21):  # Assuming up to 20 cylinders
+            geom_name = f"obstacle_cylinder{i}"
+            geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+            if geom_id > 0:
+                # Generate random XY position within workspace bounds
+                random_xy = self.np_random.uniform(
+                    low=self.workspace["low"][:2], high=self.workspace["high"][:2]
+                )
+                # Update position in the model
+                self.model.geom_pos[geom_id][:2] = random_xy
+
         mujoco.mj_forward(self.model, self.data)
 
         # Return initial observation

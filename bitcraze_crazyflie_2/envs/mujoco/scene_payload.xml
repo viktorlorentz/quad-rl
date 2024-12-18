@@ -29,4 +29,30 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
   </worldbody>
+
+  <worldbody>
+    <!-- 20 Cylinders at random positions -->
+    <geom name="obstacle_cylinder1" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder2" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder3" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder4" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder5" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder6" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder7" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder8" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder9" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder10" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder11" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder12" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder13" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder14" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder15" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder16" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder17" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder18" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder19" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+    <geom name="obstacle_cylinder20" type="cylinder" size="0.15 2.0" pos="0 0 2.0" rgba="1 1 0 0.3" />
+
+  </worldbody> 
+
 </mujoco>

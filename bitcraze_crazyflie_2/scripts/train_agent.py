@@ -180,6 +180,7 @@ def main():
         "policy_freq": 250,
         "env_config": {
             "connect_payload": False,
+            "obstacles": False, #"cylinders"
         }
     }
 
