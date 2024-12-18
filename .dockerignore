@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+quad-rl/
+
+# Python egg metadata
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Install logs
+pip-log.txt
+
+# Installer logs
+pip-delete-this-directory.txt
+
+# Models and logs
+models/
+logs/
+
+# MuJoCo license
+mjkey.txt
+
+# Other
+.DS_Store
+
+
+wandb/
+videos/
+monitor/
+runs/
+
+*.onnx
