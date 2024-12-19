@@ -8,14 +8,13 @@ import gc
 
 import numpy as np
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, TD3
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecVideoRecorder
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import ActorCriticPolicy
 from torch import nn
 from wandb.integration.sb3 import WandbCallback
-
 
 # Define the custom callback for logging reward components
 class RewardLoggingCallback(BaseCallback):
@@ -33,7 +32,6 @@ class RewardLoggingCallback(BaseCallback):
         self.actions_hist = np.zeros(20)
 
     def _on_step(self) -> bool:
-        # Get locals
         infos = self.locals.get("infos", [])
         dones = self.locals.get("dones", [])
 
@@ -73,7 +71,7 @@ class RewardLoggingCallback(BaseCallback):
             position_tracking = self.episode_distance_sum / self.episode_length
 
             # this makes sure that it hovers first before tracking
-            # any metric above 1 means its not hovering
+            # any metric above 1 means it's not hovering
             if self.episode_length < 3000:
                 position_tracking = 1 + (3000 - self.episode_length) / 3000
 
@@ -92,15 +90,13 @@ class RewardLoggingCallback(BaseCallback):
                 np_histogram=(self.actions_hist, np.linspace(0, 0.118, 21))
             )
 
-            # action satuarion (actions that are in first and last bin)
+            # action saturation (actions that are in first and last bin)
             additional_metrics["actions/saturation"] = (
                 self.actions_hist[0] + self.actions_hist[-1]
             )
 
             # Add saturation penalty to position tracking
-
             saturation_penalty = 2 * max(additional_metrics["actions/saturation"]-0.1, 0)
-
             additional_metrics["position_tracking"] += saturation_penalty
 
             # Log to wandb
@@ -124,17 +120,17 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
 
 def main():
+    # Change algorithm here: "PPO" or "TD3"
+    algorithm = "TD3"  # or "PPO"
 
     env_id = "DroneEnv-v0"
 
-    # Define parameters
+    # Define parameters common to both algorithms
     n_envs = 8
-    n_steps = 1024
-    batch_size = 256
     time_steps = 2_500_000
 
     # Reward function coefficients
-    reward_coefficients = {  # based on single_quad_rl_1731931528
+    reward_coefficients = {
         "distance": 1,
         "distance_z": 0.5,
         "goal_bonus": 20,
@@ -153,14 +149,19 @@ def main():
         "energy_penalty": 0.05,
     }
 
-    # Config for wandb
-    default_config = {  # based on single_quad_rl_1731931528
+    # Common network parameters
+    # We will use Tanh activation and [64,64] layers for both PPO and TD3
+    net_arch_pi = [64, 64]
+    net_arch_vf = [64, 64]
+
+    ppo_config = {
+        "algorithm": "PPO",
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
         "env_name": env_id,
-        "n_steps": n_steps,
+        "n_steps": 1024,
         "n_envs": n_envs,
-        "batch_size": batch_size,
+        "batch_size": 256,
         "learning_rate": 0.0012,
         "gamma": 0.98,
         "gae_lambda": 0.83,
@@ -173,8 +174,8 @@ def main():
         "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
-            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
-            "squash_output": False,  # this adds tanh to the output of the policy
+            "net_arch": {"pi": net_arch_pi, "vf": net_arch_vf},
+            "squash_output": False,
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
@@ -183,34 +184,74 @@ def main():
         }
     }
 
+    td3_config = {
+        "algorithm": "TD3",
+        "policy_type": "MlpPolicy",
+        "total_timesteps": time_steps,
+        "env_name": env_id,
+        "n_envs": n_envs,
+        "learning_rate": 0.0012,
+        "gamma": 0.98,
+        "buffer_size": 1000000,
+        "learning_starts": 10000,
+        "batch_size": 256,
+        "tau": 0.005,
+        "train_freq": 1000,
+        "gradient_steps": 1000,
+        "policy_kwargs": {
+            "net_arch": net_arch_pi,  # For TD3, a single list for both actor and critic
+            "activation_fn": torch.nn.Tanh
+        },
+        "reward_coefficients": reward_coefficients,
+        "policy_freq": 250,
+        "env_config": {
+            "connect_payload": False,
+        }
+    }
+
+    if algorithm == "PPO":
+        config = ppo_config
+    else:
+        config = td3_config
+
     # Initialize wandb run
     run = wandb.init(
         project="single_quad_rl",
-        name=f"single_quad_rl_{int(time.time())}",
-        config=default_config,
+        name=f"single_quad_rl_{algorithm.lower()}_{int(time.time())}",
+        config=config,
         sync_tensorboard=True,
         monitor_gym=True,
         save_code=True,
     )
     config = wandb.config
 
-    # Map activation function name from config to actual function
-    activation_fn = getattr(torch.nn, config["policy_kwargs"]["activation_fn"])
+    # Set activation function from config if available
+    if "policy_kwargs" in config and "activation_fn" in config["policy_kwargs"]:
+        activation_fn = getattr(torch.nn, config["policy_kwargs"]["activation_fn"], torch.nn.Tanh)
+    else:
+        activation_fn = torch.nn.Tanh
 
-    # Build policy_kwargs with correct net_arch
-    policy_kwargs = dict(
-        activation_fn=activation_fn,
-        net_arch=dict(
-            pi=config["policy_kwargs"]["net_arch"]["pi"],
-            vf=config["policy_kwargs"]["net_arch"]["vf"],
-        ),
-        squash_output=config["policy_kwargs"]["squash_output"],
-    )
+    # For PPO, we rebuild policy_kwargs using the pi/vf structure
+    if config["algorithm"] == "PPO":
+        policy_kwargs = dict(
+            activation_fn=activation_fn,
+            net_arch=dict(
+                pi=config["policy_kwargs"]["net_arch"]["pi"],
+                vf=config["policy_kwargs"]["net_arch"]["vf"],
+            ),
+            squash_output=config["policy_kwargs"]["squash_output"],
+        )
+    else:
+        # For TD3, we use the provided policy_kwargs as-is
+        policy_kwargs = dict(
+            net_arch=config["policy_kwargs"]["net_arch"],
+            activation_fn=activation_fn
+        )
 
     # Create the vectorized environments
     env = make_vec_env(
         DroneEnv,
-        n_envs=n_envs,
+        n_envs=config["n_envs"],
         vec_env_cls=SubprocVecEnv,
         env_kwargs={
             "reward_coefficients": config["reward_coefficients"],
@@ -221,12 +262,8 @@ def main():
         monitor_dir=f"monitor/{run.id}",
     )
 
-    # Create the evaluation environment
-
     def trigger(t):
         if t % 150 == 0:
-            # save video to global variable
-
             return True
         if t % 150 == 1:
             video = f"videos/{run.id}/rl-video-episode-{t-1}.mp4"
@@ -253,42 +290,62 @@ def main():
     # Directory to save models and logs
     models_dir = os.path.join(os.path.dirname(__file__), "..", "..", "models")
     os.makedirs(models_dir, exist_ok=True)
-    model_path = os.path.join(models_dir, "ppo_drone")
+    model_path = os.path.join(models_dir, f"{algorithm.lower()}_drone")
 
     # Clear previous models
     for file in os.listdir(models_dir):
-        if file.startswith("ppo_drone_"):
+        if file.startswith(f"{algorithm.lower()}_drone_"):
             os.remove(os.path.join(models_dir, file))
+
+    # Adjust eval_freq for TD3 if needed
+    eval_freq = config["n_steps"] if config["algorithm"] == "PPO" else 10000
 
     eval_callback = EvalCallback(
         eval_env=eval_env,
         best_model_save_path=models_dir,
         log_path=models_dir,
-        eval_freq=config["n_steps"],
+        eval_freq=eval_freq,
         deterministic=True,
         render=False,
     )
 
-    # Create the PPO model with all specified parameters
-    model = PPO(
-        policy=config["policy_type"],  # CustomActorCriticPolicy,
-        env=env,
-        n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        learning_rate=config["learning_rate"],
-        gamma=config["gamma"],
-        gae_lambda=config["gae_lambda"],
-        ent_coef=config["ent_coef"],
-        vf_coef=config["vf_coef"],
-        max_grad_norm=config["max_grad_norm"],
-        clip_range=config["clip_range"],
-        clip_range_vf=config["clip_range_vf"],
-        normalize_advantage=config["normalize_advantage"],
-        use_sde=config["use_sde"],
-        device="cpu",
-        policy_kwargs=policy_kwargs,
-        tensorboard_log=f"runs/{run.id}",
-    )
+    # Create the model
+    if config["algorithm"] == "PPO":
+        model = PPO(
+            policy=config["policy_type"],
+            env=env,
+            n_steps=config["n_steps"],
+            batch_size=config["batch_size"],
+            learning_rate=config["learning_rate"],
+            gamma=config["gamma"],
+            gae_lambda=config["gae_lambda"],
+            ent_coef=config["ent_coef"],
+            vf_coef=config["vf_coef"],
+            max_grad_norm=config["max_grad_norm"],
+            clip_range=config["clip_range"],
+            clip_range_vf=config["clip_range_vf"],
+            normalize_advantage=config["normalize_advantage"],
+            use_sde=config["use_sde"],
+            device="cpu",
+            policy_kwargs=policy_kwargs,
+            tensorboard_log=f"runs/{run.id}",
+        )
+    else:
+        model = TD3(
+            policy=config["policy_type"],
+            env=env,
+            learning_rate=config["learning_rate"],
+            gamma=config["gamma"],
+            buffer_size=config["buffer_size"],
+            learning_starts=config["learning_starts"],
+            batch_size=config["batch_size"],
+            train_freq=config["train_freq"],
+            gradient_steps=config["gradient_steps"],
+            tau=config["tau"],
+            policy_kwargs=policy_kwargs,
+            device="cpu",
+            tensorboard_log=f"runs/{run.id}",
+        )
 
     # Start training with wandb and custom callbacks
     model.learn(
