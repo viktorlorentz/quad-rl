@@ -1,0 +1,15 @@
+{
+    "name": "TeX Live",
+    "image": "texlive/texlive:latest",
+    // "dockerFile": "Dockerfile", //  you can use the local Dockerfile if you don't want to rely on prebuilt texlive image
+    "extensions": [
+        "james-yu.latex-workshop"
+    ],
+    "settings": {
+        "latex-workshop.latex.outDir": "./out",
+        "latex-workshop.latex.autoBuild.run": "onFileChange",
+        "latex-workshop.view.pdf.viewer": "tab",
+        "latex-workshop.synctex.afterBuild.enabled": true
+    },
+    // "onCreateCommand": "git config --global --add safe.directory $PWD" // fixes git unsave directory issue
+}

@@ -1,0 +1,62 @@
+\documentclass[a4paper, 12pt]{report}
+\input{settings/packages}
+\input{settings/page}
+\graphicspath{{images/}}
+\AtBeginDocument{\addtocontents{toc}{\protect\thispagestyle{empty}}}
+\begin{document}
+
+
+\input{settings/title}
+\microtypesetup{protrusion=false}
+\pagestyle{empty}
+% \setstretch{2}
+%
+\input{settings/declaration}
+\input{settings/abstract.tex}
+\MSverbatimspacing
+\renewcommand{\cfttoctitlefont}{\Huge\bfseries\sffamily}
+\tableofcontents
+\microtypesetup{protrusion=true}
+
+\MSverbatimspacing
+% \MSonehalfspacing
+\newpage
+
+
+
+
+\input{settings/todo}
+
+\input{settings/notation.tex}
+
+
+\setcounter{page}{1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%Insert content here%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{fancy}
+
+\input{chapters/1-intro}
+
+\input{chapters/2-background}
+
+\input{chapters/3-related-work}
+
+\input{chapters/4-quad-env.tex}
+% \addtocontents{toc}{\protect\newpage}
+
+\input{chapters/5-train-quad.tex}
+
+
+\input{chapters/6-evaluation.tex}
+
+\input{chapters/7-discussion.tex}
+
+\input{chapters/8-conclusion.tex}
+
+
+
+\newpage
+\input{settings/endofdocument}
+\end{document}
