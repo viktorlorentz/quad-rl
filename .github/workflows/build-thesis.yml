@@ -15,19 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Cache Docker image
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-
-      - name: Pull Docker image
-        run: docker pull texlive/texlive:latest
-
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Pull Docker image if not cached
+        run: |
+          if [[ "$(docker images -q texlive/texlive:latest 2> /dev/null)" == "" ]]; then
+            docker pull texlive/texlive:latest
+          fi
 
       - name: Run LaTeX Build
         run: |
