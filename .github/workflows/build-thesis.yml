@@ -14,38 +14,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    container:
+      image: texlive/texlive:latest-minimal-src
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Restore cached Docker image if it exists
-      - name: Restore TexLive Image Cache if it exists
-        id: cache-docker-texlive
-        uses: actions/cache@v4
-        with:
-          path: ci/cache/docker/texlive
-          key: cache-docker-texlive-latest
-
-      # Update Docker image cache if cache miss
-      - name: Update TexLive Image Cache if cache miss
-        if: steps.cache-docker-texlive.outputs.cache-hit != 'true'
-        run: |
-          docker pull texlive/texlive:latest
-          mkdir -p ci/cache/docker/texlive
-          docker image save texlive/texlive:latest --output ./ci/cache/docker/texlive/texlive-latest.tar
-
-      # Load Docker image cache if cache hit
-      - name: Use TexLive Image Cache if cache hit
-        if: steps.cache-docker-texlive.outputs.cache-hit == 'true'
-        run: docker image load --input ./ci/cache/docker/texlive/texlive-latest.tar
-
-      # Run LaTeX build
+      # Build the PDF directly inside the container
       - name: Build PDF
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace texlive/texlive:latest \
-          /bin/bash -c "cd thesis && latexmk -pdf"
+          cd thesis
+          latexmk -pdf
 
-      # Upload artifacts
+      # Upload the output PDF as artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
