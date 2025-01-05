@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: texlive/texlive:latest-minimal-src
+      image: texlive/texlive:latest-small-src
 
     steps:
       - name: Checkout repository
