@@ -31,7 +31,7 @@ jobs:
 
       - name: Run LaTeX Build
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/texlive/texlive:latest \
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace texlive/texlive:latest \
           /bin/bash -c "cd thesis && latexmk -pdf"
 
       - name: Upload artifacts
