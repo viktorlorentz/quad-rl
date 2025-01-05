@@ -18,11 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pull Docker image if not cached
+      - name: Enable Docker Layer Caching (DLC)
         run: |
-          if [[ "$(docker images -q texlive/texlive:latest 2> /dev/null)" == "" ]]; then
-            docker pull texlive/texlive:latest
-          fi
+          docker pull texlive/texlive:latest
 
       - name: Run LaTeX Build
         run: |
