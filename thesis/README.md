@@ -5,6 +5,4 @@ TODO Abstract
 ## Current Thesis Document
 
 The Latex document is automatically built on every commit and stored as pdf artifact. <br/>
-The [latest thesis PDF can be found here](../-/jobs/artifacts/main/file/thesis.pdf?job=build).
-
-[![](images/titlepage.png)](../-/jobs/artifacts/main/file/thesis.pdf?job=build)
+The [latest thesis PDF can be found here](https://github.com/viktorlorentz/quad-rl/actions/workflows/build-thesis.yml?query=branch%3Amain).
