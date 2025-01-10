@@ -130,27 +130,27 @@ def main():
     # Define parameters
     n_envs = 8
     n_steps = 1024
-    batch_size = 256
-    time_steps = 2_500_000
+    batch_size = 1024
+    time_steps = 3_500_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
         "distance": 1,
-        "distance_z": 0.5,
+        "distance_z": 0,
         "goal_bonus": 20,
-        "distance_xy": 0.9,
-        "alive_reward": 20,
-        "linear_velocity": 0.6,
-        "angular_velocity": 0.3,
+        "distance_xy": 0,
+        "alive_reward": 1,
+        "linear_velocity": 0,
+        "angular_velocity": 0,
         "rotation_penalty": 1,
-        "collision_penalty": 200,
+        "collision_penalty": 0,
         "z_angular_velocity": 0.17,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 5,
-        "velocity_towards_target": 5,
-        "action_saturation": 160,
+        "out_of_bounds_penalty": 0,
+        "velocity_towards_target": 0,
+        "action_saturation": 1,
         "smooth_action": 0,
-        "energy_penalty": 0.05,
+        "energy_penalty": 0,
     }
 
     # Config for wandb
@@ -173,7 +173,7 @@ def main():
         "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
-            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
+            "net_arch": {"pi": [128, 128], "vf": [128, 128]},
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
