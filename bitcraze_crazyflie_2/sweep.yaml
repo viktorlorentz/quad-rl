@@ -67,21 +67,16 @@ parameters:
     min: 0.1
     distribution: uniform
   batch_size:
-    max: 4096
-    min: 64
-    distribution: int_uniform
+    values: [32, 64, 128, 256, 512, 1024, 2048, 4096]
   num_envs:
-    max: 256
-    min: 1
-    distribution: int_uniform
+    values: [1, 2, 4, 8, 16, 32, 64, 128, 256]
   vf_coef:
     max: 1
     min: 0.25
     distribution: uniform
   n_steps:
-    max: 4096
-    min: 32
-    distribution: int_uniform
+    values: [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    distribution: categorical
   gamma:
     max: 1.98
     min: 0.495
