@@ -87,3 +87,6 @@ parameters:
     min: 0.495
     distribution: uniform
 program: scripts/train_agent.py
+early_terminate:
+  type: hyperband
+  min_iter: 10
