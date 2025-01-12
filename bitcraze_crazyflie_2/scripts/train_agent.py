@@ -128,7 +128,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 8
+    n_envs = 16
     n_steps = 1024
     batch_size = 1024
     time_steps = 3_500_000
@@ -137,20 +137,20 @@ def main():
     reward_coefficients = {  # based on single_quad_rl_1731931528
         "distance": 1,
         "distance_z": 0,
-        "goal_bonus": 20,
+        "goal_bonus": 100,
         "distance_xy": 0,
         "alive_reward": 1,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
         "collision_penalty": 0,
-        "z_angular_velocity": 0.17,
+        "z_angular_velocity": 0.5,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
-        "velocity_towards_target": 0,
-        "action_saturation": 1,
-        "smooth_action": 0,
-        "energy_penalty": 0,
+        "velocity_towards_target": 1,
+        "action_saturation": 0,
+        "smooth_action": 2,
+        "energy_penalty": 1,
     }
 
     # Config for wandb
@@ -242,6 +242,7 @@ def main():
             "reward_coefficients": config["reward_coefficients"],
             "render_mode": "rgb_array",
             "env_config": config["env_config"],
+            "policy_freq": config["policy_freq"],
         },
         wrapper_class=gym.wrappers.RecordVideo,
         wrapper_kwargs={
@@ -271,22 +272,22 @@ def main():
 
     # Create the PPO model with all specified parameters
     model = PPO(
-        policy=config["policy_type"],  # CustomActorCriticPolicy,
+        policy='MlpPolicy', #config["policy_type"],  # CustomActorCriticPolicy,
         env=env,
-        n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        learning_rate=config["learning_rate"],
-        gamma=config["gamma"],
-        gae_lambda=config["gae_lambda"],
-        ent_coef=config["ent_coef"],
-        vf_coef=config["vf_coef"],
-        max_grad_norm=config["max_grad_norm"],
-        clip_range=config["clip_range"],
-        clip_range_vf=config["clip_range_vf"],
-        normalize_advantage=config["normalize_advantage"],
-        use_sde=config["use_sde"],
+        # n_steps=config["n_steps"],
+        # batch_size=config["batch_size"],
+        # learning_rate=config["learning_rate"],
+        # gamma=config["gamma"],
+        # gae_lambda=config["gae_lambda"],
+        # ent_coef=config["ent_coef"],
+        # vf_coef=config["vf_coef"],
+        # max_grad_norm=config["max_grad_norm"],
+        # clip_range=config["clip_range"],
+        # clip_range_vf=config["clip_range_vf"],
+        # normalize_advantage=config["normalize_advantage"],
+        # use_sde=config["use_sde"],
         device="cpu",
-        policy_kwargs=policy_kwargs,
+        # policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
     )
 
