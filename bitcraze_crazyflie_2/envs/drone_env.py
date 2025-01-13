@@ -211,6 +211,8 @@ class DroneEnv(MujocoEnv):
 
         obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
         return obs
+    
+    
 
     def step(self, action):
 
@@ -219,7 +221,9 @@ class DroneEnv(MujocoEnv):
         action_scaled = 0.5 * (action + 1.0) * self.max_thrust
         action_scaled = np.clip(action_scaled, 0, self.max_thrust)
 
-        self.last_action = self.data.ctrl[:4].copy()
+        # Save raw last action
+        self.last_action = (self.data.ctrl[:4].copy()/ self.max_thrust) * 2 - 1
+        
 
         self.do_simulation(action_scaled, self.frame_skip)
 
@@ -259,7 +263,7 @@ class DroneEnv(MujocoEnv):
             collision,
             out_of_bounds,
             action_scaled,
-            last_action=obs[-4:],
+            last_action= 0.5 * (obs[-4:] + 1.0) * self.max_thrust,
         )
 
         # Determine termination conditions
@@ -291,6 +295,11 @@ class DroneEnv(MujocoEnv):
             self.render()
 
         return obs, reward, terminated, truncated, info
+    
+    def angle_between(self, v1, v2):
+        v1, v2 = np.array(v1), np.array(v2)
+        cos_theta = np.clip(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), -1, 1)
+        return np.arccos(cos_theta)
 
     def calc_reward(
         self,
@@ -360,7 +369,7 @@ class DroneEnv(MujocoEnv):
         reward -= distance_xy_penalty
         reward_components["distance_xy_penalty"] = -distance_xy_penalty
 
-        distance_penalty = rc["distance"] * distance
+        distance_penalty = rc["distance"] * distance**2
         reward -= distance_penalty
         reward_components["distance_penalty"] = -distance_penalty
 
@@ -396,37 +405,32 @@ class DroneEnv(MujocoEnv):
         # Compute the unit vector towards the target
         if distance > 0.005:
             desired_direction = position_error / distance
-        else:
-            desired_direction = np.zeros_like(position_error)
+            
+            # angle in deg between desired direction and velocity
+            velocity_offset_angle_penalty = -self.angle_between(desired_direction, linear_velocity)**2
 
-        # Compute the velocity towards the target
-        velocity_towards_target = np.dot(linear_velocity, desired_direction)
-
-        #only negative velocity is penalized
-        velocity_towards_target = np.clip(velocity_towards_target, -20, 1)
-
-        reward += rc["velocity_towards_target"] * velocity_towards_target
-        reward_components["velocity_towards_target"] = (
-            rc["velocity_towards_target"] * velocity_towards_target
-        )
+            reward += rc["velocity_towards_target"] * velocity_offset_angle_penalty
+            reward_components["velocity_towards_target"] = (
+                rc["velocity_towards_target"] * velocity_offset_angle_penalty
+            )
 
         # Linear velocity penalty
-        linear_vel_penalty = rc["linear_velocity"] * (
-            np.linalg.norm(velocity_towards_target) - distance
-        )
-        reward -= linear_vel_penalty
-        reward_components["linear_velocity_penalty"] = -linear_vel_penalty
+        # linear_vel_penalty = rc["linear_velocity"] * (
+        #     np.linalg.norm(velocity_towards_target) - distance
+        # )
+        # reward -= linear_vel_penalty
+        # reward_components["linear_velocity_penalty"] = -linear_vel_penalty
 
         # Goal bonus
         
         goal_bonus = (
-            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.008**2)
+            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
         )  # exact peek at position
-        goal_bonus += 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        goal_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
     
         # # Move the target if good tracking
         if distance < 0.01:
-            if self.np_random.uniform() < self.target_move_prob * np.exp(-(distance**2) / 0.01**2):
+            if np.random.default_rng().uniform() < self.target_move_prob * np.exp(-(distance**2) / 0.01**2):
                 # Move the target to a new random position
                 self.target_position = self.np_random.uniform(
                     low=self.workspace["low"] + 0.1,
@@ -439,7 +443,7 @@ class DroneEnv(MujocoEnv):
                 # goal_bonus += (
                 #     100 * rc["goal_bonus"]
                 # )  # add more bonus for reaching the target and to prevent policy avoiding it
-                goal_bonus += 10 * rc["goal_bonus"]
+                goal_bonus += 100 * rc["goal_bonus"]
         reward += goal_bonus
         reward_components["goal_bonus"] = goal_bonus
         
@@ -481,6 +485,10 @@ class DroneEnv(MujocoEnv):
             random_position, self.workspace["low"]+0.1, self.workspace["high"]-0.1
         )
         self.data.qpos[:3] = random_position
+
+        #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
+        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03), 0.025, 0.04)
+        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=[1.657171e-5, 1.6655602e-5, 2.9261652e-5], scale=0.0001)
 
         # Randomize initial orientation around upright orientation
         orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees
