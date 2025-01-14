@@ -13,6 +13,24 @@ DEFAULT_CAMERA_CONFIG = {
     "distance": 2.0,
 }
 
+#src: https://github.com/Zhehui-Huang/quad-swarm-rl/blob/master/gym_art/quadrotor_multi/quad_utils.py
+class OUNoise:
+    def __init__(self, size=4, mu=0.0, theta=0.15, sigma=0.2 ):
+        self.size = size
+        self.mu = mu
+        self.theta = theta
+        self.sigma = sigma
+        self.state = np.ones(self.size) * self.mu
+    
+    def reset(self):
+        self.state = np.ones(self.size) * self.mu
+    
+    def noise(self):
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
+        self.state = x + dx
+        return self.state
+
 
 class DroneEnv(MujocoEnv):
     def __init__(
@@ -49,6 +67,7 @@ class DroneEnv(MujocoEnv):
         self.total_max_time = 100
 
         self.warmup_time = 0.3  # 1s warmup time
+
 
         # Define observation space
         obs_dim = 22  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3), last action (4)
@@ -149,6 +168,12 @@ class DroneEnv(MujocoEnv):
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
+        self.thrust_noise_ratio = 0.05
+        self.ou_noise = OUNoise(size=self.action_space.shape, sigma=0.2 * self.thrust_noise_ratio)  # OU noise for motor signals
+        self.motor_tau_up = 0.2
+        self.motor_tau_down = 0.3
+        self.current_thrust = np.zeros(4)
+
     def _get_obs(self):
         # Get observations
         position = self.data.qpos[:3].copy()
@@ -220,12 +245,19 @@ class DroneEnv(MujocoEnv):
         # Scale action to [0, self.max_thrust]
         action_scaled = 0.5 * (action + 1.0) * self.max_thrust
         action_scaled = np.clip(action_scaled, 0, self.max_thrust)
-
-        # Save raw last action
-        self.last_action = (self.data.ctrl[:4].copy()/ self.max_thrust) * 2 - 1
         
 
-        self.do_simulation(action_scaled, self.frame_skip)
+        # Motor lag
+        for i in range(4):
+            tau = self.motor_tau_up if action_scaled[i] > self.current_thrust[i] else self.motor_tau_down
+            self.current_thrust[i] += tau * (action_scaled[i] - self.current_thrust[i])
+        
+        ou = self.ou_noise.noise()
+        self.current_thrust += ou
+
+        # Use self.current_thrust instead of action_scaled
+        self.last_action = (self.data.ctrl[:4].copy()/ self.max_thrust) * 2 - 1
+        self.do_simulation(self.current_thrust, self.frame_skip)
 
         # Get observation
         obs = self._get_obs()
