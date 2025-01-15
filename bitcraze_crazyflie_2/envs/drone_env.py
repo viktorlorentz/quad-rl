@@ -589,7 +589,7 @@ class DroneEnv(MujocoEnv):
         )  # Random angular velocity
 
         #randomize max_thrust of motors
-        self.max_thrust = self.np_random.uniform(low=0.09, high=0.13)
+        self.max_thrust = self.np_random.uniform(low=0.08, high=0.14)
         self.motor_offset = self.np_random.normal(loc=1.0, scale=0.01, size=4)
         
 
