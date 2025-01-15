@@ -13,6 +13,8 @@ DEFAULT_CAMERA_CONFIG = {
     "distance": 2.0,
 }
 
+MAX_THRUST = 0.11772
+
 #src: https://github.com/Zhehui-Huang/quad-swarm-rl/blob/master/gym_art/quadrotor_multi/quad_utils.py
 class OUNoise:
     def __init__(self, size=4, mu=0.0, theta=0.15, sigma=0.2 ):
@@ -169,7 +171,7 @@ class DroneEnv(MujocoEnv):
         self.target_move_prob = target_move_prob
 
         self.thrust_noise_ratio = 0.05
-        self.ou_noise = OUNoise(size=self.action_space.shape, sigma=0.2 * self.thrust_noise_ratio)  # OU noise for motor signals
+        self.ou_noise = OUNoise(size=self.action_space.shape, sigma= self.thrust_noise_ratio)  # OU noise for motor signals
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
@@ -240,23 +242,43 @@ class DroneEnv(MujocoEnv):
     
 
     def step(self, action):
+        if not hasattr(self, "thrust_rot_damp"):
+            self.thrust_rot_damp = np.zeros(4)
+        if not hasattr(self, "thrust_cmds_damp"):
+            self.thrust_cmds_damp = np.zeros(4)
 
+        # Convert action from [-1,1] to [0,1]
+        thrust_cmds = 0.5 * (action + 1.0)
+        thrust_cmds = np.clip(thrust_cmds, 0.0, 1.0)
 
-        # Scale action to [0, self.max_thrust]
-        action_scaled = 0.5 * (action + 1.0) * self.max_thrust
-        action_scaled = np.clip(action_scaled, 0, self.max_thrust)
+        action_scaled = thrust_cmds * self.max_thrust
+
+        # Motor tau
+        motor_tau = self.motor_tau_up * np.ones(4)
+        motor_tau[thrust_cmds < self.thrust_cmds_damp] = self.motor_tau_down
+        motor_tau[motor_tau > 1.0] = 1.0
+
+        # Convert to sqrt scale
+        thrust_rot = thrust_cmds ** 0.5
+        self.thrust_rot_damp = motor_tau * (thrust_rot - self.thrust_rot_damp) + self.thrust_rot_damp
+       
+
+        # Add noise
+        thr_noise = self.ou_noise.noise()
+        thrust_noise = thrust_cmds * thr_noise
+        self.thrust_cmds_damp = np.clip(self.thrust_cmds_damp + thrust_noise, 0.0, 1.0)
+
+        self.thrust_cmds_damp = self.thrust_rot_damp ** 2
         
+        # Scale to actual thrust
+        self.current_thrust = self.max_thrust * self.thrust_cmds_damp 
 
-        # Motor lag
-        for i in range(4):
-            tau = self.motor_tau_up if action_scaled[i] > self.current_thrust[i] else self.motor_tau_down
-            self.current_thrust[i] += tau * (action_scaled[i] - self.current_thrust[i])
-        
-        ou = self.ou_noise.noise()
-        self.current_thrust += ou
+        # Apply motor offset
+        self.current_thrust *= self.motor_offset
 
-        # Use self.current_thrust instead of action_scaled
-        self.last_action = (self.data.ctrl[:4].copy()/ self.max_thrust) * 2 - 1
+        # Store last action
+        self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
+        # Run simulation
         self.do_simulation(self.current_thrust, self.frame_skip)
 
         # Get observation
@@ -437,14 +459,19 @@ class DroneEnv(MujocoEnv):
         # Compute the unit vector towards the target
         if distance > 0.005:
             desired_direction = position_error / distance
-            
-            # angle in deg between desired direction and velocity
-            velocity_offset_angle_penalty = -self.angle_between(desired_direction, linear_velocity)**2
+        else:
+            desired_direction = np.zeros_like(position_error)
 
-            reward += rc["velocity_towards_target"] * velocity_offset_angle_penalty
-            reward_components["velocity_towards_target"] = (
-                rc["velocity_towards_target"] * velocity_offset_angle_penalty
-            )
+        # Compute the velocity towards the target
+        velocity_towards_target = np.dot(linear_velocity, desired_direction)
+
+        #only negative velocity is penalized
+        #velocity_towards_target = np.clip(velocity_towards_target, -20, 1)
+
+        reward += rc["velocity_towards_target"] * velocity_towards_target
+        reward_components["velocity_towards_target"] = (
+            rc["velocity_towards_target"] * velocity_towards_target
+        )
 
         # Linear velocity penalty
         # linear_vel_penalty = rc["linear_velocity"] * (
@@ -520,7 +547,7 @@ class DroneEnv(MujocoEnv):
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
         self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03), 0.025, 0.04)
-        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=[1.657171e-5, 1.6655602e-5, 2.9261652e-5], scale=0.0001)
+        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
         orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees
@@ -560,6 +587,11 @@ class DroneEnv(MujocoEnv):
         self.data.qvel[3:6] = self.np_random.uniform(
             low=-0.1, high=0.1, size=3
         )  # Random angular velocity
+
+        #randomize max_thrust of motors
+        self.max_thrust = self.np_random.uniform(low=0.09, high=0.13)
+        self.motor_offset = self.np_random.normal(loc=1.0, scale=0.01, size=4)
+        
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
