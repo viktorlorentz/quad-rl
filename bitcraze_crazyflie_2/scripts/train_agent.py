@@ -137,19 +137,19 @@ def main():
     reward_coefficients = {  # based on single_quad_rl_1731931528
         "distance": 1,
         "distance_z": 0,
-        "goal_bonus": 10,
+        "goal_bonus": 30,
         "distance_xy": 0,
         "alive_reward": 1,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
         "collision_penalty": 0,
-        "z_angular_velocity": 0.5,
+        "z_angular_velocity": 1,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 1,
         "action_saturation": 0,
-        "smooth_action": 2,
+        "smooth_action": 1,
         "energy_penalty": 1,
     }
 
