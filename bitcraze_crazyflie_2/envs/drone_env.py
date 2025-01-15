@@ -482,27 +482,27 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         
-        goal_bonus = (
-            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        )  # exact peek at position
+        # goal_bonus = (
+        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
+        # )  # exact peek at position
         goal_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
     
-        # # Move the target if good tracking
-        if distance < 0.01:
-            if np.random.default_rng().uniform() < self.target_move_prob * np.exp(-(distance**2) / 0.01**2):
-                # Move the target to a new random position
-                self.target_position = self.np_random.uniform(
-                    low=self.workspace["low"] + 0.1,
-                    high=self.workspace["high"] - 0.1,
-                )
-                # Update the goal marker's position if applicable
-                self.model.geom_pos[self.goal_geom_id] = self.target_position
+        # # # Move the target if good tracking
+        # if distance < 0.01:
+        #     if np.random.default_rng().uniform() < self.target_move_prob * np.exp(-(distance**2) / 0.01**2):
+        #         # Move the target to a new random position
+        #         self.target_position = self.np_random.uniform(
+        #             low=self.workspace["low"] + 0.1,
+        #             high=self.workspace["high"] - 0.1,
+        #         )
+        #         # Update the goal marker's position if applicable
+        #         self.model.geom_pos[self.goal_geom_id] = self.target_position
 
-                self.max_time += 10  # add more time to reach the target
-                # goal_bonus += (
-                #     100 * rc["goal_bonus"]
-                # )  # add more bonus for reaching the target and to prevent policy avoiding it
-                goal_bonus += 100 * rc["goal_bonus"]
+        #         self.max_time += 10  # add more time to reach the target
+        #         # goal_bonus += (
+        #         #     100 * rc["goal_bonus"]
+        #         # )  # add more bonus for reaching the target and to prevent policy avoiding it
+        #         goal_bonus += 100 * rc["goal_bonus"]
         reward += goal_bonus
         reward_components["goal_bonus"] = goal_bonus
         
@@ -547,7 +547,7 @@ class DroneEnv(MujocoEnv):
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
         self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03), 0.025, 0.04)
-        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
+        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.3) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
         orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees
