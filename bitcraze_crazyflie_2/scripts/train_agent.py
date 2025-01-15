@@ -131,7 +131,7 @@ def main():
     n_envs = 64
     n_steps = 1024
     batch_size = 1024
-    time_steps = 10_000_000
+    time_steps = 12_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -180,7 +180,7 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": False,
+            "connect_payload": True,
         }
     }
 
