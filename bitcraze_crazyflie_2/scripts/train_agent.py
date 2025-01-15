@@ -128,7 +128,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 32
+    n_envs = 64
     n_steps = 1024
     batch_size = 1024
     time_steps = 10_000_000
@@ -139,7 +139,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 1,
+        "alive_reward": 2,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -150,7 +150,8 @@ def main():
         "velocity_towards_target": 1,
         "action_saturation": 0,
         "smooth_action": 1,
-        "energy_penalty": 1,
+        "energy_penalty": 0.5,
+        "payload_velocity": 0.5,
     }
 
     # Config for wandb

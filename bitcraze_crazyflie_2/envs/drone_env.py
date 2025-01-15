@@ -49,9 +49,14 @@ class DroneEnv(MujocoEnv):
     ):
         # Path to the MuJoCo XML model
         model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene_payload.xml")
-        if not env_config.get("connect_payload", True):
+
+        self.payload = env_config.get("connect_payload", True)
+
+        if not self.payload:
             model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
             
+
+       
 
         self.DEFAULT_CAMERA_CONFIG = default_camera_config
 
@@ -143,6 +148,7 @@ class DroneEnv(MujocoEnv):
             self.model, mujoco.mjtObj.mjOBJ_BODY, "payload"
         )
 
+
         # Reward function coefficients
         if reward_coefficients is None:
             # Default coefficients
@@ -163,6 +169,7 @@ class DroneEnv(MujocoEnv):
                 "action_saturation": 100,
                 "smooth_action": 100,
                 "energy_penalty": 1,
+                "payload_velocity": 1,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -525,6 +532,18 @@ class DroneEnv(MujocoEnv):
             reward_components["out_of_bounds_penalty"] = -out_of_bounds_penalty
         else:
             reward_components["out_of_bounds_penalty"] = 0
+
+        # Payload penalties:
+        if self.payload:
+            #payload id
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_velocity = self.data.qvel[payload_joint_id : payload_joint_id + 3]
+
+            # Compute payload velocity penalty
+            payload_velocity_penalty = rc["payload_velocity"] * np.linalg.norm(payload_velocity)
+            reward -= payload_velocity_penalty
+            reward_components["payload_velocity"] = -payload_velocity_penalty
+
 
         # Additional info
         additional_info = {
