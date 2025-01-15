@@ -128,7 +128,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 64
+    n_envs = 32
     n_steps = 1024
     batch_size = 1024
     time_steps = 10_000_000
@@ -137,7 +137,7 @@ def main():
     reward_coefficients = {  # based on single_quad_rl_1731931528
         "distance": 1,
         "distance_z": 0,
-        "goal_bonus": 30,
+        "goal_bonus": 100,
         "distance_xy": 0,
         "alive_reward": 1,
         "linear_velocity": 0,
