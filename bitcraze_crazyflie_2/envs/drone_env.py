@@ -78,6 +78,11 @@ class DroneEnv(MujocoEnv):
 
         # Define observation space
         obs_dim = 22  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3), last action (4)
+        
+        # add paylod pos if available
+        if self.payload:
+            obs_dim += 3
+        
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -169,7 +174,7 @@ class DroneEnv(MujocoEnv):
                 "action_saturation": 100,
                 "smooth_action": 100,
                 "energy_penalty": 1,
-                "payload_velocity": 1,
+                "payload_velocity": 0.2,
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -223,19 +228,30 @@ class DroneEnv(MujocoEnv):
         # Last action
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4)
 
+        obs = [     
+            orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
+            linear_velocity_local,
+            local_angular_velocity,
+            position_error_local,  # Include position error in drone's local frame
+            last_action,
+            ]
+        
+        #payload pos
+        if self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            relative_payload_pos = payload_pos - position
+            
+            relative_payload_pos_local = np.zeros(3)
+            mujoco.mju_rotVecQuat(relative_payload_pos_local, relative_payload_pos, conj_quat)
+
+            obs.append(relative_payload_pos_local)
+
+           
+
         
         # Combine all observations, including the position error in local frame
-        obs = np.concatenate(
-            [
-                orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
-                linear_velocity_local,
-                local_angular_velocity,
-                position_error_local,  # Include position error in drone's local frame
-                last_action,
-                # imu_gyro_data,
-                # imu_acc_data,
-            ]
-        )
+        obs = np.concatenate(obs)
 
         obs = self.noise_observation(obs, noise_level=0.02)
 
@@ -540,7 +556,7 @@ class DroneEnv(MujocoEnv):
             payload_velocity = self.data.qvel[payload_joint_id : payload_joint_id + 3]
 
             # Compute payload velocity penalty
-            payload_velocity_penalty = rc["payload_velocity"] * np.linalg.norm(payload_velocity)
+            payload_velocity_penalty = rc["payload_velocity"] * np.linalg.norm(payload_velocity)**2
             reward -= payload_velocity_penalty
             reward_components["payload_velocity"] = -payload_velocity_penalty
 
@@ -569,7 +585,7 @@ class DroneEnv(MujocoEnv):
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
         self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03), 0.025, 0.04)
-        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.3) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
+        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
         orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees

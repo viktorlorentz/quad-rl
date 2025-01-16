@@ -131,7 +131,7 @@ def main():
     n_envs = 64
     n_steps = 1024
     batch_size = 1024
-    time_steps = 12_000_000
+    time_steps = 50_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -139,7 +139,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 2,
+        "alive_reward": 5,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -149,9 +149,9 @@ def main():
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 1,
         "action_saturation": 0,
-        "smooth_action": 1,
-        "energy_penalty": 0.5,
-        "payload_velocity": 0.5,
+        "smooth_action": 0.5,
+        "energy_penalty": 0.2,
+        "payload_velocity": 0.1,
     }
 
     # Config for wandb
