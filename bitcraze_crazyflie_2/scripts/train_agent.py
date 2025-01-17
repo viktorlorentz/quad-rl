@@ -139,7 +139,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 5,
+        "alive_reward": 3,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -149,9 +149,9 @@ def main():
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 1,
         "action_saturation": 0,
-        "smooth_action": 0.5,
-        "energy_penalty": 0.2,
-        "payload_velocity": 0.1,
+        "smooth_action": 0.2,
+        "energy_penalty": 0.1,
+        "payload_velocity": 0.05,
     }
 
     # Config for wandb
