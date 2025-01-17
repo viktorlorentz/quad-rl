@@ -609,6 +609,9 @@ class DroneEnv(MujocoEnv):
             random_position + np.array([0, 0, -0.15])
         )
 
+        #randomize payload mass from 2 to 10g
+        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.01, scale=0.01), 0.002, 0.01)
+
         # warmup sim to stabilize rope
         while self.data.time < self.warmup_time:
             self.do_simulation(np.zeros(4), 10)

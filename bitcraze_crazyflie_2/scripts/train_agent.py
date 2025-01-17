@@ -139,7 +139,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 3,
+        "alive_reward": 8,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
