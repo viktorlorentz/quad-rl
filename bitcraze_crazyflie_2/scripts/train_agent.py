@@ -129,8 +129,8 @@ def main():
 
     # Define parameters
     n_envs = 64
-    n_steps = 1024
-    batch_size = 1024
+    n_steps = 2048
+    batch_size = 64
     time_steps = 50_000_000
 
     # Reward function coefficients
@@ -162,7 +162,7 @@ def main():
         "n_steps": n_steps,
         "n_envs": n_envs,
         "batch_size": batch_size,
-        "learning_rate": 0.0012,
+        "learning_rate": 0.0003*10,# slightly increased learning rate because of more envs
         "gamma": 0.98,
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
@@ -275,9 +275,9 @@ def main():
     model = PPO(
         policy='MlpPolicy', #config["policy_type"],  # CustomActorCriticPolicy,
         env=env,
-        # n_steps=config["n_steps"],
-        # batch_size=config["batch_size"],
-        # learning_rate=config["learning_rate"],
+        n_steps=config["n_steps"],
+        batch_size=config["batch_size"],
+        learning_rate=config["learning_rate"],
         # gamma=config["gamma"],
         # gae_lambda=config["gae_lambda"],
         # ent_coef=config["ent_coef"],
