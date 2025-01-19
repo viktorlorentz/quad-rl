@@ -73,7 +73,7 @@ class DroneEnv(MujocoEnv):
         self.max_time = 20
         self.total_max_time = 100
 
-        self.warmup_time = 0.3  # 1s warmup time
+        self.warmup_time = 1.0  # 1s warmup time
 
 
         # Define observation space
@@ -588,9 +588,14 @@ class DroneEnv(MujocoEnv):
         self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 30 degrees
+        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 20 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
+        #clip roll and pitch to be within reasonable range
+        max_deg = 90
+        roll = np.clip(roll, -np.deg2rad(max_deg), np.deg2rad(max_deg))
+        pitch = np.clip(pitch, -np.deg2rad(max_deg), np.deg2rad(max_deg))
+      
         yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
 
         # Convert Euler angles to quaternion
@@ -609,8 +614,8 @@ class DroneEnv(MujocoEnv):
             random_position + np.array([0, 0, -0.15])
         )
 
-        #randomize payload mass from 2 to 10g
-        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.01, scale=0.01), 0.002, 0.01)
+        #randomize payload mass from 1 to 11g
+        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02), 0.001, 0.011)
 
         # warmup sim to stabilize rope
         while self.data.time < self.warmup_time:
@@ -622,12 +627,13 @@ class DroneEnv(MujocoEnv):
         self.warmup_time = self.data.time
 
         # Randomize velocity
-        self.data.qvel[:3] = self.np_random.uniform(
-            low=-0.4, high=0.4, size=3
-        )  # Random linear velocity
-        self.data.qvel[3:6] = self.np_random.uniform(
-            low=-0.1, high=0.1, size=3
-        )  # Random angular velocity
+        self.data.qvel[:3] = np.clip(self.np_random.normal(
+            loc=0.0, scale=0.4, size=3
+        ), -1, 1) # Random linear velocity
+
+        self.data.qvel[3:6] = np.clip(self.np_random.normal(
+            loc=0.0, scale=0.1, size=3
+        ), -3, 3)
 
         #randomize max_thrust of motors
         self.max_thrust = self.np_random.uniform(low=0.08, high=0.14)

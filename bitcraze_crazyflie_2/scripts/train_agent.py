@@ -162,7 +162,7 @@ def main():
         "n_steps": n_steps,
         "n_envs": n_envs,
         "batch_size": batch_size,
-        "learning_rate": 0.0003*10,# slightly increased learning rate because of more envs
+        "learning_rate": 0.0003,
         "gamma": 0.98,
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
