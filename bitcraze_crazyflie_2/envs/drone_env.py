@@ -128,6 +128,7 @@ class DroneEnv(MujocoEnv):
         self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
 
         # Set the target position for hovering
+        self.target_mode = env_config.get("target_mode", "quad") # quad or payload
         self.target_position = np.array([0.0, 0.0, 1.5], dtype=np.float32)
 
         # Get the drone's body ID
@@ -208,7 +209,12 @@ class DroneEnv(MujocoEnv):
         orientation_rot = r.as_matrix()
 
         # Compute position error in world coordinates
-        position_error_world = self.target_position - position
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error_world = self.target_position - payload_pos
+        else:
+            position_error_world = self.target_position - position
 
         # Compute conjugate quaternion (inverse rotation)
         conj_quat = np.zeros(4)
@@ -392,7 +398,12 @@ class DroneEnv(MujocoEnv):
         last_action,
     ):
         # Compute distance to target position
-        position_error = self.target_position - position
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error = self.target_position - payload_pos
+        else:
+            position_error = self.target_position - position
         distance = np.linalg.norm(position_error)
 
         # Compute rotation penalty
