@@ -635,7 +635,7 @@ class DroneEnv(MujocoEnv):
             self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
 
             # also keep payload pos fixed for initial cable stabilization
-            if self.data.time < 0.5 * self.warmup_time:
+            if self.data.time < 0.2 * self.warmup_time:
                 self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
             
 
