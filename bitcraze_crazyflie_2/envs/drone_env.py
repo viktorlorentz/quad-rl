@@ -45,7 +45,6 @@ class DroneEnv(MujocoEnv):
         visual_options=None,
         env_config={},
         target_move_prob=0.01,  # Probability of target moving when drone reaches it
-        randomness=1.0,
         **kwargs,
     ):
         # Path to the MuJoCo XML model
@@ -56,7 +55,7 @@ class DroneEnv(MujocoEnv):
         if not self.payload:
             model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
         
-        self.randomness = randomness
+        self.randomness = env_config.get("randomness", 1.0)
 
        
 

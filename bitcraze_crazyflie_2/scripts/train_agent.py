@@ -181,6 +181,7 @@ def main():
         "policy_freq": 250,
         "env_config": {
             "connect_payload": True,
+            "randomness": 1.0
         }
     }
 
