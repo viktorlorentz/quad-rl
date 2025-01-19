@@ -45,6 +45,7 @@ class DroneEnv(MujocoEnv):
         visual_options=None,
         env_config={},
         target_move_prob=0.01,  # Probability of target moving when drone reaches it
+        randomness=1.0,
         **kwargs,
     ):
         # Path to the MuJoCo XML model
@@ -54,7 +55,8 @@ class DroneEnv(MujocoEnv):
 
         if not self.payload:
             model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
-            
+        
+        self.randomness = randomness
 
        
 
@@ -182,8 +184,8 @@ class DroneEnv(MujocoEnv):
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
-        self.thrust_noise_ratio = 0.05
-        self.ou_noise = OUNoise(size=self.action_space.shape, sigma= self.thrust_noise_ratio)  # OU noise for motor signals
+        self.thrust_noise_ratio = 0.05 * self.randomness
+        self.ou_noise = OUNoise(size=self.action_space.shape, sigma=self.thrust_noise_ratio)  # OU noise for motor signals
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
@@ -259,7 +261,7 @@ class DroneEnv(MujocoEnv):
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
+        obs += np.random.normal(loc=0, scale=noise_level * self.randomness, size=obs.shape)
         return obs
     
     
@@ -573,7 +575,7 @@ class DroneEnv(MujocoEnv):
 
     def reset_model(self):
         # Randomize initial position around the target position
-        position_std_dev = 0.5  # Standard deviation in meters
+        position_std_dev = 0.5 * self.randomness  # Standard deviation in meters
         random_position = self.np_random.normal(
             loc=self.target_position, scale=position_std_dev
         )
@@ -584,11 +586,11 @@ class DroneEnv(MujocoEnv):
         self.data.qpos[:3] = random_position
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
-        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03), 0.025, 0.04)
-        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
+        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03 * self.randomness), 0.025, 0.04)
+        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1 * self.randomness) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(20)  # Standard deviation of 20 degrees
+        orientation_std_dev = np.deg2rad(20) * self.randomness  # Standard deviation of 20 degrees
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         #clip roll and pitch to be within reasonable range
@@ -615,7 +617,7 @@ class DroneEnv(MujocoEnv):
         )
 
         #randomize payload mass from 1 to 11g
-        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02), 0.001, 0.011)
+        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
 
         # warmup sim to stabilize rope
         while self.data.time < self.warmup_time:
@@ -628,16 +630,16 @@ class DroneEnv(MujocoEnv):
 
         # Randomize velocity
         self.data.qvel[:3] = np.clip(self.np_random.normal(
-            loc=0.0, scale=0.4, size=3
+            loc=0.0, scale=0.4 * self.randomness, size=3
         ), -1, 1) # Random linear velocity
 
         self.data.qvel[3:6] = np.clip(self.np_random.normal(
-            loc=0.0, scale=0.1, size=3
+            loc=0.0, scale=0.1 * self.randomness, size=3
         ), -3, 3)
 
         #randomize max_thrust of motors
-        self.max_thrust = self.np_random.uniform(low=0.08, high=0.14)
-        self.motor_offset = self.np_random.normal(loc=1.0, scale=0.01, size=4)
+        self.max_thrust = self.np_random.uniform(low=0.08, high=0.14) * self.randomness + (1 - self.randomness)*0.11772
+        self.motor_offset = self.np_random.normal(loc=1.0, scale=0.01 * self.randomness, size=4)
         
 
         # Randomize initial actions in the action space
