@@ -612,9 +612,16 @@ class DroneEnv(MujocoEnv):
         # set payload position
         payload_joint_id = self.model.body_jntadr[self.payload_body_id]
         payload_qpos_index = self.model.jnt_qposadr[payload_joint_id]
-        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = (
-            random_position + np.array([0, 0, -0.15])
-        )
+
+        #randomize payload pos with negative z direction
+        payload_direction = np.array([0, 0, -1])
+        payload_direction[0:2] = self.np_random.normal(loc=0.0, scale=0.1 * self.randomness, size=2)
+        payload_direction = payload_direction / np.linalg.norm(payload_direction)
+
+        # scale to max cable length
+        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.19, scale=0.1 * self.randomness), 0.05, 0.19)
+    
+        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
         #randomize payload mass from 1 to 11g
         self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
@@ -625,6 +632,13 @@ class DroneEnv(MujocoEnv):
             # reset qpos
             self.data.qpos[:3] = random_position
             self.data.qpos[3:7] = q
+            # keep payload vel low
+            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
+
+            # also keep payload pos fixed for initial cable stabilization
+            if self.data.time < 0.5 * self.warmup_time:
+                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            
 
         self.warmup_time = self.data.time
 
