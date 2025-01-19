@@ -2,6 +2,7 @@ method: bayes
 metric:
   goal: minimize
   name: "position_tracking"
+program: scripts/train_agent.py
 parameters:
   env_config:
     parameters:
