@@ -577,7 +577,7 @@ class DroneEnv(MujocoEnv):
             quad_offset = self.target_position - position
             z_offset = quad_offset[2]
             xy_distance = np.linalg.norm(quad_offset[:2])
-            above_payload_reward =rc["above_payload"]* 20 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
+            above_payload_reward =rc["above_payload"]* 3 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
