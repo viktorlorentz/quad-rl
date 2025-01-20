@@ -152,6 +152,7 @@ def main():
         "smooth_action": 0.2,
         "energy_penalty": 0.1,
         "payload_velocity": 0.05,
+        "above_payload": 1.0,
     }
 
     # Config for wandb
