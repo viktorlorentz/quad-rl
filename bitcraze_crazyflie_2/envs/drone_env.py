@@ -521,7 +521,7 @@ class DroneEnv(MujocoEnv):
         goal_bonus = (
             0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
         )  # exact peek at position
-        goal_bonus +=  0.5* rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        goal_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
 
         # only give bonus if velocity is near zero
         goal_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
@@ -577,7 +577,7 @@ class DroneEnv(MujocoEnv):
             quad_offset = self.target_position - position
             z_offset = quad_offset[2]
             xy_distance = np.linalg.norm(quad_offset[:2])
-            above_payload_reward =rc["above_payload"]* 3 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
+            above_payload_reward =rc["above_payload"]* 10 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
