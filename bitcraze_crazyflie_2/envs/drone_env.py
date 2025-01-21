@@ -128,6 +128,7 @@ class DroneEnv(MujocoEnv):
         self.metadata["render_fps"] = int(np.round(1.0 / self.dt))
 
         # Set the target position for hovering
+        self.target_mode = env_config.get("target_mode", "quad") # quad or payload
         self.target_position = np.array([0.0, 0.0, 1.5], dtype=np.float32)
 
         # Get the drone's body ID
@@ -176,6 +177,7 @@ class DroneEnv(MujocoEnv):
                 "smooth_action": 100,
                 "energy_penalty": 1,
                 "payload_velocity": 0.2,
+                "above_payload": 1
             }
         else:
             self.reward_coefficients = reward_coefficients
@@ -208,7 +210,12 @@ class DroneEnv(MujocoEnv):
         orientation_rot = r.as_matrix()
 
         # Compute position error in world coordinates
-        position_error_world = self.target_position - position
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error_world = self.target_position - payload_pos
+        else:
+            position_error_world = self.target_position - position
 
         # Compute conjugate quaternion (inverse rotation)
         conj_quat = np.zeros(4)
@@ -392,7 +399,12 @@ class DroneEnv(MujocoEnv):
         last_action,
     ):
         # Compute distance to target position
-        position_error = self.target_position - position
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error = self.target_position - payload_pos
+        else:
+            position_error = self.target_position - position
         distance = np.linalg.norm(position_error)
 
         # Compute rotation penalty
@@ -506,10 +518,10 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         
-        goal_bonus = (
-            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        )  # exact peek at position
-        goal_bonus +=  0.5* rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        # goal_bonus = (
+        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
+        # )  # exact peek at position
+        goal_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
 
         # only give bonus if velocity is near zero
         goal_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
@@ -560,6 +572,15 @@ class DroneEnv(MujocoEnv):
             payload_velocity_penalty = rc["payload_velocity"] * np.linalg.norm(payload_velocity)**2
             reward -= payload_velocity_penalty
             reward_components["payload_velocity"] = -payload_velocity_penalty
+
+            # above payload reward
+            quad_offset = self.target_position - position
+            z_offset = quad_offset[2]
+            xy_distance = np.linalg.norm(quad_offset[:2])
+            above_payload_reward =rc["above_payload"]* 10 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
+            reward += above_payload_reward
+            reward_components["above_payload_reward"] = above_payload_reward
+
 
 
         # Additional info

@@ -152,6 +152,7 @@ def main():
         "smooth_action": 0.2,
         "energy_penalty": 0.1,
         "payload_velocity": 0.05,
+        "above_payload": 1.0,
     }
 
     # Config for wandb
@@ -181,7 +182,8 @@ def main():
         "policy_freq": 250,
         "env_config": {
             "connect_payload": True,
-            "randomness": 1.0
+            "randomness": 0.0,
+            "target_mode": "payload",
         }
     }
 
