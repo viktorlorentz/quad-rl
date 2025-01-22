@@ -291,7 +291,7 @@ def main():
         # normalize_advantage=config["normalize_advantage"],
         # use_sde=config["use_sde"],
         device="cpu",
-        # policy_kwargs=policy_kwargs,
+        policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
     )
 
