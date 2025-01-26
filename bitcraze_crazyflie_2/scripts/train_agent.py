@@ -154,28 +154,19 @@ def main():
     }
 
     # Common network parameters
-    # We will use Tanh activation and [64,64] layers for both PPO and TD3
-    net_arch_pi = [64, 64]
-    net_arch_vf = [64, 64]
+    # We will use Tanh activation and [64,64, 64] layers for both PPO and TD3
+    net_arch_pi = [64, 64, 64]
+    net_arch_vf = [64, 64, 64]
 
     ppo_config = {
         "algorithm": "PPO",
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
         "env_name": env_id,
-        "n_steps": 1024,
+        "n_steps": n_steps,
         "n_envs": n_envs,
         "batch_size": batch_size,
         "learning_rate": 0.0003,
-        "gamma": 0.98,
-        "gae_lambda": 0.83,
-        "ent_coef": 0.05,
-        "vf_coef": 0.25,
-        "max_grad_norm": 0.5,
-        "clip_range": 0.22,
-        "clip_range_vf": None,
-        "normalize_advantage": True,
-        "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
             "net_arch": {"pi": net_arch_pi, "vf": net_arch_vf},
@@ -185,6 +176,8 @@ def main():
         "policy_freq": 250,
         "env_config": {
             "connect_payload": False,
+            "randomness": 1.0,
+            "target_mode": "payload",
         }
     }
 
@@ -192,16 +185,6 @@ def main():
         "algorithm": "TD3",
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
-        "env_name": env_id,
-        "n_envs": n_envs,
-        "learning_rate": 0.0012,
-        "gamma": 0.98,
-        "buffer_size": 1000000,
-        "learning_starts": 10000,
-        "batch_size": 256,
-        "tau": 0.005,
-        "train_freq": 1000,
-        "gradient_steps": 1000,
         "policy_kwargs": {
             "net_arch": net_arch_pi,  # For TD3, a single list for both actor and critic
             "activation_fn": torch.nn.Tanh
@@ -211,7 +194,7 @@ def main():
         "env_config": {
             "connect_payload": True,
             "randomness": 1.0,
-            "target_mode": "quad",
+            "target_mode": "payload",
         }
     }
 
@@ -324,15 +307,15 @@ def main():
             n_steps=config["n_steps"],
             batch_size=config["batch_size"],
             learning_rate=config["learning_rate"],
-            gamma=config["gamma"],
-            gae_lambda=config["gae_lambda"],
-            ent_coef=config["ent_coef"],
-            vf_coef=config["vf_coef"],
-            max_grad_norm=config["max_grad_norm"],
-            clip_range=config["clip_range"],
-            clip_range_vf=config["clip_range_vf"],
-            normalize_advantage=config["normalize_advantage"],
-            use_sde=config["use_sde"],
+            # gamma=config["gamma"],
+            # gae_lambda=config["gae_lambda"],
+            # ent_coef=config["ent_coef"],
+            # vf_coef=config["vf_coef"],
+            # max_grad_norm=config["max_grad_norm"],
+            # clip_range=config["clip_range"],
+            # clip_range_vf=config["clip_range_vf"],
+            # normalize_advantage=config["normalize_advantage"],
+            # use_sde=config["use_sde"],
             device="cpu",
             policy_kwargs=policy_kwargs,
             tensorboard_log=f"runs/{run.id}",
@@ -341,14 +324,14 @@ def main():
         model = TD3(
             policy=config["policy_type"],
             env=env,
-            learning_rate=config["learning_rate"],
-            gamma=config["gamma"],
-            buffer_size=config["buffer_size"],
-            learning_starts=config["learning_starts"],
-            batch_size=config["batch_size"],
-            train_freq=config["train_freq"],
-            gradient_steps=config["gradient_steps"],
-            tau=config["tau"],
+            # learning_rate=config["learning_rate"],
+            # gamma=config["gamma"],
+            # buffer_size=config["buffer_size"],
+            # learning_starts=config["learning_starts"],
+            # batch_size=config["batch_size"],
+            # train_freq=config["train_freq"],
+            # gradient_steps=config["gradient_steps"],
+            # tau=config["tau"],
             policy_kwargs=policy_kwargs,
             device="cpu",
             tensorboard_log=f"runs/{run.id}",
