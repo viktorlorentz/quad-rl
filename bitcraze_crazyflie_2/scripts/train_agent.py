@@ -125,28 +125,32 @@ def main():
 
     env_id = "DroneEnv-v0"
 
-    # Define parameters common to both algorithms
-    n_envs = 8
-    time_steps = 2_500_000
+    # Define parameters
+    n_envs = 64
+    n_steps = 2048
+    batch_size = 64
+    time_steps = 50_000_000
 
     # Reward function coefficients
     reward_coefficients = {
         "distance": 1,
-        "distance_z": 0.5,
-        "goal_bonus": 20,
-        "distance_xy": 0.9,
-        "alive_reward": 20,
-        "linear_velocity": 0.6,
-        "angular_velocity": 0.3,
+        "distance_z": 0,
+        "goal_bonus": 100,
+        "distance_xy": 0,
+        "alive_reward": 8,
+        "linear_velocity": 0,
+        "angular_velocity": 0,
         "rotation_penalty": 1,
-        "collision_penalty": 200,
-        "z_angular_velocity": 0.17,
+        "collision_penalty": 0,
+        "z_angular_velocity": 1,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 5,
-        "velocity_towards_target": 5,
-        "action_saturation": 160,
-        "smooth_action": 0,
-        "energy_penalty": 0.05,
+        "out_of_bounds_penalty": 0,
+        "velocity_towards_target": 1,
+        "action_saturation": 0,
+        "smooth_action": 0.2,
+        "energy_penalty": 0.1,
+        "payload_velocity": 0.05,
+        "above_payload": 0.0,
     }
 
     # Common network parameters
@@ -161,8 +165,8 @@ def main():
         "env_name": env_id,
         "n_steps": 1024,
         "n_envs": n_envs,
-        "batch_size": 256,
-        "learning_rate": 0.0012,
+        "batch_size": batch_size,
+        "learning_rate": 0.0003,
         "gamma": 0.98,
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
@@ -205,7 +209,9 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": False,
+            "connect_payload": True,
+            "randomness": 1.0,
+            "target_mode": "quad",
         }
     }
 
@@ -279,6 +285,7 @@ def main():
             "reward_coefficients": config["reward_coefficients"],
             "render_mode": "rgb_array",
             "env_config": config["env_config"],
+            "policy_freq": config["policy_freq"],
         },
         wrapper_class=gym.wrappers.RecordVideo,
         wrapper_kwargs={

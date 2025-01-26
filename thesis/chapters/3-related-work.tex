@@ -1,0 +1,39 @@
+% \begin{samepage}
+\chapter{Related Work}
+After introducing the required background knowledge, the next chapter presents some relevant related work.
+\section{Quadrotor With Payloads Control}
+\autocite{Wahba2024}: Khaleds paper.\\
+
+\autocite{Belkhale2021}:Finally RL for model-based RL with single payload 
+\section{Reinforcement Learning for Quadrotor Control}
+\subsection{Single Quadrotor Control}
+
+\subsection{Multi Quadrotor Control}
+
+
+\paragraph{xu2023omnidrones}
+\autocite{xu2023omnidrones}: Isaac Lab implementation. -> 4096 parallel envs and 125mio steps. Have transport payload: 
+\href{https://omnidrones.readthedocs.io/en/latest/tasks/multi/TransportTrack.html#transporttrack}{link} \\
+
+The observation space is specified by a \texttt{CompositeSpec} containing the following items:
+\begin{itemize}
+    \item \texttt{obs\_self} (1, *): The state of each UAV observed by itself, containing its kinematic information with the position relative to the payload. It also includes a one-hot vector indicating each drone’s identity.
+    \item \texttt{obs\_others} (k-1, *): The observed states of other agents.
+    \item \texttt{obs\_payload} (1, *): The state of the frame, including position (relative to the reference), rotations (quaternions and direction vectors), and velocities.
+\end{itemize}
+
+
+The total reward is computed as:
+\begin{equation}
+    \begin{split}
+r = r_{\text{separation}} \cdot \left( r_{\text{pos}} + r_{\text{pos}} \cdot (r_{\text{up}} + r_{\text{swing}}) + r_{\text{joint\_limit}} \right)
+    \end{split}
+\end{equation}
+\\
+\textbf{Ideas:}
+ PPO, 4096 parallel envs, 125mio steps, Stack full state as obs with one hot it, timeencoding, use poserror as coefficent\\
+
+
+\section{Environment Representations in Reinforcement Learning}
+Idea here is to show more ideas how to represent env and payload in RL.
+\section{Reinforcement Learning for Multi-Agent Payload Transport}

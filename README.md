@@ -13,23 +13,28 @@ git clone https://github.com/  TODO
 ### 2. Create and Activate the Conda Environment
 
 ```bash
-conda create -n quad-rl python=3.9
+conda create -n quad-rl python=3.10
 conda activate quad-rl
 ```
 
+Alternative with micromamba:
+  
+  ```bash
+  micromamba create -n quad-rl python=3.10
+  micromamba activate quad-rl
+  ```
+
 ### 3. Install the Package and Dependencies
 
-Navigate to the project root directory:
 
-```bash
-cd bitcraze_crazyflie_2
-```
-
-Install the package in editable mode and the required dependencies:
-
+Install the package in editable mode and the required dependencies
 ```bash
 pip install -e .
-pip install -r requirements.txt
+```
+
+# Login to Weight & Biases
+```bash
+wandb login
 ```
 
 
@@ -41,6 +46,10 @@ Run the training script to train the PPO agent:
 
 ```bash
 train-drone
+```
+On headless servers, you have to set mujoco headless
+```bash
+export MUJOCO_GL=egl
 ```
 
 **Notes:**

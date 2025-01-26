@@ -1,0 +1,35 @@
+name: Build PDF with LaTeX
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'thesis/**'
+  pull_request:
+    paths:
+      - 'thesis/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: texlive/texlive:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build the PDF directly inside the container
+      - name: Build PDF
+        run: |
+          cd thesis
+          latexmk -pdf
+
+      # Upload the output PDF as artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: thesis
+          path: thesis/thesis.pdf

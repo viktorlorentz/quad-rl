@@ -1,0 +1,73 @@
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[american]{babel} 
+\usepackage{subcaption}
+\usepackage{graphicx} 
+
+
+
+\usepackage[]{inter}
+%\usepackage[sfdefault]{inter}
+
+\usepackage{sectsty}
+\allsectionsfont{\intersemibold}
+\usepackage[pagestyles]{titlesec}
+
+\titleformat{\chapter}[hang]
+  {\intersemibold\huge\raggedright}
+  {\thechapter. }
+  {9pt}
+  {}
+
+
+
+\usepackage{parskip}
+\setlength{\parskip}{12pt plus80pt minus10pt} 
+\usepackage[]{easy-todo} 
+
+\usepackage{csquotes}
+\usepackage[style=ieee, backend=biber, sorting=none]{biblatex} 
+
+\usepackage{amssymb}
+\usepackage{mathtools}
+
+\addbibresource{literatur/bibliography.bib}
+\usepackage[activate={true,nocompatibility},
+	final,
+	tracking=true,
+	kerning=true,
+	expansion=true,
+	spacing=true,
+	factor=1050,
+	stretch=25,
+	shrink=10]{microtype} 
+\usepackage{booktabs}
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+
+\usepackage[page,toc,titletoc,title]{appendix}
+\usepackage[rflt]{floatflt}
+\usepackage{fancyvrb}
+\usepackage[hidelinks]{hyperref} 
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage[right=2.5 cm, left=2.5 cm, top=2.5 cm, bottom=2.5 cm]{geometry} % Seitenränder
+\usepackage{pbox}
+\usepackage{tabulary}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{bm}
+
+\usepackage[toc=false, abbreviations,symbols,nogroupskip,nonumberlist]{glossaries-extra}
+\setglossarysection{section}
+\makeglossaries[abbreviations,symbols]
+\include{settings/abbreviations.tex}
+\include{settings/symbols.tex}
+
+\usepackage{siunitx}
+
+\newcommand*{\imgsource}[1]{\par\raggedleft\footnotesize source:~#1}
+
+\definecolor{codegray}{gray}{1}
+% \newcommand{\code}[1]{\colorbox{codegray}{\texttt{#1}}}
+\newcommand{\code}[1]{\texttt{#1}}

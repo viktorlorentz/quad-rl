@@ -1,0 +1,85 @@
+method: bayes
+metric:
+  goal: minimize
+  name: "position_tracking"
+program: scripts/train_agent.py
+early_terminate: # maybe not possible with batch size, num_envs and n_steps
+  type: hyperband
+  min_iter: 10
+  s: 10
+parameters:
+  env_config:
+    parameters:
+      randomness:
+        distribution: constant
+        value: 1.0
+  max_grad_norm:
+    # default: 0.5
+    min: 0.3
+    max: 0.8
+    distribution: uniform
+  learning_rate:
+    # default: 0.0003
+    min: 0.0001
+    max: 0.01
+    distribution: log_uniform
+  gae_lambda:
+    # default: 0.95
+    min: 0.8
+    max: 1.0
+    distribution: uniform
+  clip_range:
+    # default: 0.2
+    min: 0.1
+    max: 0.3
+    distribution: uniform
+  clip_range_vf:
+    # default: None
+    min: 0.1
+    max: 0.3
+    distribution: uniform
+  batch_size:
+    # default: 64
+    distribution: categorical
+    values: [32, 64, 128, 256]
+  num_envs:
+    distribution: categorical
+    values: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+  vf_coef:
+    # default: 0.5
+    min: 0.3
+    max: 0.7
+    distribution: uniform
+  n_steps:
+    # default: 2048
+    values: [512, 1024, 2048, 4096]
+    distribution: categorical
+  gamma:
+    # default: 0.99
+    min: 0.9
+    max: 0.9999
+    distribution: uniform
+  ent_coef:
+    # default: 0.0
+    min: 0.0
+    max: 0.05
+    distribution: uniform
+  n_epochs:
+    # default: 10
+    min: 5
+    max: 20
+    distribution: int_uniform
+  policy_kwargs:
+    parameters:
+      net_arch:
+        distribution: categorical
+        values:
+          - {"pi": [64, 64], "vf": [64, 64]} # default
+          - {"pi": [128, 128], "vf": [128, 128]}
+          - {"pi": [256, 256], "vf": [256, 256]}
+          - {"pi": [64, 64, 64], "vf": [64, 64, 64]}
+          - {"pi": [128, 128, 128], "vf": [128, 128, 128]}
+          - {"pi": [256, 256, 256], "vf": [256, 256, 256]}
+          - {"pi": [64, 64, 64, 64], "vf": [64, 64, 64, 64]}
+          - {"pi": [128, 128, 128, 128], "vf": [128, 128, 128, 128]}
+          - {"pi": [256, 256, 256, 256], "vf": [256, 256, 256, 256]}

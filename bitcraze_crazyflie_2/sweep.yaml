@@ -6,20 +6,7 @@ parameters:
   total_timesteps:
     distribution: int_uniform
     min: 1000000
-    max: 5000000
-  policy_kwargs:
-    parameters:
-      activation_fn:
-        distribution: categorical
-        values:
-          - ReLU
-          - Tanh
-      net_arch:
-        distribution: categorical
-        values:
-          - {"pi": [64, 64], "vf": [64, 64]}
-          - {"pi": [128, 128], "vf": [128, 128]}
-          - {"pi": [64, 64, 64], "vf": [64, 64, 64]}
+    max: 10000000
   reward_coefficients:
     parameters:
       alive_reward:
@@ -32,10 +19,69 @@ parameters:
         max: 7.0
       distance:
         distribution: uniform
-        min: 5.0
-        max: 30.0
+        min: 0.0
+        max: 10.0
       velocity_towards_target:
         distribution: uniform
         min: 0.0
         max: 10.0
+      alive_reward:
+        distribution: uniform
+        min: 0.0
+        max: 20.0
+      rotation_penalty:
+        distribution: uniform
+        min: 0.0
+        max: 10.0
+      collision_penalty:
+        distribution: uniform
+        min: 0.0
+        max: 10.0
+      z_angular_velocity:
+        distribution: uniform
+        min: 0.0
+        max: 1.0
+      action_saturation:
+        distribution: uniform
+        min: 0.0
+        max: 600.0
+  normalize_advantage:
+    values:
+      - "true"
+      - "false"
+    distribution: categorical
+  max_grad_norm:
+    max: 1
+    min: 0.25
+    distribution: uniform
+  learning_rate:
+    max: 0.006
+    min: 0.00015
+    distribution: uniform
+  gae_lambda:
+    max: 1.9
+    min: 0.475
+    distribution: uniform
+  clip_range:
+    max: 0.4
+    min: 0.1
+    distribution: uniform
+  batch_size:
+    values: [32, 64, 128, 256, 512, 1024, 2048, 4096]
+  num_envs:
+    values: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+  vf_coef:
+    max: 1
+    min: 0.25
+    distribution: uniform
+  n_steps:
+    values: [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    distribution: categorical
+  gamma:
+    max: 1.98
+    min: 0.495
+    distribution: uniform
 program: scripts/train_agent.py
+early_terminate:
+  type: hyperband
+  min_iter: 10

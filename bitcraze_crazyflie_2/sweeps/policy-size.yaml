@@ -1,0 +1,28 @@
+method: bayes
+metric:
+  goal: minimize
+  name: "position_tracking"
+program: scripts/train_agent.py
+early_terminate: # maybe not possible with batch size, num_envs and n_steps
+  type: hyperband
+  min_iter: 10
+parameters:
+  env_config:
+    parameters:
+      randomness:
+        distribution: constant
+        value: 1.0
+  policy_kwargs:
+    parameters:
+      net_arch:
+        distribution: categorical
+        values:
+          - {"pi": [64, 64], "vf": [64, 64]} # default
+          - {"pi": [128, 128], "vf": [128, 128]}
+          - {"pi": [256, 256], "vf": [256, 256]}
+          - {"pi": [64, 64, 64], "vf": [64, 64, 64]}
+          - {"pi": [128, 128, 128], "vf": [128, 128, 128]}
+          - {"pi": [256, 256, 256], "vf": [256, 256, 256]}
+          - {"pi": [64, 64, 64, 64], "vf": [64, 64, 64, 64]}
+          - {"pi": [128, 128, 128, 128], "vf": [128, 128, 128, 128]}
+          - {"pi": [256, 256, 256, 256], "vf": [256, 256, 256, 256]}
