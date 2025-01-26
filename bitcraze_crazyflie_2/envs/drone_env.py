@@ -391,8 +391,11 @@ class DroneEnv(MujocoEnv):
             self.average_episode_length = (
                 self.average_episode_length * 0.95 + (self.data.time - self.warmup_time) * 0.05
             )
-            if self.average_episode_length > 10 and self.randomness < self.randomness_max:
+            if self.average_episode_length >  0.9 * self.max_time and self.randomness < self.randomness_max:
                 self.randomness += 0.01
+            
+            if self.average_episode_length < 0.45 * self.max_time and self.randomness > 0.0:
+                self.randomness -= 0.01
             info["env_randomness"] = self.randomness
             info["average_episode_length"] = self.average_episode_length
 
@@ -539,13 +542,15 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         
-        # goal_bonus = (
-        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        # )  # exact peek at position
-        goal_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
-
+        goal_bonus = (
+            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.15**2)
+        )  
+        # exact peek at position
+        peak_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
         # only give bonus if velocity is near zero
-        goal_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
+        peak_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
+
+        goal_bonus += peak_bonus
     
         # # # Move the target if good tracking
         # if distance < 0.01:
@@ -624,6 +629,10 @@ class DroneEnv(MujocoEnv):
         random_position = np.clip(
             random_position, self.workspace["low"]+0.1, self.workspace["high"]-0.1
         )
+
+        if self.target_mode == "payload" and self.payload:
+            random_position[2] += 0.2 # Start 20cm above the target position
+
         self.data.qpos[:3] = random_position
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
