@@ -224,6 +224,12 @@ def main():
     elif algorithm == "SAC":
         config = sac_config
 
+    # Convert net_arch to dict for PPO if it's a list
+    if config["algorithm"] == "PPO":
+        if not isinstance(config["policy_kwargs"]["net_arch"], dict):
+            arch_list = config["policy_kwargs"]["net_arch"]
+            config["policy_kwargs"]["net_arch"] = {"pi": arch_list, "vf": arch_list}
+
     # Initialize wandb run
     run = wandb.init(
         project="single_quad_rl",
