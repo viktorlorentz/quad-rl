@@ -59,6 +59,13 @@ class RewardLoggingCallback(BaseCallback):
                 info["action"], bins=20, range=(0, 0.118)
             )[0]
 
+        if "env_randomness" in info:
+            wandb.log({"env_randomness": info["env_randomness"]})
+        
+        if "average_episode_length" in info:
+            wandb.log({"average_episode_length": info["average_episode_length"]})
+
+        
         # Increment episode length
         self.episode_length += 1
 
@@ -175,7 +182,7 @@ def main():
         "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
-            "net_arch": {"pi": [128, 128], "vf": [128, 128]},
+            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
@@ -184,6 +191,7 @@ def main():
             "connect_payload": True,
             "randomness": 1.0,
             "target_mode": "quad",
+            "curriculum" : True
         }
     }
 

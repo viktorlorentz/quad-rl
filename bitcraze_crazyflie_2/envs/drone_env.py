@@ -55,7 +55,17 @@ class DroneEnv(MujocoEnv):
         if not self.payload:
             model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
         
-        self.randomness = env_config.get("randomness", 1.0)
+        self.curriculum = env_config.get("curriculum", False)
+        if  self.curriculum:
+        
+            self.randomness_max = env_config.get("randomness", 1.0)
+
+            self.randomness = 0.0
+        else:
+            self.randomness = env_config.get("randomness", 1.0)
+          
+
+        self.average_episode_length = 0
 
        
 
@@ -375,6 +385,17 @@ class DroneEnv(MujocoEnv):
             "action": action_scaled,
         }
         info.update(additional_info)
+
+        # Update average episode length and env randomness
+        if terminated and self.curriculum:
+            self.average_episode_length = (
+                self.average_episode_length * 0.95 + (self.data.time - self.warmup_time) * 0.05
+            )
+            if self.randomness < self.randomness_max:
+                self.randomness += 0.01
+            info["env_randomness"] = self.randomness
+            info["average_episode_length"] = self.average_episode_length
+
 
         if self.render_mode == "human":
             self.render()
