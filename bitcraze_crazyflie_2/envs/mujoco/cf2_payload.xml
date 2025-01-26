@@ -4,6 +4,7 @@
   <!-- <compiler inertiafromgeom="false" meshdir="assets" autolimits="true"/> -->
   <compiler meshdir="assets" autolimits="true"/>
 
+  
 
   <default>
     <default class="cf2">
@@ -119,21 +120,19 @@
       <site name="thrust4" pos="0.032527 0.032527 0"/>
 
 
-
-      <body pos="0 0 0" name="rope">
-        <composite type="grid" count="20" spacing="0.01" offset="0.1 0 0">
-
-          <joint kind="main" damping=".001" />
-          <tendon kind="main" width="0.001" />
-
+      <body euler="0 0 0" pos="0 0 0">
+       <composite prefix="rope_" type="cable" curve="s" count="20 1 1" size="0.3" offset="0 0 0" initial="ball" >
+          <plugin plugin="mujoco.elasticity.cable" >
+            
+          </plugin>
+          <joint kind="main" damping=".00001"/>
           <geom type="capsule" mass="0.00002" size=".002 .01" rgba=".1 .8 .1 1" condim="1"/>
 
-          <pin coord="0" />
+          
 
-        </composite>
-
+      </composite>
+      <site name="rope_site" />
       </body>
-      
 
 
     </body>

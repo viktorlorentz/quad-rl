@@ -40,7 +40,7 @@ class DroneEnv(MujocoEnv):
         reward_coefficients=None,
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
         policy_freq=200,  # Policy frequency in Hz
-        sim_steps_per_action=2,  # Simulation steps between policy executions
+        sim_steps_per_action=1,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
         env_config={},
@@ -55,9 +55,10 @@ class DroneEnv(MujocoEnv):
         if not self.payload:
             model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
         
-        self.randomness = env_config.get("randomness", 1.0)
+        self.randomness = env_config.get("randomness", 0.2)
 
        
+        
 
         self.DEFAULT_CAMERA_CONFIG = default_camera_config
 
@@ -74,7 +75,7 @@ class DroneEnv(MujocoEnv):
         self.max_time = 20
         self.total_max_time = 100
 
-        self.warmup_time = 1.0  # 1s warmup time
+        self.warmup_time = 0.0  # 1s warmup time
 
 
         # Define observation space
@@ -309,6 +310,11 @@ class DroneEnv(MujocoEnv):
 
         # Store last action
         self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
+        
+        #reset position and orientation to 0
+        # self.data.qpos[:3] = [0, 0 ,1]
+        # self.data.qpos[3:7] = np.array([1, 0, 0, 0])
+        
         # Run simulation
         self.do_simulation(self.current_thrust, self.frame_skip)
 
