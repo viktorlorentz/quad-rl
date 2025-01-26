@@ -391,7 +391,7 @@ class DroneEnv(MujocoEnv):
             self.average_episode_length = (
                 self.average_episode_length * 0.95 + (self.data.time - self.warmup_time) * 0.05
             )
-            if self.randomness < self.randomness_max:
+            if self.average_episode_length > 10 and self.randomness < self.randomness_max:
                 self.randomness += 0.01
             info["env_randomness"] = self.randomness
             info["average_episode_length"] = self.average_episode_length
