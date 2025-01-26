@@ -185,6 +185,7 @@ def main():
         "algorithm": "TD3",
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
+        "n_envs": n_envs,
         "policy_kwargs": {
             "net_arch": net_arch_pi,  # For TD3, a single list for both actor and critic
             "activation_fn": torch.nn.Tanh
@@ -202,6 +203,7 @@ def main():
         "algorithm": "SAC",
         "policy_type": "MlpPolicy",
         "total_timesteps": time_steps,
+        "n_envs": n_envs,
         "policy_kwargs": {
             "net_arch": net_arch_pi,
             "activation_fn": torch.nn.Tanh
