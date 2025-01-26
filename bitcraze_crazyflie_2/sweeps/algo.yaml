@@ -1,0 +1,12 @@
+method: bayes
+metric:
+  goal: minimize
+  name: "position_tracking"
+program: scripts/train_agent.py
+parameters:
+  algorithm:
+    distribution: categorical
+    values:
+      - "PPO"
+      - "TD3"
+      - "SAC"

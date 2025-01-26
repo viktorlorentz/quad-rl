@@ -8,7 +8,7 @@ import gc
 
 import numpy as np
 
-from stable_baselines3 import PPO, TD3
+from stable_baselines3 import PPO, TD3, SAC  # import SAC
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
@@ -198,10 +198,29 @@ def main():
         }
     }
 
+    sac_config = {
+        "algorithm": "SAC",
+        "policy_type": "MlpPolicy",
+        "total_timesteps": time_steps,
+        "policy_kwargs": {
+            "net_arch": net_arch_pi,
+            "activation_fn": torch.nn.Tanh
+        },
+        "reward_coefficients": reward_coefficients,
+        "policy_freq": 250,
+        "env_config": {
+            "connect_payload": True,
+            "randomness": 1.0,
+            "target_mode": "payload",
+        }
+    }
+
     if algorithm == "PPO":
         config = ppo_config
-    else:
+    elif algorithm == "TD3":
         config = td3_config
+    elif algorithm == "SAC":
+        config = sac_config
 
     # Initialize wandb run
     run = wandb.init(
@@ -320,7 +339,7 @@ def main():
             policy_kwargs=policy_kwargs,
             tensorboard_log=f"runs/{run.id}",
         )
-    else:
+    elif config["algorithm"] == "TD3":
         model = TD3(
             policy=config["policy_type"],
             env=env,
@@ -332,6 +351,14 @@ def main():
             # train_freq=config["train_freq"],
             # gradient_steps=config["gradient_steps"],
             # tau=config["tau"],
+            policy_kwargs=policy_kwargs,
+            device="cpu",
+            tensorboard_log=f"runs/{run.id}",
+        )
+    elif config["algorithm"] == "SAC":
+        model = SAC(
+            policy=config["policy_type"],
+            env=env,
             policy_kwargs=policy_kwargs,
             device="cpu",
             tensorboard_log=f"runs/{run.id}",
