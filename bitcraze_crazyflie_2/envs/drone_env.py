@@ -201,6 +201,31 @@ class DroneEnv(MujocoEnv):
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
 
+    def R_from_quat(self, q):
+        # Convert mujoco quaternion to rotation matrix explicitly
+        # MuJoCo quaternions are [w, x, y, z]
+        w, x, y, z = q
+        r = np.array(
+            [
+                [
+                    1 - 2 * (y ** 2 + z ** 2),
+                    2 * (x * y - z * w),
+                    2 * (x * z + y * w),
+                ],
+                [
+                    2 * (x * y + z * w),
+                    1 - 2 * (x ** 2 + z ** 2),
+                    2 * (y * z - x * w),
+                ],
+                [
+                    2 * (x * z - y * w),
+                    2 * (y * z + x * w),
+                    1 - 2 * (x ** 2 + y ** 2),
+                ],
+            ]
+        )
+        return r
+
     def _get_obs(self):
         # Get observations
         position = self.data.qpos[:3].copy()
