@@ -204,6 +204,7 @@ class DroneEnv(MujocoEnv):
     def R_from_quat(self, q):
         # Convert mujoco quaternion to rotation matrix explicitly
         # MuJoCo quaternions are [w, x, y, z]
+        q = q / np.linalg.norm(q)
         w, x, y, z = q
         r = np.array(
             [
