@@ -571,7 +571,7 @@ class DroneEnv(MujocoEnv):
         velocity_towards_target = np.dot(linear_velocity, desired_direction)
 
         #only negative velocity is penalized
-        #velocity_towards_target = np.clip(velocity_towards_target, -20, 1)
+        velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
         reward += rc["velocity_towards_target"] * velocity_towards_target
         reward_components["velocity_towards_target"] = (
@@ -588,7 +588,7 @@ class DroneEnv(MujocoEnv):
         # Goal bonus
         
         goal_bonus = (
-            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.15**2)
+            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
         )  
         # exact peek at position
         peak_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
@@ -644,11 +644,11 @@ class DroneEnv(MujocoEnv):
             reward -= payload_velocity_penalty
             reward_components["payload_velocity"] = -payload_velocity_penalty
 
-            # above payload reward
-            quad_to_payload = position - self.data.qpos[payload_joint_id : payload_joint_id + 3]
-
-            xy_distance = np.linalg.norm(quad_to_payload[:2])
-            above_payload_reward =rc["above_payload"]* -xy_distance
+            # above payload reward see reward.ipynb
+            quad_target_offset = position - self.target_position
+            z_offset = quad_target_offset[2]
+            xy_distance = np.linalg.norm(quad_target_offset[:2])
+            above_payload_reward = rc["above_payload"]*  (.04-3*(z_offset - 0.34)**4 - 6*(xy_distance)**2)
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
