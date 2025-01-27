@@ -92,7 +92,7 @@ class DroneEnv(MujocoEnv):
         
         # add paylod pos if available
         if self.payload:
-            obs_dim += 3
+            obs_dim += 6 # relative payload pos (3), payload vel (3)
         
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
@@ -195,7 +195,7 @@ class DroneEnv(MujocoEnv):
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
-        self.thrust_noise_ratio = 0.05 * self.randomness
+        self.thrust_noise_ratio = 0.05
         self.ou_noise = OUNoise(size=self.action_space.shape, sigma=self.thrust_noise_ratio)  # OU noise for motor signals
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
@@ -226,6 +226,34 @@ class DroneEnv(MujocoEnv):
             ]
         )
         return r
+    
+    def to_frame(self, orientation_q, vec):
+        # Convert a vector from the world frame to the body frame
+        # quat: quaternion of the body frame
+        # vec: vector in the world frame
+        # with explicit math so its implemetable in C
+
+        q = orientation_q
+        R = self.R_from_quat(q)
+        
+        # inverse rotation
+        R_inv = np.array(
+            [
+                [R[0, 0], R[1, 0], R[2, 0]],
+                [R[0, 1], R[1, 1], R[2, 1]],
+                [R[0, 2], R[1, 2], R[2, 2]],
+            ]
+        )
+        vec = np.array(
+            [
+                R_inv[0, 0] * vec[0] + R_inv[0, 1] * vec[1] + R_inv[0, 2] * vec[2],
+                R_inv[1, 0] * vec[0] + R_inv[1, 1] * vec[1] + R_inv[1, 2] * vec[2],
+                R_inv[2, 0] * vec[0] + R_inv[2, 1] * vec[1] + R_inv[2, 2] * vec[2],
+            ]
+            )
+        return vec
+
+
 
     def _get_obs(self):
         # Get observations
@@ -235,16 +263,12 @@ class DroneEnv(MujocoEnv):
         local_angular_velocity = self.data.qvel[3:6].copy()
         # local. See: https://github.com/google-deepmind/mujoco/issues/691
 
-        # Convert quaternion to rotation matrix using scipy
-        # MuJoCo quaternions are [w, x, y, z], scipy expects [x, y, z, w]
-        orientation_q = np.array(
-            [orientation[1], orientation[2], orientation[3], orientation[0]]
-        )
-        r = R.from_quat(orientation_q)
-        # orientation_euler = r.as_euler('xyz', degrees=False)
-
-        orientation_rot = r.as_matrix()
-
+        # Convert quaternion to rotation matrix
+        orientation_rot = self.R_from_quat(orientation)
+        # Orientation as rotation matrix. Flatten to 1D array with 9 elements. 
+        # Numpy flattesn row-wise so its 
+        # [r11, r12, r13, r21, r22, r23, r31, r32, r33]
+        orientation_rot = orientation_rot.flatten()
         # Compute position error in world coordinates
         if self.target_mode == "payload" and self.payload:
             payload_joint_id = self.model.body_jntadr[self.payload_body_id]
@@ -253,27 +277,20 @@ class DroneEnv(MujocoEnv):
         else:
             position_error_world = self.target_position - position
 
-        # Compute conjugate quaternion (inverse rotation)
-        conj_quat = np.zeros(4)
-        mujoco.mju_negQuat(conj_quat, orientation)
 
         # Rotate position error vector into drone's local frame
-        position_error_local = np.zeros(3)
-        mujoco.mju_rotVecQuat(position_error_local, position_error_world, conj_quat)
-
+        position_error_local = self.to_frame(orientation, position_error_world)
         # Rotate linear velocity into drone's local frame
-        linear_velocity_local = np.zeros(3)
-        mujoco.mju_rotVecQuat(linear_velocity_local, linear_velocity, conj_quat)
-
+        linear_velocity_local = self.to_frame(orientation, linear_velocity)
         # Extract IMU data
-        imu_gyro_data = self.data.sensordata[:3]  # First 3 values (gyroscope)
-        imu_acc_data = self.data.sensordata[3:6]  # Next 3 values (accelerometer)
+        # imu_gyro_data = self.data.sensordata[:3]  # First 3 values (gyroscope)
+        # imu_acc_data = self.data.sensordata[3:6]  # Next 3 values (accelerometer)
 
         # Last action
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4)
 
         obs = [     
-            orientation_rot.flatten(),  # Orientation as rotation matrix. Flatten to 1D array with 9 elements
+            orientation_rot,
             linear_velocity_local,
             local_angular_velocity,
             position_error_local,  # Include position error in drone's local frame
@@ -286,11 +303,13 @@ class DroneEnv(MujocoEnv):
             payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
             relative_payload_pos = payload_pos - position
             
-            relative_payload_pos_local = np.zeros(3)
-            mujoco.mju_rotVecQuat(relative_payload_pos_local, relative_payload_pos, conj_quat)
-
+            relative_payload_pos_local = self.to_frame(orientation, relative_payload_pos)
             obs.append(relative_payload_pos_local)
-
+            
+            payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
+            payload_vel_local = self.to_frame(orientation, payload_vel)
+            obs.append(payload_vel_local)
+           
            
 
         
@@ -303,7 +322,7 @@ class DroneEnv(MujocoEnv):
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs += np.random.normal(loc=0, scale=noise_level * self.randomness, size=obs.shape)
+        obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
         return obs
     
     
