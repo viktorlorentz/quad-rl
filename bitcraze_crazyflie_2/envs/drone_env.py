@@ -645,10 +645,10 @@ class DroneEnv(MujocoEnv):
             reward_components["payload_velocity"] = -payload_velocity_penalty
 
             # above payload reward
-            quad_offset = self.target_position - position
-            z_offset = quad_offset[2]
-            xy_distance = np.linalg.norm(quad_offset[:2])
-            above_payload_reward =rc["above_payload"]* 10 * (.002-(z_offset - 0.23)**4 - (xy_distance)**2)
+            quad_to_payload = position - self.data.qpos[payload_joint_id : payload_joint_id + 3]
+
+            xy_distance = np.linalg.norm(quad_to_payload[:2])
+            above_payload_reward =rc["above_payload"]* -xy_distance
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
