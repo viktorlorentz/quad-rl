@@ -59,6 +59,13 @@ class RewardLoggingCallback(BaseCallback):
                 info["action"], bins=20, range=(0, 0.118)
             )[0]
 
+        if "env_randomness" in info:
+            wandb.log({"env_randomness": info["env_randomness"]})
+        
+        if "average_episode_length" in info:
+            wandb.log({"average_episode_length": info["average_episode_length"]})
+
+        
         # Increment episode length
         self.episode_length += 1
 
@@ -131,7 +138,7 @@ def main():
     n_envs = 64
     n_steps = 2048
     batch_size = 64
-    time_steps = 50_000_000
+    time_steps = 100_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -139,7 +146,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 8,
+        "alive_reward": 10,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -147,12 +154,12 @@ def main():
         "z_angular_velocity": 1,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
-        "velocity_towards_target": 1,
+        "velocity_towards_target": 0.5,
         "action_saturation": 0,
         "smooth_action": 0.2,
         "energy_penalty": 0.1,
         "payload_velocity": 0.05,
-        "above_payload": 0.0,
+        "above_payload": 0.2,
     }
 
     # Config for wandb
@@ -175,7 +182,7 @@ def main():
         "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
-            "net_arch": {"pi": [128, 128], "vf": [128, 128]},
+            "net_arch": {"pi": [64, 64, 64], "vf": [64, 64, 64]},
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
@@ -183,7 +190,8 @@ def main():
         "env_config": {
             "connect_payload": True,
             "randomness": 1.0,
-            "target_mode": "quad",
+            "target_mode": "payload",
+            "curriculum" : True
         }
     }
 
