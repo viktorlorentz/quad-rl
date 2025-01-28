@@ -144,7 +144,7 @@ def main():
     reward_coefficients = {  # based on single_quad_rl_1731931528
         "distance": 1,
         "distance_z": 0,
-        "goal_bonus": 20,
+        "goal_bonus": 100,
         "distance_xy": 0,
         "alive_reward": 10,
         "linear_velocity": 0,
@@ -154,12 +154,12 @@ def main():
         "z_angular_velocity": 1,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
-        "velocity_towards_target": 1,
+        "velocity_towards_target": 0.5,
         "action_saturation": 0,
         "smooth_action": 0.2,
         "energy_penalty": 0.1,
         "payload_velocity": 0.05,
-        "above_payload": 1.0,
+        "above_payload": 0.2,
     }
 
     # Config for wandb

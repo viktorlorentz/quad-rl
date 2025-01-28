@@ -571,7 +571,7 @@ class DroneEnv(MujocoEnv):
         velocity_towards_target = np.dot(linear_velocity, desired_direction)
 
         #only negative velocity is penalized
-        velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
+        #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
         reward += rc["velocity_towards_target"] * velocity_towards_target
         reward_components["velocity_towards_target"] = (
