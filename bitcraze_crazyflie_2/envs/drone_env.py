@@ -88,11 +88,7 @@ class DroneEnv(MujocoEnv):
 
 
         # Define observation space
-        obs_dim = 22  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3), last action (4)
-        
-        # add paylod pos if available
-        if self.payload:
-            obs_dim += 6 # relative payload pos (3), payload vel (3)
+        obs_dim = 28
         
         obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
@@ -289,31 +285,35 @@ class DroneEnv(MujocoEnv):
         # Last action
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4)
 
-        obs = [     
-            orientation_rot,
-            linear_velocity_local,
-            local_angular_velocity,
-            position_error_local,  # Include position error in drone's local frame
-            last_action,
-            ]
+        # define zero placeholders for payload
+        relative_payload_pos_local = np.zeros(3)
+        payload_vel_local = np.zeros(3)
         
-        #payload pos
         if self.payload:
             payload_joint_id = self.model.body_jntadr[self.payload_body_id]
             payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
             relative_payload_pos = payload_pos - position
             
             relative_payload_pos_local = self.to_frame(orientation, relative_payload_pos)
-            obs.append(relative_payload_pos_local)
             
             payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
             payload_vel_local = self.to_frame(orientation, payload_vel)
-            obs.append(payload_vel_local)
-           
+
+        obs = [     
+            orientation_rot,
+            linear_velocity_local,
+            local_angular_velocity,
+            position_error_local,  # Include position error in drone's local frame
+            last_action,
+            relative_payload_pos_local,
+            payload_vel_local
+            ]
+        
            
 
         
-        # Combine all observations, including the position error in local frame
+        # Combine all observations
+
         obs = np.concatenate(obs)
 
         obs = self.noise_observation(obs, noise_level=0.02)
