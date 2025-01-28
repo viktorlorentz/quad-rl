@@ -120,7 +120,7 @@
       <site name="thrust4" pos="0.032527 0.032527 0"/>
 
 
-      <body euler="0 0 0" pos="0 0 0">
+      <body euler="0 90 0" pos="0 0 0">
        <composite prefix="rope_" type="cable" curve="s" count="20 1 1" size="0.3" offset="0 0 0" initial="ball" >
           <plugin plugin="mujoco.elasticity.cable" >
             
