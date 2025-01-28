@@ -146,7 +146,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 10,
+        "alive_reward": 8,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -154,7 +154,7 @@ def main():
         "z_angular_velocity": 1,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
-        "velocity_towards_target": 0.5,
+        "velocity_towards_target": 1,
         "action_saturation": 0,
         "smooth_action": 0.2,
         "energy_penalty": 0.1,
@@ -188,9 +188,9 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": True,
+            "connect_payload": False,
             "randomness": 1.0,
-            "target_mode": "payload",
+            "target_mode": "quad",
             "curriculum" : True
         }
     }
