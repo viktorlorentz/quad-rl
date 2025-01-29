@@ -25,6 +25,6 @@
   <equality>
     <!-- <connect body1="rope_B_first" body2="payload" anchor="0 0 0" /> -->
     <!-- very strong weld -->
-    <weld body1="payload" body2="rope_B_last" />
+    <weld site1="payload_s" site2="rope_S_last"  />
   </equality>
 </mujoco>
