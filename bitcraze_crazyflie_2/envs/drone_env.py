@@ -81,7 +81,7 @@ class DroneEnv(MujocoEnv):
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
 
-        self.max_time = 20
+        self.max_time = env_config.get("max_time", 20.0)
         self.total_max_time = 100
 
         self.warmup_time = 1.0  # 1s warmup time

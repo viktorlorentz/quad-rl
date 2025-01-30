@@ -5,7 +5,15 @@ import bitcraze_crazyflie_2  # Ensure your environment is registered
 
 def main():
     # Create the environment with rendering enabled
-    env = gym.make('DroneEnv-v0', render_mode='human')
+    env = gym.make(
+        'DroneEnv-v0', 
+        render_mode='human',
+        env_config={
+            "randomness": 1.0, 
+            "connect_payload": False,
+            "max_time": 60
+        }
+    )
 
     # Path to the saved model
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
