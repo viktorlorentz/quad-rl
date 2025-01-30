@@ -62,7 +62,7 @@ class DroneEnv(MujocoEnv):
 
             self.randomness = 0.0
         else:
-            self.randomness = env_config.get("randomness", 1.0)
+            self.randomness = env_config.get("randomness", 0.0)
           
 
         self.average_episode_length = 0
@@ -719,8 +719,9 @@ class DroneEnv(MujocoEnv):
         payload_direction = payload_direction / np.linalg.norm(payload_direction)
 
         # scale to max cable length
-        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.19, scale=0.1 * self.randomness), 0.05, 0.19)
+        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.18, scale=0.1 * self.randomness), 0.05, 0.18)
     
+        print("payload offset", payload_offset)
         self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
         #randomize payload mass from 1 to 11g
@@ -733,11 +734,12 @@ class DroneEnv(MujocoEnv):
             self.data.qpos[:3] = random_position
             self.data.qpos[3:7] = q
             # keep payload vel low
-            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
+            # if self.data.qvel[payload_qpos_index : payload_qpos_index + 3].shape[0] == 3:
+            #     self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
 
-            # also keep payload pos fixed for initial cable stabilization
-            if self.data.time < 0.2 * self.warmup_time:
-                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            # # also keep payload pos fixed for initial cable stabilization
+            # if self.data.time < 0.5 * self.warmup_time:
+            #     self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
             
 
         self.warmup_time = self.data.time
