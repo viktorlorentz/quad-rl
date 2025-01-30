@@ -576,12 +576,12 @@ class DroneEnv(MujocoEnv):
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
          # More distance more penalty less distance more reward
-        distance_change = self.last_position_error - np.linalg.norm(position_error)
+        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.dt
         self.last_position_error = np.linalg.norm(position_error)
 
-        reward += rc["velocity_towards_target"] * distance_change
+        reward += rc["velocity_towards_target"] * velocity_towards_target
         reward_components["velocity_towards_target"] = (
-            rc["velocity_towards_target"] * distance_change
+            rc["velocity_towards_target"] * velocity_towards_target
         )
 
         # Linear velocity penalty
