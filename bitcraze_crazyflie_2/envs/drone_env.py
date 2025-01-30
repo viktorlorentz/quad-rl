@@ -562,20 +562,26 @@ class DroneEnv(MujocoEnv):
 
         # Move towards target
         # Compute the unit vector towards the target
-        if distance > 0.005:
-            desired_direction = position_error / distance
-        else:
-            desired_direction = np.zeros_like(position_error)
+        # if distance > 0.005:
+        #     desired_direction = position_error / distance
+        # else:
+        #     desired_direction = np.zeros_like(position_error)
+
+       
 
         # Compute the velocity towards the target
-        velocity_towards_target = np.dot(linear_velocity, desired_direction)
+       # velocity_towards_target = np.dot(linear_velocity, desired_direction)
 
         #only negative velocity is penalized
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
-        reward += rc["velocity_towards_target"] * velocity_towards_target
+         # More distance more penalty less distance more reward
+        distance_change = self.last_position_error - np.linalg.norm(position_error)
+        self.last_position_error = np.linalg.norm(position_error)
+
+        reward += rc["velocity_towards_target"] * distance_change
         reward_components["velocity_towards_target"] = (
-            rc["velocity_towards_target"] * velocity_towards_target
+            rc["velocity_towards_target"] * distance_change
         )
 
         # Linear velocity penalty
@@ -758,8 +764,11 @@ class DroneEnv(MujocoEnv):
         # Update the goal marker position
         self.model.geom_pos[self.goal_geom_id] = self.target_position
 
+
         mujoco.mj_forward(self.model, self.data)
 
         # Return initial observation
         obs = self._get_obs()
+
+        self.last_position_error = np.linalg.norm(obs[9:12])
         return obs
