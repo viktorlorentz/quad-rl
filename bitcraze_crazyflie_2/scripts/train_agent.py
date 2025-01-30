@@ -191,7 +191,7 @@ def main():
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad",
-            "curriculum" : True
+            "curriculum" : False
         }
     }
 
