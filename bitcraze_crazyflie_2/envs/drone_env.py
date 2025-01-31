@@ -188,6 +188,9 @@ class DroneEnv(MujocoEnv):
         else:
             self.reward_coefficients = reward_coefficients
 
+        
+        self.sum_coefficients = sum(self.reward_coefficients.values())
+
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
@@ -578,7 +581,7 @@ class DroneEnv(MujocoEnv):
          # More distance more penalty less distance more reward
         velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.dt
         self.last_position_error = np.linalg.norm(position_error)
-        
+
         # scale up if moving away from target
         if velocity_towards_target < 0:
             velocity_towards_target *= 5
@@ -662,7 +665,11 @@ class DroneEnv(MujocoEnv):
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
+        # normalize reward
+        reward /= self.sum_coefficients
 
+        #frequency normalize
+        reward /= self.dt
 
         # Additional info
         additional_info = {
