@@ -669,7 +669,7 @@ class DroneEnv(MujocoEnv):
         reward /= self.sum_coefficients
 
         #frequency normalize
-        reward /= self.time_per_action
+        reward /= self.time_per_action*1000
 
         # Additional info
         additional_info = {
