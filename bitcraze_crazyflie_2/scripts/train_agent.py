@@ -149,7 +149,7 @@ def main():
         "alive_reward": 5,
         "linear_velocity": 0,
         "angular_velocity": 0,
-        "rotation_penalty": 1,
+        "rotation_penalty": 5,
         "collision_penalty": 0,
         "z_angular_velocity": 1,
         "terminate_collision": True,
