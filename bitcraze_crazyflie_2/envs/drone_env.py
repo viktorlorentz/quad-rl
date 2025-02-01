@@ -600,15 +600,15 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         
-        # goal_bonus = (
-        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        # )  
+        goal_bonus = (
+            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
+        )  
         # exact peek at position
-        peak_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        peak_bonus =  0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
         # only give bonus if velocity is near zero
         peak_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
 
-        goal_bonus = peak_bonus
+        goal_bonus += peak_bonus
     
         # # # Move the target if good tracking
         # if distance < 0.01:
