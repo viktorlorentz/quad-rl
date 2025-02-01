@@ -191,7 +191,9 @@ def main():
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad",
-            "curriculum" : False
+            "curriculum" : False,
+            "num_stack_frames": 3,
+            "stack_stride": 1,
         }
     }
 

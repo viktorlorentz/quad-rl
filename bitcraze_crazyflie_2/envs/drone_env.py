@@ -89,9 +89,16 @@ class DroneEnv(MujocoEnv):
 
         # Define observation space
         obs_dim = 28
+
+        self.num_stack_frames = env_config.get("num_stack_frames", 3)
+        self.stack_stride = env_config.get("stack_stride", 1)
+        self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
+        self.obs_buffer = []
+
+        stack_obs_dim = obs_dim * self.num_stack_frames
         
-        obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
-        obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
+        obs_low = np.full(stack_obs_dim, -np.inf, dtype=np.float32)
+        obs_high = np.full(stack_obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
             low=obs_low, high=obs_high, dtype=np.float32
         )
@@ -199,6 +206,8 @@ class DroneEnv(MujocoEnv):
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
+
+    
 
     def R_from_quat(self, q):
         # Convert mujoco quaternion to rotation matrix explicitly
@@ -328,7 +337,10 @@ class DroneEnv(MujocoEnv):
         obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
         return obs
     
-    
+    def _stack_obs(self):
+        # Concatenate observations from the buffer by sampling every 'stack_stride' element.
+        stacked = np.concatenate([self.obs_buffer[i] for i in range(0, self.obs_buffer_size, self.stack_stride)])
+        return stacked
 
     def step(self, action):
         if not hasattr(self, "thrust_rot_damp"):
@@ -372,6 +384,13 @@ class DroneEnv(MujocoEnv):
 
         # Get observation
         obs = self._get_obs()
+
+        # Update the observation buffer:
+        self.obs_buffer.append(obs)
+        if len(self.obs_buffer) > self.obs_buffer_size:
+            self.obs_buffer.pop(0)
+        stacked_obs = self._stack_obs()
+
 
         # Extract state variables
         position = self.data.qpos[:3]
@@ -451,7 +470,7 @@ class DroneEnv(MujocoEnv):
         if self.render_mode == "human":
             self.render()
 
-        return obs, reward, terminated, truncated, info
+        return stacked_obs, reward, terminated, truncated, info
     
     def angle_between(self, v1, v2):
         v1, v2 = np.array(v1), np.array(v2)
@@ -781,5 +800,8 @@ class DroneEnv(MujocoEnv):
         # Return initial observation
         obs = self._get_obs()
 
+        # Initialize the observation buffer fully with the initial observation
+        self.obs_buffer = [obs] * self.obs_buffer_size
+
         self.last_position_error = np.linalg.norm(obs[9:12])
-        return obs
+        return self._stack_obs()
