@@ -88,14 +88,18 @@ class DroneEnv(MujocoEnv):
 
 
         # Define observation space
-        obs_dim = 28
-
+        # Use full 28-dim obs when not stacking, else exclude velocity terms:
+        # If stacking: orientation (9), position_error_local (3), last_action (4), relative_payload_pos_local (3) => 19 dims
+        if env_config.get("num_stack_frames", 3) > 1:
+            base_obs_dim = 9 + 3 + 4 + 3  # = 19
+        else:
+            base_obs_dim = 28
         self.num_stack_frames = env_config.get("num_stack_frames", 3)
         self.stack_stride = env_config.get("stack_stride", 1)
         self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
         self.obs_buffer = []
 
-        stack_obs_dim = obs_dim * self.num_stack_frames
+        stack_obs_dim = base_obs_dim * self.num_stack_frames
         
         obs_low = np.full(stack_obs_dim, -np.inf, dtype=np.float32)
         obs_high = np.full(stack_obs_dim, np.inf, dtype=np.float32)
@@ -311,15 +315,24 @@ class DroneEnv(MujocoEnv):
             payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
             payload_vel_local = self.to_frame(orientation, payload_vel)
 
-        obs = [     
-            orientation_rot,
-            linear_velocity_local,
-            local_angular_velocity,
-            position_error_local,  # Include position error in drone's local frame
-            last_action,
-            relative_payload_pos_local,
-            payload_vel_local
-            ]
+        if self.num_stack_frames > 1:
+            obs = [     
+                orientation_rot,
+                position_error_local,  
+                last_action,
+                relative_payload_pos_local
+                ]
+            
+        else:
+            obs = [     
+                orientation_rot,
+                linear_velocity_local,
+                local_angular_velocity,
+                position_error_local,  
+                last_action,
+                relative_payload_pos_local,
+                payload_vel_local
+                ]
         
            
 
@@ -334,7 +347,7 @@ class DroneEnv(MujocoEnv):
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
+        obs += np.random.normal(loc=0, scale=noise_level*self.randomness, size=obs.shape)
         return obs
     
     def _stack_obs(self):

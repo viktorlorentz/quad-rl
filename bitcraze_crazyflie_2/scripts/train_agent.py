@@ -138,7 +138,7 @@ def main():
     n_envs = 64
     n_steps = 2048
     batch_size = 64
-    time_steps = 100_000_000
+    time_steps = 150_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -150,10 +150,10 @@ def main():
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 3,
-        "collision_penalty": 50,
+        "collision_penalty": 0,
         "z_angular_velocity": 1,
         "terminate_collision": True,
-        "out_of_bounds_penalty": 20,
+        "out_of_bounds_penalty": 0,
         "velocity_towards_target": 0.5,
         "action_saturation": 0,
         "smooth_action": 0.5,
@@ -190,8 +190,8 @@ def main():
         "env_config": {
             "connect_payload": True,
             "randomness": 1.0,
-            "target_mode": "quad",
-            "curriculum" : False,
+            "target_mode": "payload",
+            "curriculum" : True,
             "num_stack_frames": 3,
             "stack_stride": 1,
         }
