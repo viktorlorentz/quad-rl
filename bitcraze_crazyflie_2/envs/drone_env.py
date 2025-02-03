@@ -39,7 +39,7 @@ class DroneEnv(MujocoEnv):
         self,
         reward_coefficients=None,
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
-        policy_freq=200,  # Policy frequency in Hz
+        policy_freq=250,  # Policy frequency in Hz
         sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
@@ -86,20 +86,31 @@ class DroneEnv(MujocoEnv):
 
         self.warmup_time = 1.0  # 1s warmup time
 
+        self.obs_vel = env_config.get("velocity_observaiton", True)
 
         # Define observation space
-        # Use full 28-dim obs when not stacking, else exclude velocity terms:
-        # If stacking: orientation (9), position_error_local (3), last_action (4), relative_payload_pos_local (3) => 19 dims
-        if env_config.get("num_stack_frames", 3) > 1:
-            base_obs_dim = 9 + 3 + 4 + 3  # = 19
+        if self.obs_vel:
+            # orientation_rot,
+            # linear_velocity_local,
+            # local_angular_velocity,
+            # position_error_local,  
+            # last_action,
+            # relative_payload_pos_local,
+            # payload_vel_local
+            base_obs_dim =  9 + 3 + 3 + 3 + 4 + 3 + 3 # = 28
         else:
-            base_obs_dim = 28
+            # orientation_rot,
+            # position_error_local,
+            # last_action,
+            # relative_payload_pos_local
+            base_obs_dim = 9 + 3 + 4 + 3  # = 19
+
         self.num_stack_frames = env_config.get("num_stack_frames", 3)
         self.stack_stride = env_config.get("stack_stride", 1)
         self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
         self.obs_buffer = []
 
-        self.obs_vel = env_config.get("velocity_observaiton", True)
+        
 
         stack_obs_dim = base_obs_dim * self.num_stack_frames
         
@@ -212,6 +223,8 @@ class DroneEnv(MujocoEnv):
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
+
+        self.print_stack_time_offsets()
 
     
 
@@ -353,8 +366,9 @@ class DroneEnv(MujocoEnv):
         return obs
     
     def _stack_obs(self):
-        # Concatenate observations from the buffer by sampling every 'stack_stride' element.
-        stacked = np.concatenate([self.obs_buffer[i] for i in range(0, self.obs_buffer_size, self.stack_stride)])
+        # Concatenate observations from the buffer by sampling every 'stack_stride' element in reverse order (most recent first)
+        indices = range(len(self.obs_buffer) - 1, -1, -self.stack_stride)
+        stacked = np.concatenate([self.obs_buffer[i] for i in indices])
         return stacked
 
     def step(self, action):
@@ -820,3 +834,12 @@ class DroneEnv(MujocoEnv):
 
         self.last_position_error = np.linalg.norm(obs[9:12])
         return self._stack_obs()
+
+    def print_stack_time_offsets(self):
+        """Prints the time offsets (in ms) for each observation in the stack."""
+        offsets = []
+        # The most recent observation (offset 0) is at index 0; subsequent ones are spaced by stack_stride
+        for i in range(self.num_stack_frames):
+            offset_ms = i * self.stack_stride * self.time_per_action * 1000
+            offsets.append(offset_ms)
+        print("Observation stack time offsets (ms):", offsets)
