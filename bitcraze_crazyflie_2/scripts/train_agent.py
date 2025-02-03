@@ -193,7 +193,7 @@ def main():
             "target_mode": "quad",
             "curriculum" : False,
             "num_stack_frames": 3,
-            "stack_stride": 2,
+            "stack_stride": 1,
             "velocity_observaiton": False,
             "max_time": 10.0
         }
