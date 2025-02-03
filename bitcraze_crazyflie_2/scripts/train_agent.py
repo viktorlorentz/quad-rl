@@ -137,8 +137,8 @@ def main():
     # Define parameters
     n_envs = 64
     n_steps = 2048
-    batch_size = 64
-    time_steps = 150_000_000
+    batch_size = 128
+    time_steps = 200_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -171,7 +171,7 @@ def main():
         "n_envs": n_envs,
         "batch_size": batch_size,
         "learning_rate": 0.0003,
-        "gamma": 0.98,
+        "gamma": 0.99,
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
         "vf_coef": 0.25,
@@ -194,6 +194,8 @@ def main():
             "curriculum" : True,
             "num_stack_frames": 3,
             "stack_stride": 1,
+            "velocity_observaiton": True,
+            "max_time": 10.0
         }
     }
 
@@ -291,7 +293,7 @@ def main():
         n_steps=config["n_steps"],
         batch_size=config["batch_size"],
         learning_rate=config["learning_rate"],
-        # gamma=config["gamma"],
+        gamma=config["gamma"],
         # gae_lambda=config["gae_lambda"],
         # ent_coef=config["ent_coef"],
         # vf_coef=config["vf_coef"],

@@ -99,6 +99,8 @@ class DroneEnv(MujocoEnv):
         self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
         self.obs_buffer = []
 
+        self.obs_vel = env_config.get("velocity_observaiton", True)
+
         stack_obs_dim = base_obs_dim * self.num_stack_frames
         
         obs_low = np.full(stack_obs_dim, -np.inf, dtype=np.float32)
@@ -315,15 +317,7 @@ class DroneEnv(MujocoEnv):
             payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
             payload_vel_local = self.to_frame(orientation, payload_vel)
 
-        if self.num_stack_frames > 1:
-            obs = [     
-                orientation_rot,
-                position_error_local,  
-                last_action,
-                relative_payload_pos_local
-                ]
-            
-        else:
+        if self.obs_vel:
             obs = [     
                 orientation_rot,
                 linear_velocity_local,
@@ -332,6 +326,14 @@ class DroneEnv(MujocoEnv):
                 last_action,
                 relative_payload_pos_local,
                 payload_vel_local
+                ]
+            
+        else:
+            obs = [     
+                orientation_rot,
+                position_error_local,  
+                last_action,
+                relative_payload_pos_local
                 ]
         
            
