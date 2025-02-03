@@ -11,7 +11,7 @@ setup(
     packages=find_packages(where='.'),
     install_requires=[
         'gymnasium[other]==1.0.0',
-        'mujoco==3.2.3',
+        'mujoco==3.2.5',
         'stable-baselines3==2.4.0',
         'wandb==0.19.0',
         'scipy==1.10.1',

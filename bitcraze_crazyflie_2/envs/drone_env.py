@@ -39,8 +39,8 @@ class DroneEnv(MujocoEnv):
         self,
         reward_coefficients=None,
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
-        policy_freq=200,  # Policy frequency in Hz
-        sim_steps_per_action=1,  # Simulation steps between policy executions
+        policy_freq=250,  # Policy frequency in Hz
+        sim_steps_per_action=2,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
         env_config={},
@@ -81,21 +81,41 @@ class DroneEnv(MujocoEnv):
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
 
-        self.max_time = 20
+        self.max_time = env_config.get("max_time", 20.0)
         self.total_max_time = 100
 
         self.warmup_time = 0.0  # 1s warmup time
 
+        self.obs_vel = env_config.get("velocity_observaiton", True)
 
         # Define observation space
-        obs_dim = 22  # Orientation matrix (9), linear velocity (3), angular velocity (3), position error (3), last action (4)
+        if self.obs_vel:
+            # orientation_rot,
+            # linear_velocity_local,
+            # local_angular_velocity,
+            # position_error_local,  
+            # last_action,
+            # relative_payload_pos_local,
+            # payload_vel_local
+            base_obs_dim =  9 + 3 + 3 + 3 + 4 + 3 + 3 # = 28
+        else:
+            # orientation_rot,
+            # position_error_local,
+            # last_action,
+            # relative_payload_pos_local
+            base_obs_dim = 9 + 3 + 4 + 3  # = 19
+
+        self.num_stack_frames = env_config.get("num_stack_frames", 3)
+        self.stack_stride = env_config.get("stack_stride", 1)
+        self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
+        self.obs_buffer = []
+
         
-        # add paylod pos if available
-        if self.payload:
-            obs_dim += 6 # relative payload pos (3), payload vel (3)
+
+        stack_obs_dim = base_obs_dim * self.num_stack_frames
         
-        obs_low = np.full(obs_dim, -np.inf, dtype=np.float32)
-        obs_high = np.full(obs_dim, np.inf, dtype=np.float32)
+        obs_low = np.full(stack_obs_dim, -np.inf, dtype=np.float32)
+        obs_high = np.full(stack_obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
             low=obs_low, high=obs_high, dtype=np.float32
         )
@@ -192,6 +212,9 @@ class DroneEnv(MujocoEnv):
         else:
             self.reward_coefficients = reward_coefficients
 
+        
+        self.sum_coefficients = sum(self.reward_coefficients.values())
+
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
@@ -200,6 +223,10 @@ class DroneEnv(MujocoEnv):
         self.motor_tau_up = 0.2
         self.motor_tau_down = 0.3
         self.current_thrust = np.zeros(4)
+
+        self.print_stack_time_offsets()
+
+    
 
     def R_from_quat(self, q):
         # Convert mujoco quaternion to rotation matrix explicitly
@@ -289,31 +316,44 @@ class DroneEnv(MujocoEnv):
         # Last action
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4)
 
-        obs = [     
-            orientation_rot,
-            linear_velocity_local,
-            local_angular_velocity,
-            position_error_local,  # Include position error in drone's local frame
-            last_action,
-            ]
+        # define zero placeholders for payload
+        relative_payload_pos_local = np.zeros(3)
+        payload_vel_local = np.zeros(3)
         
-        #payload pos
         if self.payload:
             payload_joint_id = self.model.body_jntadr[self.payload_body_id]
             payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
             relative_payload_pos = payload_pos - position
             
             relative_payload_pos_local = self.to_frame(orientation, relative_payload_pos)
-            obs.append(relative_payload_pos_local)
             
             payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
             payload_vel_local = self.to_frame(orientation, payload_vel)
-            obs.append(payload_vel_local)
-           
+
+        if self.obs_vel:
+            obs = [     
+                orientation_rot,
+                linear_velocity_local,
+                local_angular_velocity,
+                position_error_local,  
+                last_action,
+                relative_payload_pos_local,
+                payload_vel_local
+                ]
+            
+        else:
+            obs = [     
+                orientation_rot,
+                position_error_local,  
+                last_action,
+                relative_payload_pos_local
+                ]
+        
            
 
         
-        # Combine all observations, including the position error in local frame
+        # Combine all observations
+
         obs = np.concatenate(obs)
 
         obs = self.noise_observation(obs, noise_level=0.02)
@@ -322,10 +362,14 @@ class DroneEnv(MujocoEnv):
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs += np.random.normal(loc=0, scale=noise_level, size=obs.shape)
+        obs += np.random.normal(loc=0, scale=noise_level*self.randomness, size=obs.shape)
         return obs
     
-    
+    def _stack_obs(self):
+        # Concatenate observations from the buffer by sampling every 'stack_stride' element in reverse order (most recent first)
+        indices = range(len(self.obs_buffer) - 1, -1, -self.stack_stride)
+        stacked = np.concatenate([self.obs_buffer[i] for i in indices])
+        return stacked
 
     def step(self, action):
         if not hasattr(self, "thrust_rot_damp"):
@@ -375,6 +419,13 @@ class DroneEnv(MujocoEnv):
         # Get observation
         obs = self._get_obs()
 
+        # Update the observation buffer:
+        self.obs_buffer.append(obs)
+        if len(self.obs_buffer) > self.obs_buffer_size:
+            self.obs_buffer.pop(0)
+        stacked_obs = self._stack_obs()
+
+
         # Extract state variables
         position = self.data.qpos[:3]
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
@@ -408,7 +459,7 @@ class DroneEnv(MujocoEnv):
             collision,
             out_of_bounds,
             action_scaled,
-            last_action= 0.5 * (obs[-4:] + 1.0) * self.max_thrust,
+            last_action= 0.5 * (self.last_action + 1.0) * self.max_thrust,
         )
 
         # Determine termination conditions
@@ -453,7 +504,7 @@ class DroneEnv(MujocoEnv):
         if self.render_mode == "human":
             self.render()
 
-        return obs, reward, terminated, truncated, info
+        return stacked_obs, reward, terminated, truncated, info
     
     def angle_between(self, v1, v2):
         v1, v2 = np.array(v1), np.array(v2)
@@ -567,16 +618,26 @@ class DroneEnv(MujocoEnv):
 
         # Move towards target
         # Compute the unit vector towards the target
-        if distance > 0.005:
-            desired_direction = position_error / distance
-        else:
-            desired_direction = np.zeros_like(position_error)
+        # if distance > 0.005:
+        #     desired_direction = position_error / distance
+        # else:
+        #     desired_direction = np.zeros_like(position_error)
+
+       
 
         # Compute the velocity towards the target
-        velocity_towards_target = np.dot(linear_velocity, desired_direction)
+       # velocity_towards_target = np.dot(linear_velocity, desired_direction)
 
         #only negative velocity is penalized
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
+
+         # More distance more penalty less distance more reward
+        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.dt
+        self.last_position_error = np.linalg.norm(position_error)
+
+        # scale up if moving away from target
+        if velocity_towards_target < 0:
+            velocity_towards_target *= 5
 
         reward += rc["velocity_towards_target"] * velocity_towards_target
         reward_components["velocity_towards_target"] = (
@@ -592,15 +653,15 @@ class DroneEnv(MujocoEnv):
 
         # Goal bonus
         
-        goal_bonus = (
-            0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        )  
+        # goal_bonus = (
+        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
+        # )  
         # exact peek at position
-        peak_bonus = 0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        peak_bonus =  0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
         # only give bonus if velocity is near zero
-        peak_bonus *= np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)
+        peak_bonus *= 0.5* (np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)+1)
 
-        goal_bonus += peak_bonus
+        goal_bonus = peak_bonus
     
         # # # Move the target if good tracking
         # if distance < 0.01:
@@ -657,7 +718,11 @@ class DroneEnv(MujocoEnv):
             reward += above_payload_reward
             reward_components["above_payload_reward"] = above_payload_reward
 
+        # normalize reward
+        reward /= self.sum_coefficients
 
+        #frequency normalize
+        reward /= self.time_per_action*1000
 
         # Additional info
         additional_info = {
@@ -765,8 +830,23 @@ class DroneEnv(MujocoEnv):
         # Update the goal marker position
         self.model.geom_pos[self.goal_geom_id] = self.target_position
 
+
         mujoco.mj_forward(self.model, self.data)
 
         # Return initial observation
         obs = self._get_obs()
-        return obs
+
+        # Initialize the observation buffer fully with the initial observation
+        self.obs_buffer = [obs] * self.obs_buffer_size
+
+        self.last_position_error = np.linalg.norm(obs[9:12])
+        return self._stack_obs()
+
+    def print_stack_time_offsets(self):
+        """Prints the time offsets (in ms) for each observation in the stack."""
+        offsets = []
+        # The most recent observation (offset 0) is at index 0; subsequent ones are spaced by stack_stride
+        for i in range(self.num_stack_frames):
+            offset_ms = i * self.stack_stride * self.time_per_action * 1000
+            offsets.append(offset_ms)
+        print("Observation stack time offsets (ms):", offsets)

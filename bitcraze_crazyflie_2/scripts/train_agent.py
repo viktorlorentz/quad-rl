@@ -137,8 +137,8 @@ def main():
     # Define parameters
     n_envs = 64
     n_steps = 2048
-    batch_size = 64
-    time_steps = 100_000_000
+    batch_size = 128
+    time_steps = 200_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -146,17 +146,17 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 10,
+        "alive_reward": 3,
         "linear_velocity": 0,
         "angular_velocity": 0,
-        "rotation_penalty": 1,
+        "rotation_penalty": 3,
         "collision_penalty": 0,
         "z_angular_velocity": 1,
         "terminate_collision": True,
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 0.5,
         "action_saturation": 0,
-        "smooth_action": 0.2,
+        "smooth_action": 0.5,
         "energy_penalty": 0.1,
         "payload_velocity": 0.05,
         "above_payload": 0.2,
@@ -171,7 +171,7 @@ def main():
         "n_envs": n_envs,
         "batch_size": batch_size,
         "learning_rate": 0.0003,
-        "gamma": 0.98,
+        "gamma": 0.99,
         "gae_lambda": 0.83,
         "ent_coef": 0.05,
         "vf_coef": 0.25,
@@ -188,10 +188,14 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": True,
+            "connect_payload": False,
             "randomness": 1.0,
-            "target_mode": "payload",
-            "curriculum" : True
+            "target_mode": "quad",
+            "curriculum" : False,
+            "num_stack_frames": 3,
+            "stack_stride": 1,
+            "velocity_observaiton": False,
+            "max_time": 10.0
         }
     }
 
@@ -289,7 +293,7 @@ def main():
         n_steps=config["n_steps"],
         batch_size=config["batch_size"],
         learning_rate=config["learning_rate"],
-        # gamma=config["gamma"],
+        gamma=config["gamma"],
         # gae_lambda=config["gae_lambda"],
         # ent_coef=config["ent_coef"],
         # vf_coef=config["vf_coef"],
