@@ -191,10 +191,10 @@ def main():
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad",
-            "curriculum" : True,
+            "curriculum" : False,
             "num_stack_frames": 3,
             "stack_stride": 2,
-            "velocity_observaiton": True,
+            "velocity_observaiton": False,
             "max_time": 10.0
         }
     }
