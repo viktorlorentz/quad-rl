@@ -194,7 +194,7 @@ def main():
             "curriculum" : False,
             "num_stack_frames": 3,
             "stack_stride": 1,
-            "velocity_observaiton": False,
+            "velocity_observaiton": True,
             "max_time": 10.0
         }
     }
