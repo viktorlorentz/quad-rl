@@ -188,12 +188,12 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": True,
+            "connect_payload": False,
             "randomness": 1.0,
-            "target_mode": "payload",
+            "target_mode": "quad",
             "curriculum" : True,
             "num_stack_frames": 3,
-            "stack_stride": 1,
+            "stack_stride": 2,
             "velocity_observaiton": True,
             "max_time": 10.0
         }
