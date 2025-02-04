@@ -475,7 +475,7 @@ class DroneEnv(MujocoEnv):
             position_error = self.target_position - position
         distance = np.linalg.norm(position_error)
 
-        max_delta_distance = 0.15 if self.payload else 0.1
+        max_delta_distance = 0.2 if self.payload else 0.1
         if distance > self.max_distance + max_delta_distance:
             terminated = True
         

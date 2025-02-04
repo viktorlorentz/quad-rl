@@ -156,7 +156,7 @@ def main():
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 1,
         "action_saturation": 0,
-        "smooth_action": 0.5,
+        "smooth_action": 1,
         "energy_penalty": 0.1,
         "payload_velocity": 0.1,
         "above_payload": 1,
@@ -188,10 +188,10 @@ def main():
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
         "env_config": {
-            "connect_payload": True,
+            "connect_payload": False,
             "randomness": 1.0,
-            "target_mode": "payload",
-            "curriculum" : False,
+            "target_mode": "quad", # "quad" or "payload"
+            "curriculum" : True,
             "num_stack_frames": 3,
             "stack_stride": 1,
             "velocity_observaiton": True,
