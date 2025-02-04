@@ -221,7 +221,7 @@ class DroneEnv(MujocoEnv):
         self.thrust_noise_ratio = 0.05
         self.ou_noise = OUNoise(size=self.action_space.shape, sigma=self.thrust_noise_ratio)  # OU noise for motor signals
         self.motor_tau_up = 0.2
-        self.motor_tau_down = 0.3
+        self.motor_tau_down = 1.0 # this is high, because we dont want pulsing actions
         self.current_thrust = np.zeros(4)
 
         self.print_stack_time_offsets()
