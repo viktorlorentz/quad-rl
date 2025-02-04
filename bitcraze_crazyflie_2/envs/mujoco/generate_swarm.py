@@ -242,7 +242,12 @@ class MuJoCoSceneGenerator:
         
 
     def generate_xml(self):
-        header = """
+
+        rope_instances = ""
+        for (i, quad) in enumerate(self.config["quads"]):
+            rope_instances += f'<instance name="compositerope{i}_" /> \n'
+
+        header = f"""
     <mujoco model="CF2 scene">
     <compiler angle="radian" meshdir="assets/" />
 
@@ -270,9 +275,8 @@ class MuJoCoSceneGenerator:
 
     <extension>
         <plugin plugin="mujoco.elasticity.cable">
-            <instance name="compositerope0_" />
-            <instance name="compositerope1_" />
-            <instance name="compositerope2_" />
+            {rope_instances}
+
         </plugin>
     </extension>
 
@@ -543,6 +547,39 @@ if __name__ == "__main__":
                 "rope_color_rgba": "0.8 0.1 0.1 1",
                 "quad_attachment_site": "quad_attachment",
                 "quad_attachment_offset": [0, 0, 0],
+            },
+             {
+                "attach_at_site": "payload_s",
+                "model": "blocks/cf2.xml",
+                "rope_length": 0.3,
+                "rope_bodies": 25,
+                "rope_mass": 0.007,
+                "rope_damping": 0.00001,
+                "rope_color_rgba": "0.8 0.1 0.1 1",
+                "quad_attachment_site": "quad_attachment",
+                "quad_attachment_offset": [0, 0, 0],
+            },
+            {
+                "attach_at_site": "payload_anchor_a",
+                "model": "blocks/cf2.xml",
+                "rope_length": 0.25,
+                "rope_bodies": 12,
+                "rope_mass": 0.004,
+                "rope_damping": 0.00002,
+                "rope_color_rgba": "0.2 0.6 0.8 1",
+                "quad_attachment_site": "quad_anchor_a",
+                "quad_attachment_offset": [0.01, 0, 0]
+            },
+            {
+                "attach_at_site": "payload_anchor_b",
+                "model": "blocks/cf2.xml",
+                "rope_length": 0.15,
+                "rope_bodies": 8,
+                "rope_mass": 0.003,
+                "rope_damping": 0.00003,
+                "rope_color_rgba": "0.7 0.2 0.2 1",
+                "quad_attachment_site": "quad_anchor_b",
+                "quad_attachment_offset": [0, 0.02, 0]
             },
         ]
     }
