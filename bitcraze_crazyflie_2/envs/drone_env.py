@@ -383,6 +383,7 @@ class DroneEnv(MujocoEnv):
 
         action_scaled = thrust_cmds * self.max_thrust
 
+
         # Motor tau
         motor_tau = self.motor_tau_up * np.ones(4)
         motor_tau[thrust_cmds < self.thrust_cmds_damp] = self.motor_tau_down
@@ -454,9 +455,9 @@ class DroneEnv(MujocoEnv):
             collision,
             out_of_bounds,
             action_scaled,
-            last_action= 0.5 * (self.last_action + 1.0) * self.max_thrust,
+            last_action= self.last_action_scaled if hasattr(self, "last_action_scaled") else action_scaled,
         )
-
+        self.last_action_scaled = action_scaled
         # Determine termination conditions
         terminated = False
         truncated = False
@@ -473,11 +474,13 @@ class DroneEnv(MujocoEnv):
         else:
             position_error = self.target_position - position
         distance = np.linalg.norm(position_error)
-        if distance > self.max_distance + 0.1:
+
+        max_delta_distance = 0.15 if self.payload else 0.1
+        if distance > self.max_distance + max_delta_distance:
             terminated = True
         
-        else:
-            self.max_distance = max(distance, self.max_distance)
+        elif distance < self.max_distance:
+            self.max_distance = distance
 
 
         # Truncate episode if too long
