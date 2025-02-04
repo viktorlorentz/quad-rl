@@ -465,6 +465,21 @@ class DroneEnv(MujocoEnv):
         if out_of_bounds:
             terminated = True  # Terminate the episode
 
+        # Terminate if going away from target again
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error = self.target_position - payload_pos
+        else:
+            position_error = self.target_position - position
+        distance = np.linalg.norm(position_error)
+        if distance > self.max_distance + 0.1:
+            terminated = True
+        
+        else:
+            self.max_distance = max(distance, self.max_distance)
+
+
         # Truncate episode if too long
         if (
             self.data.time - self.warmup_time > self.max_time
@@ -833,6 +848,8 @@ class DroneEnv(MujocoEnv):
         self.obs_buffer = [obs] * self.obs_buffer_size
 
         self.last_position_error = np.linalg.norm(obs[9:12])
+        self.max_distance = 3
+
         return self._stack_obs()
 
     def print_stack_time_offsets(self):
