@@ -579,7 +579,8 @@ class DroneEnv(MujocoEnv):
                 np.max(np.exp(-0.5 * ((action + 0.001) / 0.001) ** 2)
                 + np.exp(-0.5 * ((action - self.max_thrust - 0.001) / 0.001) ** 2) - 0.01, 0)
         )
-        
+        # normalize over time
+        action_saturation /= self.time_per_action
 
         # Initialize reward components
         reward_components = {}
@@ -626,6 +627,8 @@ class DroneEnv(MujocoEnv):
             action_difference_penalty = rc["smooth_action"] * np.mean(
                 np.abs(action - last_action)/self.max_thrust
             )**2
+            #normalize over time
+            action_difference_penalty /= self.time_per_action
             reward -= action_difference_penalty
             reward_components["action_difference_penalty"] = -action_difference_penalty
 

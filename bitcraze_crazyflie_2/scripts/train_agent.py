@@ -148,7 +148,7 @@ def main():
         "distance_xy": 0,
         "alive_reward": 10,
         "linear_velocity": 0,
-        "angular_velocity": 0,
+        "angular_velocity": 1,
         "rotation_penalty": 3,
         "collision_penalty": 0,
         "z_angular_velocity": 1,
