@@ -186,14 +186,14 @@ def main():
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
-        "policy_freq": 1000,
+        "policy_freq": 250,
         "env_config": {
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad", # "quad" or "payload"
             "curriculum" : True,
             "num_stack_frames": 3,
-            "stack_stride": 3,
+            "stack_stride": 1,
             "velocity_observaiton": True,
             "max_time": 10.0,
             "motor_dynamics": False,
