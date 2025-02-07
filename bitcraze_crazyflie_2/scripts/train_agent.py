@@ -138,7 +138,7 @@ def main():
     n_envs = 64
     n_steps = 2048
     batch_size = 128
-    time_steps = 100_000_000
+    time_steps = 150_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528
@@ -186,12 +186,12 @@ def main():
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
-        "policy_freq": 250,
+        "policy_freq": 1000,
         "env_config": {
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad", # "quad" or "payload"
-            "curriculum" : True,
+            "curriculum" : False,
             "num_stack_frames": 3,
             "stack_stride": 1,
             "velocity_observaiton": True,
