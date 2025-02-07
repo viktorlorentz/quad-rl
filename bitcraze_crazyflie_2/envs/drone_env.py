@@ -479,7 +479,7 @@ class DroneEnv(MujocoEnv):
         #lower max delta wiht time
         current_time = self.data.time - self.warmup_time
         max_delta_distance = max_delta_distance * (max((0.9 - current_time / self.max_time),0)+0.1)
-
+        max_delta_distance *= self.randomness
         if distance > self.max_distance + max_delta_distance:
             terminated = True
         
@@ -652,7 +652,7 @@ class DroneEnv(MujocoEnv):
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
          # More distance more penalty less distance more reward
-        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.dt
+        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.time_per_action
         self.last_position_error = np.linalg.norm(position_error)
 
         # scale up if moving away from target
