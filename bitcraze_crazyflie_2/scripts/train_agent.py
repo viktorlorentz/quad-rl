@@ -191,11 +191,14 @@ def main():
             "connect_payload": False,
             "randomness": 1.0,
             "target_mode": "quad", # "quad" or "payload"
-            "curriculum" : False,
+            "curriculum" : True,
             "num_stack_frames": 3,
             "stack_stride": 3,
             "velocity_observaiton": True,
-            "max_time": 10.0
+            "max_time": 10.0,
+            "motor_noise": {
+              
+            }
         }
     }
 

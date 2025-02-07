@@ -478,8 +478,7 @@ class DroneEnv(MujocoEnv):
         max_delta_distance = 0.5
         #lower max delta wiht time
         current_time = self.data.time - self.warmup_time
-        max_delta_distance = max_delta_distance * (max((0.9 - current_time / self.max_time),0)+0.1)
-        max_delta_distance *= self.randomness
+        max_delta_distance = max_delta_distance * (max((0.75 - current_time / self.max_time)*self.randomness,0)+0.25)
         if distance > self.max_distance + max_delta_distance:
             terminated = True
         
