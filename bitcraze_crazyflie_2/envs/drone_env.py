@@ -215,9 +215,13 @@ class DroneEnv(MujocoEnv):
         
         self.sum_coefficients = sum(self.reward_coefficients.values())
 
+    
+
         # Set the target move probability
         self.target_move_prob = target_move_prob
 
+
+        self.motor_dynamics = env_config.get("motor_dynamics", False)
         self.thrust_noise_ratio = 0.05
         self.ou_noise = OUNoise(size=self.action_space.shape, sigma=self.thrust_noise_ratio)  # OU noise for motor signals
         self.motor_tau_up = 0.2
@@ -356,13 +360,13 @@ class DroneEnv(MujocoEnv):
 
         obs = np.concatenate(obs)
 
-        obs = self.noise_observation(obs, noise_level=0.02)
+        obs = self.noise_observation(obs, noise_level=0.1)
 
         return obs.astype(np.float32)
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs += np.random.normal(loc=0, scale=noise_level*self.randomness, size=obs.shape)
+        obs *= np.random.normal(loc=0, scale=noise_level*self.randomness, size=obs.shape)
         return obs
     
     def _stack_obs(self):
@@ -379,30 +383,35 @@ class DroneEnv(MujocoEnv):
 
         # Convert action from [-1,1] to [0,1]
         thrust_cmds = 0.5 * (action + 1.0)
-        thrust_cmds = np.clip(thrust_cmds, 0.0, 1.0)
+       
+        #throw error if action is out of bounds
+        if np.any(thrust_cmds < 0) or np.any(thrust_cmds > 1):
+            raise ValueError("Action out of bounds")
 
         action_scaled = thrust_cmds * self.max_thrust
 
+        if self.motor_dynamics:
+            # Motor tau
+            motor_tau = self.motor_tau_up * np.ones(4)
+            motor_tau[thrust_cmds < self.thrust_cmds_damp] = self.motor_tau_down
+            motor_tau[motor_tau > 1.0] = 1.0
 
-        # Motor tau
-        motor_tau = self.motor_tau_up * np.ones(4)
-        motor_tau[thrust_cmds < self.thrust_cmds_damp] = self.motor_tau_down
-        motor_tau[motor_tau > 1.0] = 1.0
-
-        # Convert to sqrt scale
-        thrust_rot = thrust_cmds ** 0.5
-        self.thrust_rot_damp = motor_tau * (thrust_rot - self.thrust_rot_damp) + self.thrust_rot_damp
+            # Convert to sqrt scale
+            thrust_rot = thrust_cmds ** 0.5
+            self.thrust_rot_damp = motor_tau * (thrust_rot - self.thrust_rot_damp) + self.thrust_rot_damp
        
 
-        # Add noise
-        thr_noise = self.ou_noise.noise()
-        thrust_noise = thrust_cmds * thr_noise
-        self.thrust_cmds_damp = np.clip(self.thrust_cmds_damp + thrust_noise, 0.0, 1.0)
+            # Add noise
+            thr_noise = self.ou_noise.noise()
+            thrust_noise = thrust_cmds * thr_noise
+            self.thrust_cmds_damp = np.clip(self.thrust_cmds_damp + thrust_noise, 0.0, 1.0)
 
-        self.thrust_cmds_damp = self.thrust_rot_damp ** 2
-        
-        # Scale to actual thrust
-        self.current_thrust = self.max_thrust * self.thrust_cmds_damp 
+            self.thrust_cmds_damp = self.thrust_rot_damp ** 2
+            
+            # Scale to actual thrust
+            self.current_thrust = self.max_thrust * self.thrust_cmds_damp 
+        else:
+            self.current_thrust = action_scaled
 
         # Apply motor offset
         self.current_thrust *= self.motor_offset
@@ -582,8 +591,7 @@ class DroneEnv(MujocoEnv):
                 np.max(np.exp(-0.5 * ((action + 0.001) / 0.001) ** 2)
                 + np.exp(-0.5 * ((action - self.max_thrust - 0.001) / 0.001) ** 2) - 0.01, 0)
         )
-        # normalize over time
-        action_saturation /= self.time_per_action
+     
 
         # Initialize reward components
         reward_components = {}
@@ -630,8 +638,7 @@ class DroneEnv(MujocoEnv):
             action_difference_penalty = rc["smooth_action"] * np.mean(
                 np.abs(action - last_action)/self.max_thrust
             )**2
-            #normalize over time
-            action_difference_penalty /= self.time_per_action
+
             reward -= action_difference_penalty
             reward_components["action_difference_penalty"] = -action_difference_penalty
 
@@ -651,7 +658,7 @@ class DroneEnv(MujocoEnv):
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
          # More distance more penalty less distance more reward
-        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))/ self.time_per_action
+        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))
         self.last_position_error = np.linalg.norm(position_error)
 
         # scale up if moving away from target
@@ -770,8 +777,8 @@ class DroneEnv(MujocoEnv):
         self.data.qpos[:3] = random_position
 
         #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
-        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.033, scale=0.03 * self.randomness), 0.025, 0.04)
-        self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1 * self.randomness) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
+        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.034, scale=0.005 * self.randomness), 0.025, 0.04)
+        #self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1 * self.randomness) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
 
         # Randomize initial orientation around upright orientation
         orientation_std_dev = np.deg2rad(20) * self.randomness  # Standard deviation of 20 degrees
@@ -793,38 +800,39 @@ class DroneEnv(MujocoEnv):
         mujoco.mju_normalize4(q)
         self.data.qpos[3:7] = q
 
+        if self.payload:
         # set payload position
-        payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-        payload_qpos_index = self.model.jnt_qposadr[payload_joint_id]
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_qpos_index = self.model.jnt_qposadr[payload_joint_id]
 
-        #randomize payload pos with negative z direction
-        payload_direction = np.array([0, 0, -1])
-        payload_direction[0:2] = self.np_random.normal(loc=0.0, scale=0.1 * self.randomness, size=2)
-        payload_direction = payload_direction / np.linalg.norm(payload_direction)
+            #randomize payload pos with negative z direction
+            payload_direction = np.array([0, 0, -1])
+            payload_direction[0:2] = self.np_random.normal(loc=0.0, scale=0.1 * self.randomness, size=2)
+            payload_direction = payload_direction / np.linalg.norm(payload_direction)
 
-        # scale to max cable length
-        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.19, scale=0.1 * self.randomness), 0.05, 0.19)
-    
-        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            # scale to max cable length
+            payload_offset = payload_direction * np.clip(np.random.normal(loc=0.19, scale=0.1 * self.randomness), 0.05, 0.19)
+        
+            self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
-        #randomize payload mass from 1 to 11g
-        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
+            #randomize payload mass from 1 to 11g
+            self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
 
-        # warmup sim to stabilize rope
-        while self.data.time < self.warmup_time:
-            self.do_simulation(np.zeros(4), 10)
-            # reset qpos
-            self.data.qpos[:3] = random_position
-            self.data.qpos[3:7] = q
-            # keep payload vel low
-            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
+            # warmup sim to stabilize rope
+            while self.data.time < self.warmup_time:
+                self.do_simulation(np.zeros(4), 10)
+                # reset qpos
+                self.data.qpos[:3] = random_position
+                self.data.qpos[3:7] = q
+                # keep payload vel low
+                self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
 
-            # also keep payload pos fixed for initial cable stabilization
-            if self.data.time < 0.2 * self.warmup_time:
-                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
-            
+                # also keep payload pos fixed for initial cable stabilization
+                if self.data.time < 0.2 * self.warmup_time:
+                    self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+                
 
-        self.warmup_time = self.data.time
+            self.warmup_time = self.data.time
 
         # Randomize velocity
         self.data.qvel[:3] = np.clip(self.np_random.normal(
@@ -836,13 +844,15 @@ class DroneEnv(MujocoEnv):
         ), -3, 3)
 
         #randomize max_thrust of motors
-        self.max_thrust = self.np_random.uniform(low=0.08, high=0.14) * self.randomness + (1 - self.randomness)*0.11772
-        self.motor_offset = self.np_random.normal(loc=1.0, scale=0.01 * self.randomness, size=4)
+        self.max_thrust = np.clip(self.np_random.normal(loc=0.11, scale=0.01 * self.randomness), 0.095, 0.13)
+        self.motor_offset = self.np_random.normal(loc=1.0, scale=0.05 * self.randomness, size=4)
+
         
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
         self.data.ctrl[:] = initial_action[:4]
+
 
         # Update the goal marker position
         self.model.geom_pos[self.goal_geom_id] = self.target_position
@@ -857,7 +867,7 @@ class DroneEnv(MujocoEnv):
         self.obs_buffer = [obs] * self.obs_buffer_size
 
         self.last_position_error = np.linalg.norm(obs[9:12])
-        self.max_distance = 3
+        self.max_distance = 5
 
         return self._stack_obs()
 

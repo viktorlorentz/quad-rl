@@ -196,9 +196,7 @@ def main():
             "stack_stride": 3,
             "velocity_observaiton": True,
             "max_time": 10.0,
-            "motor_noise": {
-              
-            }
+            "motor_dynamics": False,
         }
     }
 
