@@ -638,11 +638,10 @@ class DroneEnv(MujocoEnv):
         # Smooth action penalty
         if hasattr(self, "last_action"):
             action_difference_penalty = rc["smooth_action"] * np.mean(
-                np.abs(action - last_action)/self.max_thrust
-            )**2
+                np.abs(action - last_action)/self.max_thrust/self.time_per_action
+            )**2 / 1000
 
-            #normalize with time
-            action_difference_penalty /= self.time_per_action
+
             reward -= action_difference_penalty
             reward_components["action_difference_penalty"] = -action_difference_penalty
 
@@ -793,7 +792,7 @@ class DroneEnv(MujocoEnv):
         roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
         #clip roll and pitch to be within reasonable range
-        max_deg = 90
+        max_deg = 40
         roll = np.clip(roll, -np.deg2rad(max_deg), np.deg2rad(max_deg))
         pitch = np.clip(pitch, -np.deg2rad(max_deg), np.deg2rad(max_deg))
       
@@ -840,7 +839,7 @@ class DroneEnv(MujocoEnv):
                     self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
                 
 
-            self.warmup_time = self.data.time
+        self.warmup_time = self.data.time
 
         # Randomize velocity
         self.data.qvel[:3] = np.clip(self.np_random.normal(
