@@ -135,7 +135,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 1
+    n_envs = 64
     n_steps = 2048
     batch_size = 128
     time_steps = 150_000_000

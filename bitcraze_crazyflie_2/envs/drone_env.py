@@ -114,6 +114,7 @@ class DroneEnv(MujocoEnv):
           
 
         self.average_episode_length = 0
+        self.debug_rates_enabled = env_config.get("debug_rates_enabled", False)
         self.debug_rates = {'sim': [], 'obs': [], 'reward': [], 'total': []}
 
        
@@ -381,7 +382,8 @@ class DroneEnv(MujocoEnv):
         return stacked
 
     def step(self, action):
-        step_start = time.time()  # debug: start of step
+        if self.debug_rates_enabled:
+            step_start = time.time()
         
         if not hasattr(self, "thrust_rot_damp"):
             self.thrust_rot_damp = np.zeros(4)
@@ -426,18 +428,22 @@ class DroneEnv(MujocoEnv):
         # Store last action
         self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
         # Run simulation
-        t_sim_start = time.time()
+        if self.debug_rates_enabled:
+            t_sim_start = time.time()
         self.do_simulation(self.current_thrust, self.frame_skip)
-        t_sim = time.time() - t_sim_start
-        sim_rate = 1 / t_sim if t_sim > 1e-9 else float("inf")
-        self.debug_rates['sim'].append(sim_rate)
+        if self.debug_rates_enabled:
+            t_sim = time.time() - t_sim_start
+            sim_rate = 1 / t_sim if t_sim > 1e-9 else float("inf")
+            self.debug_rates['sim'].append(sim_rate)
         
         # Get observation
-        t_obs_start = time.time()
+        if self.debug_rates_enabled:
+            t_obs_start = time.time()
         obs = self._get_obs()
-        t_obs = time.time() - t_obs_start
-        obs_rate = 1 / t_obs if t_obs > 1e-9 else float("inf")
-        self.debug_rates['obs'].append(obs_rate)
+        if self.debug_rates_enabled:
+            t_obs = time.time() - t_obs_start
+            obs_rate = 1 / t_obs if t_obs > 1e-9 else float("inf")
+            self.debug_rates['obs'].append(obs_rate)
         
         if len(self.obs_buffer) > self.obs_buffer_size:
             self.obs_buffer.pop(0)
@@ -467,7 +473,8 @@ class DroneEnv(MujocoEnv):
         )
 
         # Compute reward
-        t_reward_start = time.time()
+        if self.debug_rates_enabled:
+            t_reward_start = time.time()
         reward, reward_components, additional_info = self.calc_reward(
             position,
             orientation,
@@ -479,9 +486,10 @@ class DroneEnv(MujocoEnv):
             action_scaled,
             last_action= self.last_action_scaled if hasattr(self, "last_action_scaled") else action_scaled,
         )
-        t_reward = time.time() - t_reward_start
-        reward_rate = 1 / t_reward if t_reward > 1e-9 else float("inf")
-        self.debug_rates['reward'].append(reward_rate)
+        if self.debug_rates_enabled:
+            t_reward = time.time() - t_reward_start
+            reward_rate = 1 / t_reward if t_reward > 1e-9 else float("inf")
+            self.debug_rates['reward'].append(reward_rate)
         
         self.last_action_scaled = action_scaled
         # Determine termination conditions
@@ -548,11 +556,12 @@ class DroneEnv(MujocoEnv):
         if self.render_mode == "human":
             self.render()
 
-        total_step_time = time.time() - step_start
-        total_rate = 1 / total_step_time if total_step_time > 1e-9 else float("inf")
-        self.debug_rates['total'].append(total_rate)
+        if self.debug_rates_enabled:
+            total_step_time = time.time() - step_start
+            total_rate = 1 / total_step_time if total_step_time > 1e-9 else float("inf")
+            self.debug_rates['total'].append(total_rate)
 
-        if terminated:
+        if terminated and self.debug_rates_enabled:
             avg_sim_rate = np.mean(self.debug_rates['sim'])
             avg_obs_rate = np.mean(self.debug_rates['obs'])
             avg_reward_rate = np.mean(self.debug_rates['reward'])
