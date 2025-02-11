@@ -17,10 +17,9 @@ setup(
         'scipy==1.10.1',
         'tensorboard==2.14.0',
         'numpy<=2.0.0',
-        #'numba==0.61.0',
+        'numba==0.61.0',
         'tqdm==4.67.1',
         'rich==13.9.4',
-        'moviepy>=1.0.0'
     ],
     package_data={
         'bitcraze_crazyflie_2': ['assets/*'],

@@ -88,7 +88,7 @@ class DroneEnv(MujocoEnv):
         reward_coefficients=None,
         default_camera_config: Dict[str, Union[float, int]] = DEFAULT_CAMERA_CONFIG,
         policy_freq=250,  # Policy frequency in Hz
-        sim_steps_per_action=2,  # Simulation steps between policy executions
+        sim_steps_per_action=3,  # Simulation steps between policy executions
         render_mode=None,
         visual_options=None,
         env_config={},
@@ -554,8 +554,8 @@ class DroneEnv(MujocoEnv):
             info["average_episode_length"] = self.average_episode_length
 
 
-        if self.render_mode == "human":
-            self.render()
+        # if self.render_mode == "human":
+        #     self.render()
 
         if self.debug_rates_enabled:
             total_step_time = time.time() - step_start

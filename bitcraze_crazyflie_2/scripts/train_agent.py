@@ -10,7 +10,7 @@ import numpy as np
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecVideoRecorder
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import ActorCriticPolicy
 from torch import nn
@@ -261,7 +261,7 @@ def main():
             "env_config": config["env_config"],
             "policy_freq": config["policy_freq"],
         },
-        wrapper_class=gym.wrappers.RecordVideo,  #BROKEN
+        wrapper_class=gym.wrappers.RecordVideo,
         wrapper_kwargs={
             "video_folder": f"videos/{run.id}",
             "episode_trigger": trigger,
