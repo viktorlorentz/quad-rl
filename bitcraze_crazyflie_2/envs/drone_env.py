@@ -440,6 +440,7 @@ class DroneEnv(MujocoEnv):
         if self.debug_rates_enabled:
             t_obs_start = time.time()
         obs = self._get_obs()
+        self.obs_buffer.append(obs)
         if self.debug_rates_enabled:
             t_obs = time.time() - t_obs_start
             obs_rate = 1 / t_obs if t_obs > 1e-9 else float("inf")
@@ -921,18 +922,6 @@ class DroneEnv(MujocoEnv):
 
         return self._stack_obs()
 
-    def print_stack_time_offsets(self):
-        """Prints the time offsets (in ms) for each observation in the stack."""
-        offsets = []
-        # The most recent observation (offset 0) is at index 0; subsequent ones are spaced by stack_stride
-        for i in range(self.num_stack_frames):
-            offset_ms = i * self.stack_stride * self.time_per_action * 1000
-            offsets.append(offset_ms)
-        print("Observation stack time offsets (ms):", offsets)
-
-        self.max_distance = 5
-
-        return self._stack_obs()
 
     def print_stack_time_offsets(self):
         """Prints the time offsets (in ms) for each observation in the stack."""
