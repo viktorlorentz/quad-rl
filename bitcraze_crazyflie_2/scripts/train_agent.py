@@ -146,7 +146,7 @@ def main():
         "distance_z": 0,
         "goal_bonus": 100,
         "distance_xy": 0,
-        "alive_reward": 10,
+        "alive_reward": 0,
         "linear_velocity": 0,
         "angular_velocity": 0,
         "rotation_penalty": 1,
@@ -192,7 +192,7 @@ def main():
             "randomness": 1.0,
             "target_mode": "quad", # "quad" or "payload"
             "curriculum" : True,
-            "num_stack_frames": 3,
+            "num_stack_frames": 1,
             "stack_stride": 1,
             "velocity_observaiton": True,
             "max_time": 10.0,

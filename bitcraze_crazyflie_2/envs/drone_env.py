@@ -487,7 +487,7 @@ class DroneEnv(MujocoEnv):
         max_delta_distance = 1.5
         #lower max delta wiht time
         current_time_progress = (time - self.warmup_time) / self.max_time
-        min_delta_distance = (0.1+ 0.2*self.randomness) * (1.1-current_time_progress)
+        min_delta_distance = (0.2+ 0.2*self.randomness) * (1.1-current_time_progress)
 
         if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
             terminated = True
@@ -639,7 +639,12 @@ class DroneEnv(MujocoEnv):
         if hasattr(self, "last_action"):
             action_difference_penalty = rc["smooth_action"] * np.mean(
                 np.abs(action - last_action)/self.max_thrust/self.time_per_action
-            )**2 / 1000
+            )**2 / 100
+
+            # penalize variance in action
+            # action_variance_penalty = (np.mean(np.abs(action - np.mean(action)))/self.max_thrust)**2
+
+            # action_difference_penalty += action_variance_penalty
 
 
             reward -= action_difference_penalty
@@ -851,7 +856,7 @@ class DroneEnv(MujocoEnv):
         ), -3, 3)
 
         #randomize max_thrust of motors
-        self.max_thrust = np.clip(self.np_random.normal(loc=0.11, scale=0.01 * self.randomness), 0.095, 0.13)
+        self.max_thrust = np.clip(self.np_random.normal(loc=MAX_THRUST, scale=0.01 * self.randomness), 0.095, 0.13)
         self.motor_offset = self.np_random.normal(loc=1.0, scale=0.05 * self.randomness, size=4)
 
         
