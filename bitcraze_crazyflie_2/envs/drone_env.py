@@ -3,6 +3,9 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import mujoco
+import time  # added for debugging
+import numba
+from numba import njit
 
 from typing import Dict, Union
 from scipy.spatial.transform import Rotation as R
@@ -32,6 +35,51 @@ class OUNoise:
         dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
         self.state = x + dx
         return self.state
+
+
+@njit
+def np_R_from_quat(q):
+    q = q / np.linalg.norm(q)
+    w, x, y, z = q
+    r = np.empty((3,3))
+    r[0, 0] = 1 - 2*(y*y + z*z)
+    r[0, 1] = 2*(x*y - z*w)
+    r[0, 2] = 2*(x*z + y*w)
+    r[1, 0] = 2*(x*y + z*w)
+    r[1, 1] = 1 - 2*(x*x + z*z)
+    r[1, 2] = 2*(y*z - x*w)
+    r[2, 0] = 2*(x*z - y*w)
+    r[2, 1] = 2*(y*z + x*w)
+    r[2, 2] = 1 - 2*(x*x + y*y)
+    return r
+
+@njit
+def np_to_frame(q, vec):
+    r = np_R_from_quat(q)
+    # For an orthonormal rotation matrix, the inverse is the transpose
+    return r.T @ vec
+
+@njit
+def np_angle_between(v1, v2):
+    norm1 = 0.0
+    norm2 = 0.0
+    for i in range(v1.shape[0]):
+        norm1 += v1[i] * v1[i]
+        norm2 += v2[i] * v2[i]
+    norm1 = norm1 ** 0.5
+    norm2 = norm2 ** 0.5
+    dot = 0.0
+    for i in range(v1.shape[0]):
+        dot += v1[i] * v2[i]
+    # Avoid division by zero.
+    if norm1 < 1e-8 or norm2 < 1e-8:
+        return 0.0
+    cos_theta = dot / (norm1 * norm2)
+    if cos_theta > 1.0:
+        cos_theta = 1.0
+    elif cos_theta < -1.0:
+        cos_theta = -1.0
+    return np.arccos(cos_theta)
 
 
 class DroneEnv(MujocoEnv):
@@ -66,6 +114,7 @@ class DroneEnv(MujocoEnv):
           
 
         self.average_episode_length = 0
+        self.debug_rates = {'sim': [], 'obs': [], 'reward': [], 'total': []}
 
        
 
@@ -233,56 +282,12 @@ class DroneEnv(MujocoEnv):
     
 
     def R_from_quat(self, q):
-        # Convert mujoco quaternion to rotation matrix explicitly
-        # MuJoCo quaternions are [w, x, y, z]
-        q = q / np.linalg.norm(q)
-        w, x, y, z = q
-        r = np.array(
-            [
-                [
-                    1 - 2 * (y ** 2 + z ** 2),
-                    2 * (x * y - z * w),
-                    2 * (x * z + y * w),
-                ],
-                [
-                    2 * (x * y + z * w),
-                    1 - 2 * (x ** 2 + z ** 2),
-                    2 * (y * z - x * w),
-                ],
-                [
-                    2 * (x * z - y * w),
-                    2 * (y * z + x * w),
-                    1 - 2 * (x ** 2 + y ** 2),
-                ],
-            ]
-        )
-        return r
+        # Use Numba-optimized quaternion conversion
+        return np_R_from_quat(q)
     
     def to_frame(self, orientation_q, vec):
-        # Convert a vector from the world frame to the body frame
-        # quat: quaternion of the body frame
-        # vec: vector in the world frame
-        # with explicit math so its implemetable in C
-
-        q = orientation_q
-        R = self.R_from_quat(q)
-        
-        # inverse rotation
-        R_inv = np.array(
-            [
-                [R[0, 0], R[1, 0], R[2, 0]],
-                [R[0, 1], R[1, 1], R[2, 1]],
-                [R[0, 2], R[1, 2], R[2, 2]],
-            ]
-        )
-        vec = np.array(
-            [
-                R_inv[0, 0] * vec[0] + R_inv[0, 1] * vec[1] + R_inv[0, 2] * vec[2],
-                R_inv[1, 0] * vec[0] + R_inv[1, 1] * vec[1] + R_inv[1, 2] * vec[2],
-                R_inv[2, 0] * vec[0] + R_inv[2, 1] * vec[1] + R_inv[2, 2] * vec[2],
-            ]
-            )
-        return vec
+        # Use Numba-optimized vector rotation
+        return np_to_frame(orientation_q, vec)
 
 
 
@@ -376,6 +381,8 @@ class DroneEnv(MujocoEnv):
         return stacked
 
     def step(self, action):
+        step_start = time.time()  # debug: start of step
+        
         if not hasattr(self, "thrust_rot_damp"):
             self.thrust_rot_damp = np.zeros(4)
         if not hasattr(self, "thrust_cmds_damp"):
@@ -419,24 +426,29 @@ class DroneEnv(MujocoEnv):
         # Store last action
         self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
         # Run simulation
+        t_sim_start = time.time()
         self.do_simulation(self.current_thrust, self.frame_skip)
-
+        t_sim = time.time() - t_sim_start
+        sim_rate = 1 / t_sim if t_sim > 1e-9 else float("inf")
+        self.debug_rates['sim'].append(sim_rate)
+        
         # Get observation
+        t_obs_start = time.time()
         obs = self._get_obs()
-
-        # Update the observation buffer:
-        self.obs_buffer.append(obs)
+        t_obs = time.time() - t_obs_start
+        obs_rate = 1 / t_obs if t_obs > 1e-9 else float("inf")
+        self.debug_rates['obs'].append(obs_rate)
+        
         if len(self.obs_buffer) > self.obs_buffer_size:
             self.obs_buffer.pop(0)
         stacked_obs = self._stack_obs()
-
 
         # Extract state variables
         position = self.data.qpos[:3]
         orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
         angular_velocity = self.data.qvel[3:6]
         linear_velocity = self.data.qvel[:3]
-        time = self.data.time
+        sim_time = self.data.time
 
         # Check for collisions
         collision = False
@@ -455,17 +467,22 @@ class DroneEnv(MujocoEnv):
         )
 
         # Compute reward
+        t_reward_start = time.time()
         reward, reward_components, additional_info = self.calc_reward(
             position,
             orientation,
             angular_velocity,
             linear_velocity,
-            time,
+            sim_time,
             collision,
             out_of_bounds,
             action_scaled,
             last_action= self.last_action_scaled if hasattr(self, "last_action_scaled") else action_scaled,
         )
+        t_reward = time.time() - t_reward_start
+        reward_rate = 1 / t_reward if t_reward > 1e-9 else float("inf")
+        self.debug_rates['reward'].append(reward_rate)
+        
         self.last_action_scaled = action_scaled
         # Determine termination conditions
         terminated = False
@@ -486,7 +503,7 @@ class DroneEnv(MujocoEnv):
 
         max_delta_distance = 1.5
         #lower max delta wiht time
-        current_time_progress = (time - self.warmup_time) / self.max_time
+        current_time_progress = (sim_time - self.warmup_time) / self.max_time
         min_delta_distance = (0.2+ 0.2*self.randomness) * (1.1-current_time_progress)
 
         if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
@@ -499,8 +516,8 @@ class DroneEnv(MujocoEnv):
 
         # Truncate episode if too long
         if (
-            self.data.time - self.warmup_time > self.max_time
-            or self.data.time - self.warmup_time > self.total_max_time
+            sim_time - self.warmup_time > self.max_time
+            or sim_time - self.warmup_time > self.total_max_time
         ):
             terminated = True
             truncated = True
@@ -531,12 +548,23 @@ class DroneEnv(MujocoEnv):
         if self.render_mode == "human":
             self.render()
 
+        total_step_time = time.time() - step_start
+        total_rate = 1 / total_step_time if total_step_time > 1e-9 else float("inf")
+        self.debug_rates['total'].append(total_rate)
+
+        if terminated:
+            avg_sim_rate = np.mean(self.debug_rates['sim'])
+            avg_obs_rate = np.mean(self.debug_rates['obs'])
+            avg_reward_rate = np.mean(self.debug_rates['reward'])
+            avg_total_rate = np.mean(self.debug_rates['total'])
+            print(f"[DEBUG] Average rates - Sim: {avg_sim_rate:.4f} it/s, Obs: {avg_obs_rate:.4f} it/s, Reward: {avg_reward_rate:.4f} it/s, Total: {avg_total_rate:.4f} it/s")
+            self.debug_rates = {'sim': [], 'obs': [], 'reward': [], 'total': []}
+
         return stacked_obs, reward, terminated, truncated, info
     
     def angle_between(self, v1, v2):
-        v1, v2 = np.array(v1), np.array(v2)
-        cos_theta = np.clip(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), -1, 1)
-        return np.arccos(cos_theta)
+        # Call the njit-optimized helper.
+        return np_angle_between(np.array(v1), np.array(v2))
 
     def calc_reward(
         self,
@@ -544,7 +572,7 @@ class DroneEnv(MujocoEnv):
         orientation,
         angular_velocity,
         linear_velocity,
-        time,
+        sim_time,
         collision,
         out_of_bounds,
         action,
@@ -879,6 +907,20 @@ class DroneEnv(MujocoEnv):
         self.obs_buffer = [obs] * self.obs_buffer_size
 
         self.last_position_error = np.linalg.norm(obs[9:12])
+        self.max_distance = 5
+        self.last_position_error = np.linalg.norm(obs[9:12])
+
+        return self._stack_obs()
+
+    def print_stack_time_offsets(self):
+        """Prints the time offsets (in ms) for each observation in the stack."""
+        offsets = []
+        # The most recent observation (offset 0) is at index 0; subsequent ones are spaced by stack_stride
+        for i in range(self.num_stack_frames):
+            offset_ms = i * self.stack_stride * self.time_per_action * 1000
+            offsets.append(offset_ms)
+        print("Observation stack time offsets (ms):", offsets)
+
         self.max_distance = 5
 
         return self._stack_obs()
