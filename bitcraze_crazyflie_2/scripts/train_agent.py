@@ -261,7 +261,7 @@ def main():
             "env_config": config["env_config"],
             "policy_freq": config["policy_freq"],
         },
-        #wrapper_class=gym.wrappers.RecordVideo,  #BROKEN
+        wrapper_class=gym.wrappers.RecordVideo,  #BROKEN
         wrapper_kwargs={
             "video_folder": f"videos/{run.id}",
             "episode_trigger": trigger,
