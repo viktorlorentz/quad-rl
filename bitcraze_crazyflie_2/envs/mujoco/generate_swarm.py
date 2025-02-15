@@ -8,77 +8,78 @@ class MuJoCoSceneGenerator:
     # {
     #             "attach_at_site": "payload_s",
     #             "model": "blocks/cf2.xml",
-    #             "rope_length": 0.2,
-    #             "rope_bodies": 20,
-    #             "rope_mass": 0.005,
-    #             "rope_damping": 0.00001,
-    #             "rope_color_rgba": "0.1 0.1 0.8 1",
+    #             "cable_length": 0.2,
+    #             "cable_bodies": 20,
+    #             "cable_mass": 0.005,
+    #             "cable_damping": 0.00001,
+    #             "cable_color_rgba": "0.1 0.1 0.8 1",
     #             "quad_attachment_site": "quad_attachment",
     #             "quad_attachment_offset": [0, 0, 0],
     #         }
 
     def generate_rope(self, quad_config, quad_id):
         # retrieve rope parameters from the config (with defaults)
-        rope_length     = quad_config.get("rope_length", 0.2)
-        rope_bodies     = quad_config.get("rope_bodies", 10)
-        rope_mass_total = quad_config.get("rope_mass", 0.005)
-        rope_damping    = quad_config.get("rope_damping", 0.00001)
-        rope_color_rgba = quad_config.get("rope_color_rgba", "0.1 0.8 0.1 1")
+        cable_config = quad_config["cable"]
+        cable_length     = cable_config.get("length", 0.2)
+        cable_bodies     = cable_config.get("bodies", 20)
+        cable_mass_total = cable_config.get("mass", 0.005)
+        cable_damping    = cable_config.get("damping", 0.00001)
+        cable_color_rgba = cable_config.get("color_rgba", "0.1 0.1 0.8 1")
 
         # Compute per-segment values
-        delta     = rope_length / rope_bodies          # offset for each nested body
+        delta     = cable_length / cable_bodies          # offset for each nested body
         halfDelta = delta / 2                           # used for geom pos and capsule half-length
-        mass_per_body = rope_mass_total / rope_bodies   # mass per geom
+        mass_per_body = cable_mass_total / cable_bodies   # mass per geom
 
         # Start building the XML string
-        rope_xml_lines = []
+        cable_xml_lines = []
         # first body
-        rope_xml_lines.append(f'<body name="q{quad_id}_rope_B_first">')
-        rope_xml_lines.append(f'    <geom name="q{quad_id}_rope_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-        rope_xml_lines.append(f'        quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        rope_xml_lines.append(f'        mass="{mass_per_body}" rgba="{rope_color_rgba}" />')
-        rope_xml_lines.append(f'    <site name="q{quad_id}_rope_S_first" pos="0 0 0" group="3" />')
-        rope_xml_lines.append(f'    <plugin instance="compositerope{quad_id}_" />')
+        cable_xml_lines.append(f'<body name="q{quad_id}_cable_B_first">')
+        cable_xml_lines.append(f'    <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
+        cable_xml_lines.append(f'        quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
+        cable_xml_lines.append(f'        mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+        cable_xml_lines.append(f'    <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />')
+        cable_xml_lines.append(f'    <plugin instance="compositerope{quad_id}_" />')
         
         # intermediate bodies (if any)
-        # For bodies 1 to rope_bodies-2, we nest them inside the previous body
-        for i in range(1, rope_bodies - 1):
-            rope_xml_lines.append(f'    <body name="q{quad_id}_rope_B_{i}" pos="{delta} 0 0">')
-            rope_xml_lines.append(f'         <joint name="q{quad_id}_rope_J_{i}" pos="0 0 0" type="ball" group="3"')
-            rope_xml_lines.append(f'             actuatorfrclimited="false" damping="{rope_damping}" />')
-            rope_xml_lines.append(f'         <geom name="q{quad_id}_rope_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-            rope_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-            rope_xml_lines.append(f'             mass="{mass_per_body}" rgba="{rope_color_rgba}" />')
-            rope_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
+        # For bodies 1 to cable_bodies-2, we nest them inside the previous body
+        for i in range(1, cable_bodies - 1):
+            cable_xml_lines.append(f'    <body name="q{quad_id}_cable_B_{i}" pos="{delta} 0 0">')
+            cable_xml_lines.append(f'         <joint name="q{quad_id}_cable_J_{i}" pos="0 0 0" type="ball" group="3"')
+            cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
+            cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
+            cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
+            cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+            cable_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
         
         # last body: close with a site and plugin
-        rope_xml_lines.append(f'    <body name="q{quad_id}_rope_B_last" pos="{delta} 0 0">')
-        rope_xml_lines.append(f'         <joint name="q{quad_id}_rope_J_last" pos="0 0 0" type="ball" group="3"')
-        rope_xml_lines.append(f'             actuatorfrclimited="false" damping="{rope_damping}" />')
-        rope_xml_lines.append(f'         <geom name="q{quad_id}_rope_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-        rope_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        rope_xml_lines.append(f'             mass="{mass_per_body}" rgba="{rope_color_rgba}" />')
-        rope_xml_lines.append(f'         <site name="q{quad_id}_rope_S_last" pos="{delta} 0 0" group="3" />')
-        rope_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
+        cable_xml_lines.append(f'    <body name="q{quad_id}_cable_B_last" pos="{delta} 0 0">')
+        cable_xml_lines.append(f'         <joint name="q{quad_id}_cable_J_last" pos="0 0 0" type="ball" group="3"')
+        cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
+        cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
+        cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
+        cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+        cable_xml_lines.append(f'         <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />')
+        cable_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
         
-        rope = "\n".join(rope_xml_lines)
+        rope = "\n".join(cable_xml_lines)
 
-        rope_close = ""
+        cable_close = ""
 
         # close all open <body> tags.
         # We opened one tag for the first body, then one for every intermediate and one for the last body.
-        # Total open bodies = rope_bodies (first + (rope_bodies-2) intermediates + last)
-        for _ in range(rope_bodies):
-            rope_close += "</body>\n"
+        # Total open bodies = cable_bodies (first + (cable_bodies-2) intermediates + last)
+        for _ in range(cable_bodies):
+            cable_close += "</body>\n"
         
-        return rope, rope_close
+        return rope, cable_close
 
     def generate_quad(self, quad_config):
         id = quad_config["id"]
         yaw_angle = quad_config.get("yaw_angle", 0)
         quad_header = f"""
             <!-- Quad {id} -->
-            <body name="q{id}_rope_chain" pos="0 0 0.01" euler="0 0 {yaw_angle}">
+            <body name="q{id}_cable_chain" pos="0 0 0.01" euler="0 0 {yaw_angle}">
             """
         quad = f"""
             <body
@@ -237,15 +238,15 @@ class MuJoCoSceneGenerator:
             </body>          
                                                                                        
 """
-        rope, rope_close = self.generate_rope(quad_config, id)
-        return quad_header + rope + quad + rope_close + "</body>"
+        rope, cable_close = self.generate_rope(quad_config, id)
+        return quad_header + rope + quad + cable_close + "</body>"
         
 
     def generate_xml(self):
 
-        rope_instances = ""
-        for (i, quad) in enumerate(self.config["quads"]):
-            rope_instances += f'<instance name="compositerope{i}_" /> \n'
+        cable_instances = ""
+        for quad in self.config["quads"]:
+            cable_instances += f'<instance name="compositerope{quad["id"]}_" /> \n'
 
         header = f"""
     <mujoco model="CF2 scene">
@@ -275,13 +276,13 @@ class MuJoCoSceneGenerator:
 
     <extension>
         <plugin plugin="mujoco.elasticity.cable">
-            {rope_instances}
+            {cable_instances}
 
         </plugin>
     </extension>
 
     <custom>
-        <text name="composite_rope_" data="rope_rope_" />
+        <text name="composite_cable_" data="cable_cable_" />
     </custom>
 
     <asset>
@@ -345,6 +346,15 @@ class MuJoCoSceneGenerator:
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
         <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
 
+        <!-- Quad start site -->
+        <site name="q1_start" pos="{self.config['quads'][0]['start_pos'][0]} {self.config['quads'][0]['start_pos'][1]} {self.config['quads'][0]['start_pos'][2]}" euler="{self.config['quads'][0]['start_euler'][0]} {self.config['quads'][0]['start_euler'][1]} {self.config['quads'][0]['start_euler'][2]}" />
+        <site name="q0_start" pos="{self.config['quads'][1]['start_pos'][0]} {self.config['quads'][1]['start_pos'][1]} {self.config['quads'][1]['start_pos'][2]}" euler="{self.config['quads'][1]['start_euler'][0]} {self.config['quads'][1]['start_euler'][1]} {self.config['quads'][1]['start_euler'][2]}" />
+   
+        <!-- Payload start site-->
+        <site name="payload_start" pos="{self.config['payload']['start_pos'][0]} {self.config['payload']['start_pos'][1]} {self.config['payload']['start_pos'][2]}" euler="{self.config['payload']['start_euler'][0]} {self.config['payload']['start_euler'][1]} {self.config['payload']['start_euler'][2]}" />
+
+
+
 
         <body name="payload" pos="0 0 0.1">
             <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
@@ -357,7 +367,6 @@ class MuJoCoSceneGenerator:
         quads= ""
         for (i, quad) in enumerate(self.config["quads"]):
             q = quad
-            q["id"] = i
             pi = 3.14159
             yaw_angle = (2*pi / len(self.config["quads"])) * i - pi
             q["yaw_angle"] = yaw_angle
@@ -365,77 +374,73 @@ class MuJoCoSceneGenerator:
             
         end = """
         </body>
+
+        
+
     </worldbody>
 
     <contact>
-        <exclude body1="q1_rope_B_first" body2="q1_rope_B_1" />
-        <exclude body1="q1_rope_B_1" body2="q1_rope_B_2" />
-        <exclude body1="q1_rope_B_2" body2="q1_rope_B_3" />
-        <exclude body1="q1_rope_B_3" body2="q1_rope_B_4" />
-        <exclude body1="q1_rope_B_4" body2="q1_rope_B_5" />
-        <exclude body1="q1_rope_B_5" body2="q1_rope_B_6" />
-        <exclude body1="q1_rope_B_6" body2="q1_rope_B_7" />
-        <exclude body1="q1_rope_B_7" body2="q1_rope_B_8" />
-        <exclude body1="q1_rope_B_8" body2="q1_rope_B_9" />
-        <exclude body1="q1_rope_B_9" body2="q1_rope_B_10" />
-        <exclude body1="q1_rope_B_10" body2="q1_rope_B_11" />
-        <exclude body1="q1_rope_B_11" body2="q1_rope_B_12" />
-        <exclude body1="q1_rope_B_12" body2="q1_rope_B_13" />
-        <exclude body1="q1_rope_B_13" body2="q1_rope_B_14" />
-        <exclude body1="q1_rope_B_14" body2="q1_rope_B_15" />
-        <exclude body1="q1_rope_B_15" body2="q1_rope_B_16" />
-        <exclude body1="q1_rope_B_16" body2="q1_rope_B_17" />
-        <exclude body1="q1_rope_B_17" body2="q1_rope_B_last" />
-        <exclude body1="q1_rope_B_last" body2="payload" />
-        <exclude body1="q1_rope_B_last" body2="payload" />
+        <exclude body1="q1_cable_B_first" body2="q1_cable_B_1" />
+        <exclude body1="q1_cable_B_1" body2="q1_cable_B_2" />
+        <exclude body1="q1_cable_B_2" body2="q1_cable_B_3" />
+        <exclude body1="q1_cable_B_3" body2="q1_cable_B_4" />
+        <exclude body1="q1_cable_B_4" body2="q1_cable_B_5" />
+        <exclude body1="q1_cable_B_5" body2="q1_cable_B_6" />
+        <exclude body1="q1_cable_B_6" body2="q1_cable_B_7" />
+        <exclude body1="q1_cable_B_7" body2="q1_cable_B_8" />
+        <exclude body1="q1_cable_B_8" body2="q1_cable_B_9" />
+        <exclude body1="q1_cable_B_9" body2="q1_cable_B_10" />
+        <exclude body1="q1_cable_B_10" body2="q1_cable_B_11" />
+        <exclude body1="q1_cable_B_11" body2="q1_cable_B_12" />
+        <exclude body1="q1_cable_B_12" body2="q1_cable_B_13" />
+        <exclude body1="q1_cable_B_13" body2="q1_cable_B_14" />
+        <exclude body1="q1_cable_B_14" body2="q1_cable_B_15" />
+        <exclude body1="q1_cable_B_15" body2="q1_cable_B_16" />
+        <exclude body1="q1_cable_B_16" body2="q1_cable_B_17" />
+        <exclude body1="q1_cable_B_17" body2="q1_cable_B_last" />
+        <exclude body1="q1_cable_B_last" body2="payload" />
+        <exclude body1="q1_cable_B_last" body2="payload" />
 
 
-        <exclude body1="q2_rope_B_first" body2="q2_rope_B_1" />
-        <exclude body1="q2_rope_B_1" body2="q2_rope_B_2" />
-        <exclude body1="q2_rope_B_2" body2="q2_rope_B_3" />
-        <exclude body1="q2_rope_B_3" body2="q2_rope_B_4" />
-        <exclude body1="q2_rope_B_4" body2="q2_rope_B_5" />
-        <exclude body1="q2_rope_B_5" body2="q2_rope_B_6" />
-        <exclude body1="q2_rope_B_6" body2="q2_rope_B_7" />
-        <exclude body1="q2_rope_B_7" body2="q2_rope_B_8" />
-        <exclude body1="q2_rope_B_8" body2="q2_rope_B_9" />
-        <exclude body1="q2_rope_B_9" body2="q2_rope_B_10" />
-        <exclude body1="q2_rope_B_10" body2="q2_rope_B_11" />
-        <exclude body1="q2_rope_B_11" body2="q2_rope_B_12" />
-        <exclude body1="q2_rope_B_12" body2="q2_rope_B_13" />
-        <exclude body1="q2_rope_B_13" body2="q2_rope_B_14" />
-        <exclude body1="q2_rope_B_14" body2="q2_rope_B_15" />
-        <exclude body1="q2_rope_B_15" body2="q2_rope_B_16" />
-        <exclude body1="q2_rope_B_16" body2="q2_rope_B_17" />
-        <exclude body1="q2_rope_B_17" body2="q2_rope_B_last" />
-        <exclude body1="q2_rope_B_last" body2="payload" />
-        <exclude body1="q2_rope_B_last" body2="payload" />
+     
 
-        <exclude body1="q0_rope_B_first" body2="q0_rope_B_1" />
-        <exclude body1="q0_rope_B_1" body2="q0_rope_B_2" />
-        <exclude body1="q0_rope_B_2" body2="q0_rope_B_3" />
-        <exclude body1="q0_rope_B_3" body2="q0_rope_B_4" />
-        <exclude body1="q0_rope_B_4" body2="q0_rope_B_5" />
-        <exclude body1="q0_rope_B_5" body2="q0_rope_B_6" />
-        <exclude body1="q0_rope_B_6" body2="q0_rope_B_7" />
-        <exclude body1="q0_rope_B_7" body2="q0_rope_B_8" />
-        <exclude body1="q0_rope_B_8" body2="q0_rope_B_9" />
-        <exclude body1="q0_rope_B_9" body2="q0_rope_B_10" />
-        <exclude body1="q0_rope_B_10" body2="q0_rope_B_11" />
-        <exclude body1="q0_rope_B_11" body2="q0_rope_B_12" />
-        <exclude body1="q0_rope_B_12" body2="q0_rope_B_13" />
-        <exclude body1="q0_rope_B_13" body2="q0_rope_B_14" />
-        <exclude body1="q0_rope_B_14" body2="q0_rope_B_15" />
-        <exclude body1="q0_rope_B_15" body2="q0_rope_B_16" />
-        <exclude body1="q0_rope_B_16" body2="q0_rope_B_17" />
-        <exclude body1="q0_rope_B_17" body2="q0_rope_B_last" />
-        <exclude body1="q0_rope_B_last" body2="payload" />
-        <exclude body1="q0_rope_B_last" body2="payload" />
+        <exclude body1="q0_cable_B_first" body2="q0_cable_B_1" />
+        <exclude body1="q0_cable_B_1" body2="q0_cable_B_2" />
+        <exclude body1="q0_cable_B_2" body2="q0_cable_B_3" />
+        <exclude body1="q0_cable_B_3" body2="q0_cable_B_4" />
+        <exclude body1="q0_cable_B_4" body2="q0_cable_B_5" />
+        <exclude body1="q0_cable_B_5" body2="q0_cable_B_6" />
+        <exclude body1="q0_cable_B_6" body2="q0_cable_B_7" />
+        <exclude body1="q0_cable_B_7" body2="q0_cable_B_8" />
+        <exclude body1="q0_cable_B_8" body2="q0_cable_B_9" />
+        <exclude body1="q0_cable_B_9" body2="q0_cable_B_10" />
+        <exclude body1="q0_cable_B_10" body2="q0_cable_B_11" />
+        <exclude body1="q0_cable_B_11" body2="q0_cable_B_12" />
+        <exclude body1="q0_cable_B_12" body2="q0_cable_B_13" />
+        <exclude body1="q0_cable_B_13" body2="q0_cable_B_14" />
+        <exclude body1="q0_cable_B_14" body2="q0_cable_B_15" />
+        <exclude body1="q0_cable_B_15" body2="q0_cable_B_16" />
+        <exclude body1="q0_cable_B_16" body2="q0_cable_B_17" />
+        <exclude body1="q0_cable_B_17" body2="q0_cable_B_last" />
+        <exclude body1="q0_cable_B_last" body2="payload" />
+        <exclude body1="q0_cable_B_last" body2="payload" />
     </contact>
 
     <!-- <equality>
-    <connect site1="rope_S_last" site2="payload_s"/>
+    <connect site1="cable_S_last" site2="payload_s"/>
   </equality> -->
+
+  <!-- quad start site -->
+    <equality>
+        <weld site1="q1_start" site2="q1_imu" solref="0.01 4"  />
+        <weld site1="q0_start" site2="q0_imu" solref="0.01 4"  />
+      
+        <weld site1="payload_start" site2="payload_s" solref="0.01 4"  />
+
+
+    </equality>
+
+   
 
     <actuator>
         <general name="q1_thrust1" class="cf2" site="q1_thrust1" ctrlrange="0 0.14"
@@ -447,14 +452,7 @@ class MuJoCoSceneGenerator:
         <general name="q1_thrust4" class="cf2" site="q1_thrust4" ctrlrange="0 0.14"
             gear="0 0 1 0 0 -6e-06" />
 
-        <general name="q2_thrust1" class="cf2" site="q2_thrust1" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q2_thrust2" class="cf2" site="q2_thrust2" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
-        <general name="q2_thrust3" class="cf2" site="q2_thrust3" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q2_thrust4" class="cf2" site="q2_thrust4" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
+    
 
         <general name="q0_thrust1" class="cf2" site="q0_thrust1" ctrlrange="0 0.14"
             gear="0 0 1 0 0 6e-06" />
@@ -470,117 +468,67 @@ class MuJoCoSceneGenerator:
         <gyro site="q1_imu" name="body_gyro" />
         <accelerometer site="q1_imu" name="body_linacc" />
         <framequat objtype="site" objname="q1_imu" name="body_quat" />
+
+        
     </sensor>
 </mujoco>"""
         return header + quads + end
 
 if __name__ == "__main__":
     scene_config = {
-        "payload": "blocks/payload.xml",
-        "payload_mass": 0.1,
-        "scene": "blocks/scene.xml",
+        "payload": {
+            "mass": 0.01,
+            "geom_type": "cylinder",
+            "size": [0.007, 0.01],
+            "start_pos": [0, 0, 0.2],
+            "start_euler": [0, 1, 1],
+            "color_rgba": "0.8 0.8 0.8 1",
+            "attach_sites": [
+                {
+                    "name": "attach_site_1",
+                    "pos": [0, 0, 0.01]
+                },
+                {
+                    "name": "attach_site_2",
+                    "pos": [0, 0, -0.01]
+                }
+            ]
+        },
         "quad_prefix": "q",
         "quads": [
             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.5,
-                "rope_bodies": 25,
-                "rope_mass": 0.01,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.1 0.8 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0.001, 0],
+                "id": 0,
+                "start_pos": [0.15, 0, 0.3],
+                "start_euler": [0, 1, 0],
+                "cable":{
+                    "length": 0.5,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "damping": 0.00001,
+                    "color_rgba" : "0.1 0.8 0.1 1",
+                    "quad_site": "quad_attachment",
+                    "attachment_offset": [0, 0.001, 0],
+                    "payload_site": "attach_site_1",
+                }
                 
             },
             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.2,
-                "rope_bodies": 20,
-                "rope_mass": 0.005,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.1 0.1 0.8 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
+               
+                "id": 1,
+                "start_pos": [-0.15, 0, 0.3],
+                "start_euler": [0, 0, 0.5],
+                "cable":{
+                    "length": 0.2,
+                    "bodies": 20,
+                    "mass": 0.005,
+                    "damping": 0.00001,
+                    "color_rgba" : "0.1 0.1 0.8 1",
+                    "quad_site": "quad_attachment",
+                    "attachment_offset": [0, 0.001, 0],
+                    "payload_site": "attach_site_1",
+                }
             },
-            {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.3,
-                "rope_bodies": 25,
-                "rope_mass": 0.007,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.8 0.1 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
-            },
-             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.1,
-                "rope_bodies": 25,
-                "rope_mass": 0.007,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.8 0.1 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
-            },
-             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.7,
-                "rope_bodies": 25,
-                "rope_mass": 0.007,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.8 0.1 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
-            },
-             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.3,
-                "rope_bodies": 25,
-                "rope_mass": 0.007,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.8 0.1 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
-            },
-             {
-                "attach_at_site": "payload_s",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.3,
-                "rope_bodies": 25,
-                "rope_mass": 0.007,
-                "rope_damping": 0.00001,
-                "rope_color_rgba": "0.8 0.1 0.1 1",
-                "quad_attachment_site": "quad_attachment",
-                "quad_attachment_offset": [0, 0, 0],
-            },
-            {
-                "attach_at_site": "payload_anchor_a",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.25,
-                "rope_bodies": 12,
-                "rope_mass": 0.004,
-                "rope_damping": 0.00002,
-                "rope_color_rgba": "0.2 0.6 0.8 1",
-                "quad_attachment_site": "quad_anchor_a",
-                "quad_attachment_offset": [0.01, 0, 0]
-            },
-            {
-                "attach_at_site": "payload_anchor_b",
-                "model": "blocks/cf2.xml",
-                "rope_length": 0.15,
-                "rope_bodies": 8,
-                "rope_mass": 0.003,
-                "rope_damping": 0.00003,
-                "rope_color_rgba": "0.7 0.2 0.2 1",
-                "quad_attachment_site": "quad_anchor_b",
-                "quad_attachment_offset": [0, 0.02, 0]
-            },
+         
         ]
     }
     generator = MuJoCoSceneGenerator(scene_config)
