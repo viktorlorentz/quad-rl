@@ -117,7 +117,7 @@ class DroneEnv(MujocoEnv):
 
             self.randomness = 0.01
         else:
-            self.randomness = env_config.get("randomness", 1.0)
+            self.randomness = env_config.get("randomness", 0.0)
           
 
         self.average_episode_length = 0
@@ -141,7 +141,7 @@ class DroneEnv(MujocoEnv):
         self.max_time = env_config.get("max_time", 20.0)
         self.total_max_time = 100
 
-        self.warmup_time = 1.0  # 1s warmup time
+        self.warmup_time = 0.0  # 1s warmup time
 
         self.obs_vel = env_config.get("velocity_observaiton", True)
 
@@ -444,6 +444,11 @@ class DroneEnv(MujocoEnv):
 
         # Store last action
         self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
+        
+        #reset position and orientation to 0
+        # self.data.qpos[:3] = [0, 0 ,1]
+        # self.data.qpos[3:7] = np.array([1, 0, 0, 0])
+        
         # Run simulation
         if self.debug_rates_enabled:
             t_sim_start = time.time()
@@ -876,10 +881,11 @@ class DroneEnv(MujocoEnv):
             payload_direction[0:2] = self.np_random.normal(loc=0.0, scale=0.1 * self.randomness, size=2)
             payload_direction = payload_direction / np.linalg.norm(payload_direction)
 
-            # scale to max cable length
-            payload_offset = payload_direction * np.clip(np.random.normal(loc=0.19, scale=0.1 * self.randomness), 0.05, 0.19)
-        
-            self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+        # scale to max cable length
+        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.18, scale=0.1 * self.randomness), 0.05, 0.18)
+    
+        print("payload offset", payload_offset)
+        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
             #randomize payload mass from 1 to 11g
             self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)

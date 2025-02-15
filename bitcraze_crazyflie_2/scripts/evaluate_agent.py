@@ -11,7 +11,8 @@ def main():
         env_config={
             "randomness": 1.0, 
             "connect_payload": False,
-            "max_time": 60
+            "max_time": 60,
+            "velocity_observaiton": True,
         }
     )
 
