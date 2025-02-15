@@ -249,11 +249,12 @@ class MuJoCoSceneGenerator:
         for quad in self.config["quads"]:
             cable_instances += f'<instance name="compositecable{quad["id"]}_" /> \n'
 
+        options_str = " ".join([f'{k}="{v}"' for k, v in self.config["options"].items()])
         header = f"""
     <mujoco model="CF2 scene">
     <compiler angle="radian" meshdir="assets/" />
 
-    <option timestep="0.004" density="1.225" viscosity="1.8e-05" integrator="implicit" />
+    <option {options_str} />
 
     <visual>
         <global azimuth="-20" elevation="-20" ellipsoidinertia="true" />
@@ -483,6 +484,12 @@ class MuJoCoSceneGenerator:
 
 if __name__ == "__main__":
     scene_config = {
+        "options": {
+            "timestep": 0.004,
+            "density": 1.2, # air density
+            "viscosity": 0.00002, # air viscosity
+            "integrator": "Euler" 
+        },
         "payload": {
             "mass": 0.01,
             "geom_type": "cylinder",
