@@ -81,6 +81,13 @@ def np_angle_between(v1, v2):
         cos_theta = -1.0
     return np.arccos(cos_theta)
 
+@njit
+def np_to_spherical(vec):
+    r = np.linalg.norm(vec)
+    theta = np.arctan2(vec[1], vec[0])
+    phi = np.arccos(vec[2] / r)
+    return np.array([r, theta, phi])
+
 
 class DroneEnv(MujocoEnv):
     def __init__(
@@ -108,7 +115,7 @@ class DroneEnv(MujocoEnv):
         
             self.randomness_max = env_config.get("randomness", 1.0)
 
-            self.randomness = 0.0
+            self.randomness = 0.01
         else:
             self.randomness = env_config.get("randomness", 1.0)
           
@@ -289,6 +296,10 @@ class DroneEnv(MujocoEnv):
     def to_frame(self, orientation_q, vec):
         # Use Numba-optimized vector rotation
         return np_to_frame(orientation_q, vec)
+    
+    def to_spherical(self, vec):
+        # Use Numba-optimized vector rotation
+        return np_to_spherical(vec)
 
 
 
@@ -317,6 +328,12 @@ class DroneEnv(MujocoEnv):
 
         # Rotate position error vector into drone's local frame
         position_error_local = self.to_frame(orientation, position_error_world)
+
+        #turn into spherical coordinates
+        #position_error_local = self.to_spherical(position_error_local)
+
+
+
         # Rotate linear velocity into drone's local frame
         linear_velocity_local = self.to_frame(orientation, linear_velocity)
         # Extract IMU data
@@ -473,6 +490,24 @@ class DroneEnv(MujocoEnv):
             position <= self.workspace["high"]
         )
 
+         # Terminate if going away from target again
+        if self.target_mode == "payload" and self.payload:
+            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+            position_error = self.target_position - payload_pos
+        else:
+            position_error = self.target_position - position
+        distance = np.linalg.norm(position_error)
+
+        max_delta_distance = 1.5
+        #lower max delta wiht time
+        current_time_progress = (sim_time - self.warmup_time) / self.max_time
+        min_delta_distance = (0.3+ 0.2*self.randomness) * (1.1-current_time_progress)
+
+        if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
+            terminated = True
+            out_of_bounds = True
+
         # Compute reward
         if self.debug_rates_enabled:
             t_reward_start = time.time()
@@ -501,22 +536,7 @@ class DroneEnv(MujocoEnv):
         if out_of_bounds:
             terminated = True  # Terminate the episode
 
-        # Terminate if going away from target again
-        if self.target_mode == "payload" and self.payload:
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-            position_error = self.target_position - payload_pos
-        else:
-            position_error = self.target_position - position
-        distance = np.linalg.norm(position_error)
-
-        max_delta_distance = 1.5
-        #lower max delta wiht time
-        current_time_progress = (sim_time - self.warmup_time) / self.max_time
-        min_delta_distance = (0.2+ 0.2*self.randomness) * (1.1-current_time_progress)
-
-        if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
-            terminated = True
+       
 
         
         elif distance < self.max_distance:
@@ -548,8 +568,7 @@ class DroneEnv(MujocoEnv):
             if self.average_episode_length >  0.9 * self.max_time and self.randomness < self.randomness_max:
                 self.randomness += 0.01
             
-            if self.average_episode_length < 0.45 * self.max_time and self.randomness > 0.0:
-                self.randomness -= 0.01
+           
             info["env_randomness"] = self.randomness
             info["average_episode_length"] = self.average_episode_length
 
@@ -649,7 +668,7 @@ class DroneEnv(MujocoEnv):
         reward -= distance_xy_penalty
         reward_components["distance_xy_penalty"] = -distance_xy_penalty
 
-        distance_penalty = rc["distance"] * distance**2
+        distance_penalty = rc["distance"] * distance
         reward -= distance_penalty
         reward_components["distance_penalty"] = -distance_penalty
 
@@ -676,8 +695,8 @@ class DroneEnv(MujocoEnv):
         # Smooth action penalty
         if hasattr(self, "last_action"):
             action_difference_penalty = rc["smooth_action"] * np.mean(
-                np.abs(action - last_action)/self.max_thrust/self.time_per_action
-            )**2 / 100
+                np.abs(action - last_action)/self.max_thrust
+            )**2
 
             # penalize variance in action
             # action_variance_penalty = (np.mean(np.abs(action - np.mean(action)))/self.max_thrust)**2
@@ -690,26 +709,23 @@ class DroneEnv(MujocoEnv):
 
         # Move towards target
         # Compute the unit vector towards the target
-        # if distance > 0.005:
-        #     desired_direction = position_error / distance
-        # else:
-        #     desired_direction = np.zeros_like(position_error)
+        if distance > 0.005:
+            desired_direction = position_error / distance
+        else:
+            desired_direction = np.zeros_like(position_error)
 
        
 
         # Compute the velocity towards the target
-       # velocity_towards_target = np.dot(linear_velocity, desired_direction)
+        velocity_towards_target = np.dot(linear_velocity, desired_direction)* self.time_per_action
 
         #only negative velocity is penalized
         #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
 
          # More distance more penalty less distance more reward
-        velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))
-        self.last_position_error = np.linalg.norm(position_error)
+        # velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))
+        # self.last_position_error = np.linalg.norm(position_error)
 
-        # scale up if moving away from target
-        if velocity_towards_target < 0:
-            velocity_towards_target *= 5
 
         # normalize over time
         velocity_towards_target /= self.time_per_action
@@ -733,9 +749,9 @@ class DroneEnv(MujocoEnv):
         #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
         # )  
         # exact peek at position
-        peak_bonus =  0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.005**2)
+        peak_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.01**2)
         # only give bonus if velocity is near zero
-        peak_bonus *= 0.5* (np.exp(-np.linalg.norm(linear_velocity)**2 / 0.1**2)+1)
+        #peak_bonus *=  np.exp(-(np.linalg.norm(linear_velocity)+ np.linalg.norm(angular_velocity))**2 / 0.1**2)
 
         goal_bonus = peak_bonus
     
@@ -901,6 +917,10 @@ class DroneEnv(MujocoEnv):
 
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
+
+        # initial_action = np.ones(4)*0.5 # start with 3/4 thrust
+        # initial_action += self.np_random.normal(loc=0, scale=0.1 * self.randomness, size=4)
+        # initial_action = np.clip(initial_action, -1, 1)
         self.data.ctrl[:] = initial_action[:4]
 
 

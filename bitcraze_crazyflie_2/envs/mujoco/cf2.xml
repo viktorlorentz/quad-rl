@@ -2,7 +2,8 @@
   <option integrator="RK4" density="1.225" viscosity="1.8e-5"/>
 
   <!-- <compiler inertiafromgeom="false" meshdir="assets" autolimits="true"/> -->
-  <compiler meshdir="assets" autolimits="true"/>
+  <compiler meshdir="assets" autolimits="true" /> 
+  <!-- discardvisual="true" -->
 
 
   <default>

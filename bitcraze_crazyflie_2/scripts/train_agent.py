@@ -8,9 +8,10 @@ import gc
 
 import numpy as np
 
-from stable_baselines3 import PPO
+#from stable_baselines3 import PPO
+from sbx import PPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import ActorCriticPolicy
 from torch import nn
@@ -136,8 +137,8 @@ def main():
 
     # Define parameters
     n_envs = 64
-    n_steps = 2048
-    batch_size = 128
+    n_steps = 128
+    batch_size = 64
     time_steps = 150_000_000
 
     # Reward function coefficients
@@ -156,7 +157,7 @@ def main():
         "out_of_bounds_penalty": 0,
         "velocity_towards_target": 1,
         "action_saturation": 0,
-        "smooth_action": 0.1,
+        "smooth_action": 1,
         "energy_penalty": 0.1,
         "payload_velocity": 0.1,
         "above_payload": 1,
@@ -172,17 +173,10 @@ def main():
         "batch_size": batch_size,
         "learning_rate": 0.0003,
         "gamma": 0.99,
-        "gae_lambda": 0.83,
-        "ent_coef": 0.05,
-        "vf_coef": 0.25,
-        "max_grad_norm": 0.5,
-        "clip_range": 0.22,
-        "clip_range_vf": None,
-        "normalize_advantage": True,
         "use_sde": False,
         "policy_kwargs": {
             "activation_fn": "Tanh",
-            "net_arch": {"pi": [64, 64, 64], "vf": [64, 64, 64]},
+            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
             "squash_output": False,  # this adds tanh to the output of the policy
         },
         "reward_coefficients": reward_coefficients,
@@ -221,7 +215,7 @@ def main():
             pi=config["policy_kwargs"]["net_arch"]["pi"],
             vf=config["policy_kwargs"]["net_arch"]["vf"],
         ),
-        squash_output=config["policy_kwargs"]["squash_output"],
+        #squash_output=config["policy_kwargs"]["squash_output"],
     )
 
     # Create the vectorized environments
@@ -253,7 +247,7 @@ def main():
     eval_env = make_vec_env(
         DroneEnv,
         n_envs=1,
-        vec_env_cls=SubprocVecEnv,
+        vec_env_cls=DummyVecEnv,
         seed=0,
         env_kwargs={
             "reward_coefficients": config["reward_coefficients"],
@@ -304,7 +298,7 @@ def main():
         # normalize_advantage=config["normalize_advantage"],
         # use_sde=config["use_sde"],
         device="cpu",
-        policy_kwargs=policy_kwargs,
+        #policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
     )
 
