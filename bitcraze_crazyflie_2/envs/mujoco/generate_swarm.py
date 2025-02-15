@@ -39,7 +39,7 @@ class MuJoCoSceneGenerator:
         cable_xml_lines.append(f'        quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
         cable_xml_lines.append(f'        mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
         cable_xml_lines.append(f'    <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />')
-        cable_xml_lines.append(f'    <plugin instance="compositerope{quad_id}_" />')
+        cable_xml_lines.append(f'    <plugin instance="compositecable{quad_id}_" />')
         
         # intermediate bodies (if any)
         # For bodies 1 to cable_bodies-2, we nest them inside the previous body
@@ -50,7 +50,7 @@ class MuJoCoSceneGenerator:
             cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
             cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
             cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
-            cable_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
+            cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
         
         # last body: close with a site and plugin
         cable_xml_lines.append(f'    <body name="q{quad_id}_cable_B_last" pos="{delta} 0 0">')
@@ -60,7 +60,7 @@ class MuJoCoSceneGenerator:
         cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
         cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
         cable_xml_lines.append(f'         <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />')
-        cable_xml_lines.append(f'         <plugin instance="compositerope{quad_id}_" />')
+        cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
         
         rope = "\n".join(cable_xml_lines)
 
@@ -234,7 +234,8 @@ class MuJoCoSceneGenerator:
                 <site
                     name="q{id}_thrust4"
                     pos="0.032527 0.032527 0" />
-
+                <site name="q{id}_attachment" pos="0 0 0" />
+                
             </body>          
                                                                                        
 """
@@ -246,7 +247,7 @@ class MuJoCoSceneGenerator:
 
         cable_instances = ""
         for quad in self.config["quads"]:
-            cable_instances += f'<instance name="compositerope{quad["id"]}_" /> \n'
+            cable_instances += f'<instance name="compositecable{quad["id"]}_" /> \n'
 
         header = f"""
     <mujoco model="CF2 scene">
@@ -435,8 +436,9 @@ class MuJoCoSceneGenerator:
         <weld site1="q1_start" site2="q1_imu" solref="0.01 4"  />
         <weld site1="q0_start" site2="q0_imu" solref="0.01 4"  />
       
+        <!-- 
         <weld site1="payload_start" site2="payload_s" solref="0.01 4"  />
-
+        -->
 
     </equality>
 
@@ -469,7 +471,12 @@ class MuJoCoSceneGenerator:
         <accelerometer site="q1_imu" name="body_linacc" />
         <framequat objtype="site" objname="q1_imu" name="body_quat" />
 
-        
+        <!-- force at cable attachment site -->
+
+        <force name="q0_cable_force" site="q0_attachment" />
+        <force name="q1_cable_force" site="q1_attachment" />
+  
+
     </sensor>
 </mujoco>"""
         return header + quads + end
@@ -506,7 +513,7 @@ if __name__ == "__main__":
                     "mass": 0.01,
                     "damping": 0.00001,
                     "color_rgba" : "0.1 0.8 0.1 1",
-                    "quad_site": "quad_attachment",
+                    "quad_site": "q1_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
                 }
