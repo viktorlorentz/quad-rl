@@ -12,7 +12,7 @@ class MuJoCoSceneGenerator:
     #             "cable_bodies": 20,
     #             "cable_mass": 0.005,
     #             "cable_damping": 0.00001,
-    #             "cable_color_rgba": "0.1 0.1 0.8 1",
+    #             "cable_rgba": "0.1 0.1 0.8 1",
     #             "quad_attachment_site": "quad_attachment",
     #             "quad_attachment_offset": [0, 0, 0],
     #         }
@@ -24,7 +24,7 @@ class MuJoCoSceneGenerator:
         cable_bodies     = cable_config.get("bodies", 20)
         cable_mass_total = cable_config.get("mass", 0.005)
         cable_damping    = cable_config.get("damping", 0.00001)
-        cable_color_rgba = cable_config.get("color_rgba", "0.1 0.1 0.8 1")
+        cable_rgba = cable_config.get("rgba", "0.1 0.1 0.8 1")
 
         # Compute per-segment values
         delta     = cable_length / cable_bodies          # offset for each nested body
@@ -37,7 +37,7 @@ class MuJoCoSceneGenerator:
         cable_xml_lines.append(f'<body name="q{quad_id}_cable_B_first">')
         cable_xml_lines.append(f'    <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
         cable_xml_lines.append(f'        quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        cable_xml_lines.append(f'        mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+        cable_xml_lines.append(f'        mass="{mass_per_body}" rgba="{cable_rgba}" />')
         cable_xml_lines.append(f'    <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />')
         cable_xml_lines.append(f'    <plugin instance="compositecable{quad_id}_" />')
         
@@ -49,7 +49,7 @@ class MuJoCoSceneGenerator:
             cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
             cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
             cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-            cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+            cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_rgba}" />')
             cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
         
         # last body: close with a site and plugin
@@ -58,7 +58,7 @@ class MuJoCoSceneGenerator:
         cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
         cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
         cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_color_rgba}" />')
+        cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_rgba}" />')
         cable_xml_lines.append(f'         <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />')
         cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
         
@@ -73,6 +73,15 @@ class MuJoCoSceneGenerator:
             cable_close += "</body>\n"
         
         return rope, cable_close
+    
+    def val_string(self, dict):
+        # turn into = string. Make sure arrays are space-separated
+        for key, val in dict.items():
+            if isinstance(val, list):
+                dict[key] = " ".join(map(str, val))
+        return " ".join([f'{key}="{val}"' for key, val in dict.items()])
+        
+
 
     def generate_quad(self, quad_config):
         id = quad_config["id"]
@@ -249,20 +258,17 @@ class MuJoCoSceneGenerator:
         for quad in self.config["quads"]:
             cable_instances += f'<instance name="compositecable{quad["id"]}_" /> \n'
 
-        options_str = " ".join([f'{k}="{v}"' for k, v in self.config["options"].items()])
+      
         header = f"""
     <mujoco model="CF2 scene">
-    <compiler angle="radian" meshdir="assets/" />
-
-    <option {options_str} />
+    <compiler {self.val_string(self.config["compiler"])} />
+    <option {self.val_string(self.config["options"])} />
 
     <visual>
         <global azimuth="-20" elevation="-20" ellipsoidinertia="true" />
         <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0" />
         <rgba haze="0.15 0.25 0.35 1" />
     </visual>
-
-    <statistic meansize="0.05" extent="0.2" center="0 0 0.1" />
 
     <default>
         <default class="cf2">
@@ -283,9 +289,7 @@ class MuJoCoSceneGenerator:
         </plugin>
     </extension>
 
-    <custom>
-        <text name="composite_cable_" data="cable_cable_" />
-    </custom>
+ 
 
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
@@ -299,8 +303,8 @@ class MuJoCoSceneGenerator:
         <material name="white" />
         <material name="body_frame_plastic" rgba="0.102 0.102 0.102 1" />
         <material name="burnished_chrome" rgba="0.898 0.898 0.898 1" />
-        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
-            reflectance="0.2" />
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="10 10"
+            reflectance="0" />
         <mesh name="cf2_0" file="cf2_0.obj" />
         <mesh name="cf2_1" file="cf2_1.obj" />
         <mesh name="cf2_2" file="cf2_2.obj" />
@@ -343,8 +347,7 @@ class MuJoCoSceneGenerator:
     </asset>
 
     <worldbody>
-        <geom name="goal_marker" size="0.02" pos="0 0 1" contype="0" conaffinity="0"
-            rgba="1 0 0 0.8" />
+        <geom name="goal_marker" contype="0" conaffinity="0" {self.val_string(self.config["goal"])} />
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
         <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
 
@@ -490,13 +493,23 @@ if __name__ == "__main__":
             "viscosity": 0.00002, # air viscosity
             "integrator": "Euler" 
         },
+        "compiler": {
+            "angle": "radian",
+            "meshdir": "assets/",
+            "discardvisual": "false"
+        },
+        "goal": {
+            "pos": [0, 0, 0.5],
+            "size": 0.02,
+            "rgba": "1 0 0 0.8"
+        },
         "payload": {
             "mass": 0.01,
             "geom_type": "cylinder",
             "size": [0.007, 0.01],
             "start_pos": [0, 0, 0.2],
             "start_euler": [0, 1, 1],
-            "color_rgba": "0.8 0.8 0.8 1",
+            "rgba": "0.8 0.8 0.8 1",
             "attach_sites": [
                 {
                     "name": "attach_site_1",
@@ -519,7 +532,7 @@ if __name__ == "__main__":
                     "bodies": 25,
                     "mass": 0.01,
                     "damping": 0.00001,
-                    "color_rgba" : "0.1 0.8 0.1 1",
+                    "rgba" : "0.1 0.8 0.1 1",
                     "quad_site": "q1_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
@@ -536,7 +549,7 @@ if __name__ == "__main__":
                     "bodies": 20,
                     "mass": 0.005,
                     "damping": 0.00001,
-                    "color_rgba" : "0.1 0.1 0.8 1",
+                    "rgba" : "0.1 0.1 0.8 1",
                     "quad_site": "quad_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",

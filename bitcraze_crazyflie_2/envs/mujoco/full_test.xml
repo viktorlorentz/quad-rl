@@ -1,7 +1,6 @@
 
     <mujoco model="CF2 scene">
-    <compiler angle="radian" meshdir="assets/" />
-
+    <compiler angle="radian" meshdir="assets/" discardvisual="false" />
     <option timestep="0.004" density="1.2" viscosity="2e-05" integrator="Euler" />
 
     <visual>
@@ -9,8 +8,6 @@
         <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0" />
         <rgba haze="0.15 0.25 0.35 1" />
     </visual>
-
-    <statistic meansize="0.05" extent="0.2" center="0 0 0.1" />
 
     <default>
         <default class="cf2">
@@ -33,9 +30,7 @@
         </plugin>
     </extension>
 
-    <custom>
-        <text name="composite_cable_" data="cable_cable_" />
-    </custom>
+ 
 
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
@@ -49,8 +44,8 @@
         <material name="white" />
         <material name="body_frame_plastic" rgba="0.102 0.102 0.102 1" />
         <material name="burnished_chrome" rgba="0.898 0.898 0.898 1" />
-        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
-            reflectance="0.2" />
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="10 10"
+            reflectance="0" />
         <mesh name="cf2_0" file="cf2_0.obj" />
         <mesh name="cf2_1" file="cf2_1.obj" />
         <mesh name="cf2_2" file="cf2_2.obj" />
@@ -93,10 +88,7 @@
     </asset>
 
     <worldbody>
-    <replicate count="2" offset="0 3 0" >
-      <replicate count="2" sep="-" offset="3 0 0" >
-        <geom name="goal_marker" size="0.02" pos="0 0 1" contype="0" conaffinity="0"
-            rgba="1 0 0 0.8" />
+        <geom name="goal_marker" contype="0" conaffinity="0" pos="0 0 0.5" size="0.02" rgba="1 0 0 0.8" />
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
         <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
 
@@ -797,8 +789,7 @@
 </body>
         </body>
 
-     </replicate>
-    </replicate>
+        
 
     </worldbody>
 
