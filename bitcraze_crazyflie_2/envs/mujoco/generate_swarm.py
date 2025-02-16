@@ -23,9 +23,53 @@ colors = [
     "0.1 0.9 0.9 1",
 ]
 
-class MuJoCoSceneGenerator:
+class QuadSceneGenerator:
     def __init__(self, scene_config):
-        self.config = scene_config
+        # Apply defaults to the scene config
+        defaults = {
+            "payload_connection": "tendon",  # ["cable", "tendon", "none"]
+            "options": {
+                "timestep": 0.004,
+                "density": 1.2,  # air density
+                "viscosity": 0.00002,  # air viscosity
+                "integrator": "Euler",
+                "gravity": "0 0 -9.81",
+                "wind": "0 0 0",
+            },
+            "compiler": {
+                "angle": "radian",
+                "meshdir": "assets/",
+                "discardvisual": "false"
+            },
+            "goal": {
+                "pos": [0, 0, 0.5],
+                "size": 0.02,
+                "rgba": "1 0 0 0.8"
+            },
+            "payload": {
+                "mass": 0.01,
+                "geom_type": "cylinder",
+                "size": [0.007, 0.01],
+                "start_pos": False,  # [0, 0, 0.1] or False
+                "start_euler": [0, 0, 0],
+                "rgba": "0.8 0.8 0.8 1",
+                "attach_sites": [
+                    {
+                        "name": "attach_site_1",
+                        "pos": [0, 0, 0.01]
+                    },
+                    {
+                        "name": "attach_site_2",
+                        "pos": [0, 0, -0.01]
+                    }
+                ]
+            },
+            "quads": []
+        }
+        # Merge the provided scene_config into defaults (shallow merge)
+        merged = defaults.copy()
+        merged.update(scene_config)
+        self.config = merged
 
     #example config
     # {
@@ -520,19 +564,6 @@ class MuJoCoSceneGenerator:
 if __name__ == "__main__":
     scene_config = {
         "payload_connection": "tendon", # ["cable", "tendon", "none"]
-        "options": {
-            "timestep": 0.004,
-            "density": 1.2, # air density
-            "viscosity": 0.00002, # air viscosity
-            "integrator": "Euler",
-            "gravity": "0 0 -9.81",
-            "wind": "0 0 0",
-        },
-        "compiler": {
-            "angle": "radian",
-            "meshdir": "assets/",
-            "discardvisual": "false"
-        },
         "goal": {
             "pos": [0, 0, 0.5],
             "size": 0.02,
@@ -672,7 +703,7 @@ if __name__ == "__main__":
             },
         ]
     }
-    generator = MuJoCoSceneGenerator(scene_config)
+    generator = QuadSceneGenerator(scene_config)
     full_xml = generator.generate_xml()
     output_file = os.path.join(os.path.dirname(__file__), "full_test.xml")
     with open(output_file, "w") as f:
