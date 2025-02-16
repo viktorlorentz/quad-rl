@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 class MuJoCoSceneGenerator:
     def __init__(self, scene_config):
@@ -17,7 +18,7 @@ class MuJoCoSceneGenerator:
     #             "quad_attachment_offset": [0, 0, 0],
     #         }
 
-    def generate_rope(self, quad_config, quad_id):
+    def generate_cable(self, quad_config, quad_id):
         # retrieve rope parameters from the config (with defaults)
         cable_config = quad_config["cable"]
         cable_length     = cable_config.get("length", 0.2)
@@ -31,38 +32,37 @@ class MuJoCoSceneGenerator:
         halfDelta = delta / 2                           # used for geom pos and capsule half-length
         mass_per_body = cable_mass_total / cable_bodies   # mass per geom
 
-        # Start building the XML string
-        cable_xml_lines = []
-        # first body
-        cable_xml_lines.append(f'<body name="q{quad_id}_cable_B_first">')
-        cable_xml_lines.append(f'    <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-        cable_xml_lines.append(f'        quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        cable_xml_lines.append(f'        mass="{mass_per_body}" rgba="{cable_rgba}" />')
-        cable_xml_lines.append(f'    <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />')
-        cable_xml_lines.append(f'    <plugin instance="compositecable{quad_id}_" />')
-        
-        # intermediate bodies (if any)
-        # For bodies 1 to cable_bodies-2, we nest them inside the previous body
+        # Build the rope XML using multi-line strings
+        first_body = f"""
+        <body name="q{quad_id}_cable_B_first">
+            <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+            quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
+            mass="{mass_per_body}" rgba="{cable_rgba}" />
+            <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />
+            <plugin instance="compositecable{quad_id}_" />
+        """
+        intermediate_bodies = ""
         for i in range(1, cable_bodies - 1):
-            cable_xml_lines.append(f'    <body name="q{quad_id}_cable_B_{i}" pos="{delta} 0 0">')
-            cable_xml_lines.append(f'         <joint name="q{quad_id}_cable_J_{i}" pos="0 0 0" type="ball" group="3"')
-            cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
-            cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-            cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-            cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_rgba}" />')
-            cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
-        
-        # last body: close with a site and plugin
-        cable_xml_lines.append(f'    <body name="q{quad_id}_cable_B_last" pos="{delta} 0 0">')
-        cable_xml_lines.append(f'         <joint name="q{quad_id}_cable_J_last" pos="0 0 0" type="ball" group="3"')
-        cable_xml_lines.append(f'             actuatorfrclimited="false" damping="{cable_damping}" />')
-        cable_xml_lines.append(f'         <geom name="q{quad_id}_cable_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"')
-        cable_xml_lines.append(f'             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"')
-        cable_xml_lines.append(f'             mass="{mass_per_body}" rgba="{cable_rgba}" />')
-        cable_xml_lines.append(f'         <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />')
-        cable_xml_lines.append(f'         <plugin instance="compositecable{quad_id}_" />')
-        
-        rope = "\n".join(cable_xml_lines)
+            intermediate_bodies += f"""
+            <body name="q{quad_id}_cable_B_{i}" pos="{delta} 0 0">
+             <joint name="q{quad_id}_cable_J_{i}" pos="0 0 0" type="ball" group="3"
+                 actuatorfrclimited="false" damping="{cable_damping}" />
+             <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+                 quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
+                 mass="{mass_per_body}" rgba="{cable_rgba}" />
+             <plugin instance="compositecable{quad_id}_" />
+            """
+        last_body = f"""
+            <body name="q{quad_id}_cable_B_last" pos="{delta} 0 0">
+             <joint name="q{quad_id}_cable_J_last" pos="0 0 0" type="ball" group="3"
+                 actuatorfrclimited="false" damping="{cable_damping}" />
+             <geom name="q{quad_id}_cable_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+                 quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
+                 mass="{mass_per_body}" rgba="{cable_rgba}" />
+             <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />
+             <plugin instance="compositecable{quad_id}_" />
+        """
+        rope = first_body + intermediate_bodies + last_body
 
         cable_close = ""
 
@@ -248,7 +248,7 @@ class MuJoCoSceneGenerator:
             </body>          
                                                                                        
 """
-        rope, cable_close = self.generate_rope(quad_config, id)
+        rope, cable_close = self.generate_cable(quad_config, id)
         return quad_header + rope + quad + cable_close + "</body>"
         
 
@@ -258,9 +258,20 @@ class MuJoCoSceneGenerator:
         for quad in self.config["quads"]:
             cable_instances += f'<instance name="compositecable{quad["id"]}_" /> \n'
 
-      
+        # Dynamically generate quad start sites
+        quad_start_sites = ""
+        for quad in self.config["quads"]:
+            quad_start_sites += f'<site name="q{quad["id"]}_start" pos="{" ".join(map(str, quad["start_pos"]))}" euler="{" ".join(map(str, quad["start_euler"]))}" />\n'
+        
+        # Dynamically generate payload start site
+        if self.config["payload"]["start_pos"] is False:
+            payload_start_site = ""
+        else:
+            payload_start_site = f'<site name="payload_start" pos="{" ".join(map(str, self.config["payload"]["start_pos"]))}" euler="{" ".join(map(str, self.config["payload"]["start_euler"]))}" />\n'
+
+
         header = f"""
-    <mujoco model="CF2 scene">
+    <mujoco>
     <compiler {self.val_string(self.config["compiler"])} />
     <option {self.val_string(self.config["options"])} />
 
@@ -285,11 +296,8 @@ class MuJoCoSceneGenerator:
     <extension>
         <plugin plugin="mujoco.elasticity.cable">
             {cable_instances}
-
         </plugin>
     </extension>
-
- 
 
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
@@ -351,136 +359,78 @@ class MuJoCoSceneGenerator:
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
         <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
 
-        <!-- Quad start site -->
-        <site name="q1_start" pos="{self.config['quads'][0]['start_pos'][0]} {self.config['quads'][0]['start_pos'][1]} {self.config['quads'][0]['start_pos'][2]}" euler="{self.config['quads'][0]['start_euler'][0]} {self.config['quads'][0]['start_euler'][1]} {self.config['quads'][0]['start_euler'][2]}" />
-        <site name="q0_start" pos="{self.config['quads'][1]['start_pos'][0]} {self.config['quads'][1]['start_pos'][1]} {self.config['quads'][1]['start_pos'][2]}" euler="{self.config['quads'][1]['start_euler'][0]} {self.config['quads'][1]['start_euler'][1]} {self.config['quads'][1]['start_euler'][2]}" />
-   
+        {quad_start_sites}
         <!-- Payload start site-->
-        <site name="payload_start" pos="{self.config['payload']['start_pos'][0]} {self.config['payload']['start_pos'][1]} {self.config['payload']['start_pos'][2]}" euler="{self.config['payload']['start_euler'][0]} {self.config['payload']['start_euler'][1]} {self.config['payload']['start_euler'][2]}" />
+        {payload_start_site}
 
-
-
-
-        <body name="payload" pos="0 0 0.1">
+        <body name="payload" pos="{self.config['payload']['init_pos'][0]} {self.config['payload']['init_pos'][1]} {self.config['payload']['init_pos'][2]}" >
             <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
                 mode="trackcom" />
             <joint type="free" actuatorfrclimited="false" />
             <geom size="0.007 0.01" type="cylinder" mass="0.001" rgba="0.8 0.8 0.8 1" />
             <site name="payload_s" pos="0 0 0.01" />
 """
-
-        quads= ""
+        quads = ""
         for (i, quad) in enumerate(self.config["quads"]):
-            q = quad
-            pi = 3.14159
-            yaw_angle = (2*pi / len(self.config["quads"])) * i - pi
-            q["yaw_angle"] = yaw_angle
-            quads += self.generate_quad(q)
+            # set yaw angle for quad placement to point from init pos to quad start pos
+            vec = np.array(quad["start_pos"])- np.array(self.config["payload"]["init_pos"])
+            quad["yaw_angle"] = np.arctan2(vec[1], vec[0])
+
+            quads += self.generate_quad(quad)
+           
             
-        end = """
-        </body>
+        # Dynamically generate equality welds for all quads
+        equality_welds = ""
+        for quad in self.config["quads"]:
+            equality_welds += f'<weld site1="q{quad["id"]}_start" site2="q{quad["id"]}_imu" solref="0.01 6" />\n'
 
+        # Dynamically generate actuator definitions for each quad
+        actuators = ""
+        for quad in self.config["quads"]:
+            for i in range(1, 5):
+                gear = "0 0 1 0 0 6e-06" if i in [1, 3] else "0 0 1 0 0 -6e-06"
+                actuators += f'<general name="q{quad["id"]}_thrust{i}" class="cf2" site="q{quad["id"]}_thrust{i}" ctrlrange="0 0.14" gear="{gear}" />\n'
+
+        # Dynamically generate sensor definitions for each quad
+        sensors = ""
+        for quad in self.config["quads"]:
+            sensors += f'<gyro site="q{quad["id"]}_imu" name="q{quad["id"]}_gyro" />\n'
+            sensors += f'<accelerometer site="q{quad["id"]}_imu" name="q{quad["id"]}_linacc" />\n'
+            sensors += f'<framequat objtype="site" objname="q{quad["id"]}_imu" name="q{quad["id"]}_framequat" />\n'
+            sensors += f'<force name="q{quad["id"]}_cable_force" site="q{quad["id"]}_attachment" />\n'
         
-
+        # Dynamically generate contact exclusions for cable bodies of each quad
+        contact_exclusions = ""
+        for quad in self.config["quads"]:
+            bodies = quad["cable"]["bodies"]
+            if bodies > 1:
+                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="q{quad["id"]}_cable_B_1" />\n'
+            for i in range(1, bodies - 2):
+                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{i}" body2="q{quad["id"]}_cable_B_{i+1}" />\n'
+            contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{bodies-2}" body2="q{quad["id"]}_cable_B_last" />\n'
+            contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="payload" />\n'
+        
+        end = f"""
+        </body>
     </worldbody>
 
     <contact>
-        <exclude body1="q1_cable_B_first" body2="q1_cable_B_1" />
-        <exclude body1="q1_cable_B_1" body2="q1_cable_B_2" />
-        <exclude body1="q1_cable_B_2" body2="q1_cable_B_3" />
-        <exclude body1="q1_cable_B_3" body2="q1_cable_B_4" />
-        <exclude body1="q1_cable_B_4" body2="q1_cable_B_5" />
-        <exclude body1="q1_cable_B_5" body2="q1_cable_B_6" />
-        <exclude body1="q1_cable_B_6" body2="q1_cable_B_7" />
-        <exclude body1="q1_cable_B_7" body2="q1_cable_B_8" />
-        <exclude body1="q1_cable_B_8" body2="q1_cable_B_9" />
-        <exclude body1="q1_cable_B_9" body2="q1_cable_B_10" />
-        <exclude body1="q1_cable_B_10" body2="q1_cable_B_11" />
-        <exclude body1="q1_cable_B_11" body2="q1_cable_B_12" />
-        <exclude body1="q1_cable_B_12" body2="q1_cable_B_13" />
-        <exclude body1="q1_cable_B_13" body2="q1_cable_B_14" />
-        <exclude body1="q1_cable_B_14" body2="q1_cable_B_15" />
-        <exclude body1="q1_cable_B_15" body2="q1_cable_B_16" />
-        <exclude body1="q1_cable_B_16" body2="q1_cable_B_17" />
-        <exclude body1="q1_cable_B_17" body2="q1_cable_B_last" />
-        <exclude body1="q1_cable_B_last" body2="payload" />
-        <exclude body1="q1_cable_B_last" body2="payload" />
-
-
-     
-
-        <exclude body1="q0_cable_B_first" body2="q0_cable_B_1" />
-        <exclude body1="q0_cable_B_1" body2="q0_cable_B_2" />
-        <exclude body1="q0_cable_B_2" body2="q0_cable_B_3" />
-        <exclude body1="q0_cable_B_3" body2="q0_cable_B_4" />
-        <exclude body1="q0_cable_B_4" body2="q0_cable_B_5" />
-        <exclude body1="q0_cable_B_5" body2="q0_cable_B_6" />
-        <exclude body1="q0_cable_B_6" body2="q0_cable_B_7" />
-        <exclude body1="q0_cable_B_7" body2="q0_cable_B_8" />
-        <exclude body1="q0_cable_B_8" body2="q0_cable_B_9" />
-        <exclude body1="q0_cable_B_9" body2="q0_cable_B_10" />
-        <exclude body1="q0_cable_B_10" body2="q0_cable_B_11" />
-        <exclude body1="q0_cable_B_11" body2="q0_cable_B_12" />
-        <exclude body1="q0_cable_B_12" body2="q0_cable_B_13" />
-        <exclude body1="q0_cable_B_13" body2="q0_cable_B_14" />
-        <exclude body1="q0_cable_B_14" body2="q0_cable_B_15" />
-        <exclude body1="q0_cable_B_15" body2="q0_cable_B_16" />
-        <exclude body1="q0_cable_B_16" body2="q0_cable_B_17" />
-        <exclude body1="q0_cable_B_17" body2="q0_cable_B_last" />
-        <exclude body1="q0_cable_B_last" body2="payload" />
-        <exclude body1="q0_cable_B_last" body2="payload" />
+        {contact_exclusions}
     </contact>
 
-    <!-- <equality>
-    <connect site1="cable_S_last" site2="payload_s"/>
-  </equality> -->
-
-  <!-- quad start site -->
     <equality>
-        <weld site1="q1_start" site2="q1_imu" solref="0.01 4"  />
-        <weld site1="q0_start" site2="q0_imu" solref="0.01 4"  />
+        {equality_welds}
       
-        <!-- 
-        <weld site1="payload_start" site2="payload_s" solref="0.01 4"  />
-        -->
-
+        {"" if payload_start_site == "" else f'<weld site1="payload_start" site2="payload_s" solref="0.01 6" />'}
+       
     </equality>
 
-   
-
     <actuator>
-        <general name="q1_thrust1" class="cf2" site="q1_thrust1" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q1_thrust2" class="cf2" site="q1_thrust2" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
-        <general name="q1_thrust3" class="cf2" site="q1_thrust3" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q1_thrust4" class="cf2" site="q1_thrust4" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
-
-    
-
-        <general name="q0_thrust1" class="cf2" site="q0_thrust1" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q0_thrust2" class="cf2" site="q0_thrust2" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
-        <general name="q0_thrust3" class="cf2" site="q0_thrust3" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 6e-06" />
-        <general name="q0_thrust4" class="cf2" site="q0_thrust4" ctrlrange="0 0.14"
-            gear="0 0 1 0 0 -6e-06" />
+        {actuators}
     </actuator>
 
     <sensor>
-        <gyro site="q1_imu" name="body_gyro" />
-        <accelerometer site="q1_imu" name="body_linacc" />
-        <framequat objtype="site" objname="q1_imu" name="body_quat" />
-
-        <!-- force at cable attachment site -->
-
-        <force name="q0_cable_force" site="q0_attachment" />
-        <force name="q1_cable_force" site="q1_attachment" />
-  
-
+        {sensors}
     </sensor>
 </mujoco>"""
         return header + quads + end
@@ -507,7 +457,8 @@ if __name__ == "__main__":
             "mass": 0.01,
             "geom_type": "cylinder",
             "size": [0.007, 0.01],
-            "start_pos": [0, 0, 0.2],
+            "start_pos": False, # array or False
+            "init_pos": [0, 0, 0.1],
             "start_euler": [0, 1, 1],
             "rgba": "0.8 0.8 0.8 1",
             "attach_sites": [
@@ -521,7 +472,6 @@ if __name__ == "__main__":
                 }
             ]
         },
-        "quad_prefix": "q",
         "quads": [
             {
                 "id": 0,
@@ -542,10 +492,42 @@ if __name__ == "__main__":
             {
                
                 "id": 1,
-                "start_pos": [-0.15, 0, 0.3],
+                "start_pos": [-0.15, .1, 0.3],
                 "start_euler": [0, 0, 0.5],
                 "cable":{
                     "length": 0.2,
+                    "bodies": 20,
+                    "mass": 0.005,
+                    "damping": 0.00001,
+                    "rgba" : "0.1 0.1 0.8 1",
+                    "quad_site": "quad_attachment",
+                    "attachment_offset": [0, 0.001, 0],
+                    "payload_site": "attach_site_1",
+                }
+            },
+            {
+               
+                "id": 2,
+                "start_pos": [0.15, .1, 0.3],
+                "start_euler": [0, 0, 0.5],
+                "cable":{
+                    "length": 0.2,
+                    "bodies": 20,
+                    "mass": 0.005,
+                    "damping": 0.00001,
+                    "rgba" : "0.1 0.1 0.8 1",
+                    "quad_site": "quad_attachment",
+                    "attachment_offset": [0, 0.001, 0],
+                    "payload_site": "attach_site_1",
+                }
+            },
+            {
+               
+                "id": 3,
+                "start_pos": [0.1, .3, 0.3],
+                "start_euler": [0, 0, 0.5],
+                "cable":{
+                    "length": 0.4,
                     "bodies": 20,
                     "mass": 0.005,
                     "damping": 0.00001,
