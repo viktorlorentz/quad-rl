@@ -1,6 +1,28 @@
 import os
 import numpy as np
 
+colors = [
+    "0.1 0.8 0.1 1",
+    "0.8 0.1 0.1 1",
+    "0.1 0.1 0.8 1",
+    "0.8 0.8 0.1 1",
+    "0.1 0.8 0.8 1",
+    "0.8 0.1 0.8 1",
+    "0.8 0.8 0.8 1",
+    "0.5 0.5 0.5 1",
+    "0.1 0.5 0.5 1",
+    "0.5 0.1 0.5 1",
+    "0.5 0.5 0.1 1",
+    "0.2 0.3 0.4 1",
+    "0.4 0.3 0.2 1",
+    "0.3 0.2 0.4 1",
+    "0.4 0.2 0.3 1",
+    "0.2 0.4 0.3 1",
+    "0.3 0.4 0.2 1",
+    "0.9 0.9 0.1 1",
+    "0.1 0.9 0.9 1",
+]
+
 class MuJoCoSceneGenerator:
     def __init__(self, scene_config):
         self.config = scene_config
@@ -23,9 +45,10 @@ class MuJoCoSceneGenerator:
         cable_config = quad_config["cable"]
         cable_length     = cable_config.get("length", 0.2)
         cable_bodies     = cable_config.get("bodies", 20)
-        cable_mass_total = cable_config.get("mass", 0.005)
+        cable_mass_total = cable_config.get("mass", 0.001)
         cable_damping    = cable_config.get("damping", 0.00001)
-        cable_rgba = cable_config.get("rgba", "0.1 0.1 0.8 1")
+
+        cable_rgba = cable_config.get("rgba", colors[quad_id % len(colors)])
 
         # Compute per-segment values
         delta     = cable_length / cable_bodies          # offset for each nested body
@@ -35,6 +58,8 @@ class MuJoCoSceneGenerator:
         # Build the rope XML using multi-line strings
         first_body = f"""
         <body name="q{quad_id}_cable_B_first">
+            <joint name="q{quad_id}_cable_J_first" pos="0 0 0" type="ball" group="3"
+                actuatorfrclimited="false" damping="{cable_damping}" />
             <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
             mass="{mass_per_body}" rgba="{cable_rgba}" />
@@ -383,6 +408,9 @@ class MuJoCoSceneGenerator:
         equality_welds = ""
         for quad in self.config["quads"]:
             equality_welds += f'<weld site1="q{quad["id"]}_start" site2="q{quad["id"]}_imu" solref="0.01 6" />\n'
+        
+        if payload_start_site != "":
+            equality_welds += f'<weld site1="payload_start" site2="payload_s" solref="0.01 6" />\n'
 
         # Dynamically generate actuator definitions for each quad
         actuators = ""
@@ -419,10 +447,7 @@ class MuJoCoSceneGenerator:
     </contact>
 
     <equality>
-        {equality_welds}
-      
-        {"" if payload_start_site == "" else f'<weld site1="payload_start" site2="payload_s" solref="0.01 6" />'}
-       
+        {equality_welds}       
     </equality>
 
     <actuator>
@@ -441,7 +466,9 @@ if __name__ == "__main__":
             "timestep": 0.004,
             "density": 1.2, # air density
             "viscosity": 0.00002, # air viscosity
-            "integrator": "Euler" 
+            "integrator": "Euler",
+            "gravity": "0 0 -9.81",
+            "wind": "0 0 0",
         },
         "compiler": {
             "angle": "radian",
@@ -481,8 +508,6 @@ if __name__ == "__main__":
                     "length": 0.5,
                     "bodies": 25,
                     "mass": 0.01,
-                    "damping": 0.00001,
-                    "rgba" : "0.1 0.8 0.1 1",
                     "quad_site": "q1_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
@@ -497,9 +522,7 @@ if __name__ == "__main__":
                 "cable":{
                     "length": 0.2,
                     "bodies": 20,
-                    "mass": 0.005,
-                    "damping": 0.00001,
-                    "rgba" : "0.1 0.1 0.8 1",
+                    "mass": 0.001,
                     "quad_site": "quad_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
@@ -513,9 +536,7 @@ if __name__ == "__main__":
                 "cable":{
                     "length": 0.2,
                     "bodies": 20,
-                    "mass": 0.005,
-                    "damping": 0.00001,
-                    "rgba" : "0.1 0.1 0.8 1",
+                    "mass": 0.001,
                     "quad_site": "quad_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
@@ -529,9 +550,7 @@ if __name__ == "__main__":
                 "cable":{
                     "length": 0.4,
                     "bodies": 20,
-                    "mass": 0.005,
-                    "damping": 0.00001,
-                    "rgba" : "0.1 0.1 0.8 1",
+                    "mass": 0.001,
                     "quad_site": "quad_attachment",
                     "attachment_offset": [0, 0.001, 0],
                     "payload_site": "attach_site_1",
