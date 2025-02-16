@@ -47,6 +47,7 @@ class MuJoCoSceneGenerator:
         cable_bodies     = cable_config.get("bodies", 20)
         cable_mass_total = cable_config.get("mass", 0.001)
         cable_damping    = cable_config.get("damping", 0.00001)
+        cable_thickness  = cable_config.get("thickness", 0.002)
 
         cable_rgba = cable_config.get("rgba", colors[quad_id % len(colors)])
 
@@ -60,7 +61,7 @@ class MuJoCoSceneGenerator:
         <body name="q{quad_id}_cable_B_first">
             <joint name="q{quad_id}_cable_J_first" pos="0 0 0" type="ball" group="3"
                 actuatorfrclimited="false" damping="{cable_damping}" />
-            <geom name="q{quad_id}_cable_G0" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+            <geom name="q{quad_id}_cable_G0" size="{cable_thickness} {halfDelta}" pos="{halfDelta} 0 0"
             quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
             mass="{mass_per_body}" rgba="{cable_rgba}" />
             <site name="q{quad_id}_cable_S_first" pos="0 0 0" group="3" />
@@ -72,7 +73,7 @@ class MuJoCoSceneGenerator:
             <body name="q{quad_id}_cable_B_{i}" pos="{delta} 0 0">
              <joint name="q{quad_id}_cable_J_{i}" pos="0 0 0" type="ball" group="3"
                  actuatorfrclimited="false" damping="{cable_damping}" />
-             <geom name="q{quad_id}_cable_G{i}" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+             <geom name="q{quad_id}_cable_G{i}" size="{cable_thickness} {halfDelta}" pos="{halfDelta} 0 0"
                  quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
                  mass="{mass_per_body}" rgba="{cable_rgba}" />
              <plugin instance="compositecable{quad_id}_" />
@@ -81,7 +82,7 @@ class MuJoCoSceneGenerator:
             <body name="q{quad_id}_cable_B_last" pos="{delta} 0 0">
              <joint name="q{quad_id}_cable_J_last" pos="0 0 0" type="ball" group="3"
                  actuatorfrclimited="false" damping="{cable_damping}" />
-             <geom name="q{quad_id}_cable_G_last" size="0.002 {halfDelta}" pos="{halfDelta} 0 0"
+             <geom name="q{quad_id}_cable_G_last" size="{cable_thickness} {halfDelta}" pos="{halfDelta} 0 0"
                  quat="0.707107 0 -0.707107 0" type="capsule" condim="1"
                  mass="{mass_per_body}" rgba="{cable_rgba}" />
              <site name="q{quad_id}_cable_S_last" pos="{delta} 0 0" group="3" />
@@ -115,20 +116,30 @@ class MuJoCoSceneGenerator:
             <!-- Quad {id} -->
             <body name="q{id}_cable_chain" pos="0 0 0.01" euler="0 0 {yaw_angle}">
             """
+        
+        attachment_offset= f"{quad_config['cable']['attachment_offset'][0]} {quad_config['cable']['attachment_offset'][1]} {quad_config['cable']['attachment_offset'][2]-0.0015}"
         quad = f"""
+        <body
+            name="q{id}_container"
+            pos="0.0157895 0 0"
+            >
+            
+            <joint
+                    type="ball"
+                    pos="0 0 0"
+                    limited="false"
+                    damping="0.00001" />
+            <site name="q{id}_attachment" pos="0 0 0" group="5"/>
             <body
                 name="q{id}_cf2"
                 childclass="cf2"
-                pos="0.0157895 0 0">
+                pos="{attachment_offset}"
+                >
                 <inertial
                     pos="0 0 0"
                     mass="0.034"
                     diaginertia="1.65717e-05 1.66556e-05 2.92617e-05" />
-                <joint
-                    type="ball"
-                    pos="0 0 0"
-                    limited="false"
-                    damping="1e-05" />
+                
                 <geom
                     class="visual"
                     material="propeller_plastic"
@@ -268,9 +279,9 @@ class MuJoCoSceneGenerator:
                 <site
                     name="q{id}_thrust4"
                     pos="0.032527 0.032527 0" />
-                <site name="q{id}_attachment" pos="0 0 0" />
                 
-            </body>          
+            </body>    
+        </body>      
                                                                                        
 """
         rope, cable_close = self.generate_cable(quad_config, id)
@@ -502,60 +513,20 @@ if __name__ == "__main__":
         "quads": [
             {
                 "id": 0,
-                "start_pos": [0.15, 0, 0.3],
-                "start_euler": [0, 1, 0],
+                "start_pos": [0.15, 0, 0.5],
+                "start_euler": [0, 0, 0],
                 "cable":{
-                    "length": 0.5,
+                    "length": 0.3,
+                    "thickness": 0.0005,
                     "bodies": 25,
                     "mass": 0.01,
                     "quad_site": "q1_attachment",
-                    "attachment_offset": [0, 0.001, 0],
+                    "attachment_offset": [0, 0, 0],
                     "payload_site": "attach_site_1",
                 }
                 
             },
-            {
-               
-                "id": 1,
-                "start_pos": [-0.15, .1, 0.3],
-                "start_euler": [0, 0, 0.5],
-                "cable":{
-                    "length": 0.2,
-                    "bodies": 20,
-                    "mass": 0.001,
-                    "quad_site": "quad_attachment",
-                    "attachment_offset": [0, 0.001, 0],
-                    "payload_site": "attach_site_1",
-                }
-            },
-            {
-               
-                "id": 2,
-                "start_pos": [0.15, .1, 0.3],
-                "start_euler": [0, 0, 0.5],
-                "cable":{
-                    "length": 0.2,
-                    "bodies": 20,
-                    "mass": 0.001,
-                    "quad_site": "quad_attachment",
-                    "attachment_offset": [0, 0.001, 0],
-                    "payload_site": "attach_site_1",
-                }
-            },
-            {
-               
-                "id": 3,
-                "start_pos": [0.1, .3, 0.3],
-                "start_euler": [0, 0, 0.5],
-                "cable":{
-                    "length": 0.4,
-                    "bodies": 20,
-                    "mass": 0.001,
-                    "quad_site": "quad_attachment",
-                    "attachment_offset": [0, 0.001, 0],
-                    "payload_site": "attach_site_1",
-                }
-            },
+           
          
         ]
     }
