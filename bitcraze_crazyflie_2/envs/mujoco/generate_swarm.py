@@ -118,17 +118,28 @@ class MuJoCoSceneGenerator:
             """
         
         attachment_offset= f"{quad_config['cable']['attachment_offset'][0]} {quad_config['cable']['attachment_offset'][1]} {quad_config['cable']['attachment_offset'][2]-0.0015}"
-        quad = f"""
-        <body
-            name="q{id}_container"
-            pos="0.0157895 0 0"
-            >
-            
-            <joint
+        pos = "0.0157895 0 0"
+        if quad_config["payload_connection"] == "cable":
+            quad_payload_joint = """
+             <joint
                     type="ball"
                     pos="0 0 0"
                     limited="false"
                     damping="0.00001" />
+            """
+        else:
+            pos= f"{quad_config['start_pos'][0]} {quad_config['start_pos'][1]} {quad_config['start_pos'][2]}"
+            quad_payload_joint = """
+            <joint type="free" actuatorfrclimited="false" />
+            """
+        
+        
+        quad = f"""
+        <body
+            name="q{id}_container"
+            pos="{pos}"
+            >        
+            {quad_payload_joint}
             <site name="q{id}_attachment" pos="0 0 0" group="5"/>
             <body
                 name="q{id}_cf2"
@@ -283,9 +294,13 @@ class MuJoCoSceneGenerator:
             </body>    
         </body>      
                                                                                        
-"""
-        rope, cable_close = self.generate_cable(quad_config, id)
-        return quad_header + rope + quad + cable_close + "</body>"
+"""    
+        if quad_config["payload_connection"] == "cable":
+            cable, cable_close = self.generate_cable(quad_config, id)
+            return quad_header + cable + quad + cable_close + "</body>"
+        else:
+            return quad
+
         
 
     def generate_xml(self):
@@ -305,7 +320,25 @@ class MuJoCoSceneGenerator:
         else:
             payload_start_site = f'<site name="payload_start" pos="{" ".join(map(str, self.config["payload"]["start_pos"]))}" euler="{" ".join(map(str, self.config["payload"]["start_euler"]))}" />\n'
 
-
+        payload_connection = self.config.get("payload_connection", "cable")
+        if payload_connection == "none":
+            payload = ""
+        else:
+            init_pos = self.config["payload"]["start_pos"]
+            if init_pos is False:
+                # If no start pos is given, average out the quad start positions
+                init_pos = np.mean([np.array(quad["start_pos"]) for quad in self.config["quads"]], axis=0) - np.array([0, 0, 0.1])
+            
+            payload = f"""
+            <body name="payload" pos="{init_pos[0]} {init_pos[1]} {init_pos[2]}" >
+            <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
+                mode="trackcom" />
+            <joint type="free" actuatorfrclimited="false" damping="0.00001"/>
+            <geom size="0.007 0.01" type="cylinder" mass="0.001" rgba="0.8 0.8 0.8 1" />
+            <site name="payload_s" pos="0 0 0.01" />
+            {"</body>" if payload_connection != "cable" else ""}
+            """
+        
         header = f"""
     <mujoco>
     <compiler {self.val_string(self.config["compiler"])} />
@@ -399,29 +432,37 @@ class MuJoCoSceneGenerator:
         <!-- Payload start site-->
         {payload_start_site}
 
-        <body name="payload" pos="{self.config['payload']['init_pos'][0]} {self.config['payload']['init_pos'][1]} {self.config['payload']['init_pos'][2]}" >
-            <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
-                mode="trackcom" />
-            <joint type="free" actuatorfrclimited="false" />
-            <geom size="0.007 0.01" type="cylinder" mass="0.001" rgba="0.8 0.8 0.8 1" />
-            <site name="payload_s" pos="0 0 0.01" />
+        {payload}
 """
         quads = ""
         for (i, quad) in enumerate(self.config["quads"]):
             # set yaw angle for quad placement to point from init pos to quad start pos
-            vec = np.array(quad["start_pos"])- np.array(self.config["payload"]["init_pos"])
+            vec = np.array(quad["start_pos"]) - init_pos
             quad["yaw_angle"] = np.arctan2(vec[1], vec[0])
+            quad["payload_connection"] = payload_connection
 
             quads += self.generate_quad(quad)
            
-            
+        # Dynamically generate tendons for all quads
+        tendons = ""
+        if payload_connection == "tendon":
+            for quad in self.config["quads"]:
+                tendon_rgba = quad["cable"].get("rgba", colors[quad["id"] % len(colors)])
+                tendons += f"""
+                <spatial name="q{quad["id"]}_tendon" limited="true" range="0 {quad["cable"]["length"]}" width="{quad["cable"]["thickness"]}" rgba="{tendon_rgba}">
+                    <site site="q{quad["id"]}_attachment" />
+                    <site site="payload_s" />
+                </spatial>
+                """
+
+
         # Dynamically generate equality welds for all quads
         equality_welds = ""
         for quad in self.config["quads"]:
-            equality_welds += f'<weld site1="q{quad["id"]}_start" site2="q{quad["id"]}_imu" solref="0.01 6" />\n'
+            equality_welds += f'<weld site1="q{quad["id"]}_start" site2="q{quad["id"]}_imu" solref="0.01 4" />\n'
         
-        if payload_start_site != "":
-            equality_welds += f'<weld site1="payload_start" site2="payload_s" solref="0.01 6" />\n'
+        if payload_start_site != "" and payload_connection != "none":
+            equality_welds += f'<weld site1="payload_start" site2="payload_s" solref="0.02 5" />\n'
 
         # Dynamically generate actuator definitions for each quad
         actuators = ""
@@ -440,22 +481,27 @@ class MuJoCoSceneGenerator:
         
         # Dynamically generate contact exclusions for cable bodies of each quad
         contact_exclusions = ""
-        for quad in self.config["quads"]:
-            bodies = quad["cable"]["bodies"]
-            if bodies > 1:
-                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="q{quad["id"]}_cable_B_1" />\n'
-            for i in range(1, bodies - 2):
-                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{i}" body2="q{quad["id"]}_cable_B_{i+1}" />\n'
-            contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{bodies-2}" body2="q{quad["id"]}_cable_B_last" />\n'
-            contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="payload" />\n'
-        
+        if payload_connection == "cable":
+            for quad in self.config["quads"]:
+                bodies = quad["cable"]["bodies"]
+                if bodies > 1:
+                    contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="q{quad["id"]}_cable_B_1" />\n'
+                for i in range(1, bodies - 2):
+                    contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{i}" body2="q{quad["id"]}_cable_B_{i+1}" />\n'
+                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_{bodies-2}" body2="q{quad["id"]}_cable_B_last" />\n'
+                contact_exclusions += f'<exclude body1="q{quad["id"]}_cable_B_first" body2="payload" />\n'
+            
         end = f"""
-        </body>
+        {"</body>" if payload_connection == "cable" else ""}
     </worldbody>
 
     <contact>
         {contact_exclusions}
     </contact>
+
+    <tendon>
+        {tendons}
+    </tendon>
 
     <equality>
         {equality_welds}       
@@ -473,6 +519,7 @@ class MuJoCoSceneGenerator:
 
 if __name__ == "__main__":
     scene_config = {
+        "payload_connection": "tendon", # ["cable", "tendon", "none"]
         "options": {
             "timestep": 0.004,
             "density": 1.2, # air density
@@ -495,9 +542,8 @@ if __name__ == "__main__":
             "mass": 0.01,
             "geom_type": "cylinder",
             "size": [0.007, 0.01],
-            "start_pos": False, # array or False
-            "init_pos": [0, 0, 0.1],
-            "start_euler": [0, 1, 1],
+            "start_pos": False, #[0, 0, 0.1], # array or False | This is the payload start site
+            "start_euler": [0, 0, 0],
             "rgba": "0.8 0.8 0.8 1",
             "attach_sites": [
                 {
@@ -526,8 +572,104 @@ if __name__ == "__main__":
                 }
                 
             },
-           
-         
+            {
+                "id": 1,
+                "start_pos": [0, 0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable":{
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q2_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_2",
+                }
+            },
+            {
+                "id": 2,
+                "start_pos": [-0.15, 0, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable":{
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q3_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_1",
+                }
+            },
+            {
+                "id": 3,
+                "start_pos": [0, -0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable":{
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q4_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_2",
+                }
+            },
+            {
+                "id": 4,
+                "start_pos": [0.15, 0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable": {
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q5_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_1",
+                }
+            },
+            {
+                "id": 5,
+                "start_pos": [-0.15, 0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable": {
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q6_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_2",
+                }
+            },
+            {
+                "id": 6,
+                "start_pos": [-0.15, -0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable": {
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q7_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_1",
+                }
+            },
+            {
+                "id": 7,
+                "start_pos": [0.15, -0.15, 0.5],
+                "start_euler": [0, 0, 0],
+                "cable": {
+                    "length": 0.3,
+                    "thickness": 0.0005,
+                    "bodies": 25,
+                    "mass": 0.01,
+                    "quad_site": "q8_attachment",
+                    "attachment_offset": [0, 0, 0],
+                    "payload_site": "attach_site_2",
+                }
+            },
         ]
     }
     generator = MuJoCoSceneGenerator(scene_config)
