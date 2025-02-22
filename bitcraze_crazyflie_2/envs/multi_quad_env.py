@@ -464,6 +464,8 @@ class MultiQuadEnv(MujocoEnv):
             collision,
             out_of_bounds,
             action_scaled,
+            angle_q1, 
+            angle_q2,
             last_action= self.last_action_scaled if hasattr(self, "last_action_scaled") else action_scaled,
         )
       
@@ -526,14 +528,14 @@ class MultiQuadEnv(MujocoEnv):
     
 
     
-    def calc_quad_reward(self, quad_obs):
+    def calc_quad_reward(self, quad_obs, angle):
         quad_rel = quad_obs[:3]
         quad_rot = quad_obs[3:12]
         quad_linvel = quad_obs[12:15]
         quad_acc = quad_obs[15:18]
         quad_gyro = quad_obs[18:21]
     
-        rotation_penalty = np.linalg.norm(quad_rot)
+        rotation_penalty = np.abs(angle*10)**2
         angular_velocity_penalty = np.linalg.norm(quad_gyro)**2
         acceleration_penalty = np.linalg.norm(quad_acc)
     
@@ -545,7 +547,7 @@ class MultiQuadEnv(MujocoEnv):
 
 
     def calc_reward(
-        self, obs, sim_time, collision, out_of_bounds, action, last_action
+        self, obs, sim_time, collision, out_of_bounds, action, , angle_q1, angle_q2, last_action
     ):
         
         team_obs = obs[:6]
@@ -556,8 +558,8 @@ class MultiQuadEnv(MujocoEnv):
         
 
         distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
-        quad1_reward = self.calc_quad_reward(quad1_obs)
-        quad2_reward = self.calc_quad_reward(quad2_obs)
+        quad1_reward = self.calc_quad_reward(quad1_obs, angle_q1)
+        quad2_reward = self.calc_quad_reward(quad2_obs, angle_q2)
 
         #unpack quad rewards
         rotation_penalty = quad1_reward[0] + quad2_reward[0]
