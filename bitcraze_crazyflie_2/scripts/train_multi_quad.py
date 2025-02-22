@@ -265,6 +265,13 @@ def main():
         },
     )
 
+    eval_env = VecNormalize(    
+        eval_env, 
+        training=True, 
+        norm_obs=True, 
+        norm_reward=True, 
+    )
+
     # Directory to save models and logs
     models_dir = os.path.join(os.path.dirname(__file__), "..", "..", "models")
     os.makedirs(models_dir, exist_ok=True)

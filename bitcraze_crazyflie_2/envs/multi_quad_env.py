@@ -90,6 +90,8 @@ class MultiQuadEnv(MujocoEnv):
 
 
         self.randomness = env_config.get("randomness", 0.1)
+        self.obs_buffer_size = 1
+ 
 
 
         self.debug_rates_enabled = env_config.get("debug_rates_enabled", False)
@@ -118,13 +120,12 @@ class MultiQuadEnv(MujocoEnv):
 
     
         # Observation vector composition:
-        #   payload_error (3)
-        #   payload_vel (3)
-        #   [Quad1] relative position (3), flattened rotation matrix (9), linear velocity (3), accelerometer (3), gyro (3)
-        #   [Quad2] relative position (3), flattened rotation matrix (9), linear velocity (3), accelerometer (3), gyro (3)
-        #   last_action (4)
-        # Total dimension = 3+3 + (3+9+3+3+3)*2 + 4 = 52
-        base_obs_dim = 3+3 + 3+9+3+3+3 + 3+9+3+3+3 + 4  # = 52
+        #   payload_error (3), payload_vel (3),
+        #   quad1: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
+        #   quad2: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
+        #   last_action (8)
+        # total dims = 3+3 + (3+9+3+3+3)*2 + 8 = 56
+        base_obs_dim =65
         
 
         
@@ -288,7 +289,7 @@ class MultiQuadEnv(MujocoEnv):
         def get_sensor(sensor_name):
             # Helper function to extract sensor readings.
             # It retrieves the sensor's starting address and its dimension.
-            sensor_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjSENSOR, sensor_name)
+            sensor_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SENSOR, sensor_name)
             adr = self.model.sensor_adr[sensor_id]
             dim = self.model.sensor_dim[sensor_id]
             return self.data.sensordata[adr:adr + dim].copy()
@@ -299,7 +300,7 @@ class MultiQuadEnv(MujocoEnv):
         quad2_acc = get_sensor("q1_linacc")
 
         # Retrieve last_action (default to zeros if not set)
-        last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4, dtype=np.float32)
+        last_action = self.last_action if hasattr(self, "last_action") else np.zeros(8, dtype=np.float32)
 
         # Build observation vector with updated components:
         #   payload_error (3), payload_vel (3),
@@ -319,11 +320,15 @@ class MultiQuadEnv(MujocoEnv):
             quad2_linvel,         # (3,)
             quad2_acc,            # (3,)
             quad2_gyro,           # (3,)
-            last_action           # (4,)
+            last_action           # (8,)
         ])
+
+        # total dims = 3+3 + (3+9+3+3+3)*2 + 8 = 56
 
         # Optionally add noise to the observation.
         obs = self.noise_observation(obs, noise_level=0.05)
+
+        # print("shape" , obs.shape)
         return obs.astype(np.float32)
 
     def noise_observation(self, obs, noise_level=0.02):
@@ -353,8 +358,7 @@ class MultiQuadEnv(MujocoEnv):
 
         self.current_thrust = action_scaled
 
-        # Apply motor offset
-        self.current_thrust *= self.motor_offset
+     
 
         # Store last action
         self.last_action = (self.data.ctrl[:8].copy() / self.max_thrust) * 2.0 - 1.0
@@ -410,6 +414,8 @@ class MultiQuadEnv(MujocoEnv):
             if out_of_bounds:
                 break
 
+        terminated = False
+        
          # Terminate if going away from target again
         payload_joint_id = self.model.body_jntadr[self.payload_body_id]
         payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
@@ -449,7 +455,6 @@ class MultiQuadEnv(MujocoEnv):
         # Truncate episode if too long
         if (
             sim_time - self.warmup_time > self.max_time
-            or sim_time - self.warmup_time > self.total_max_time
         ):
             terminated = True
             truncated = True
@@ -622,9 +627,7 @@ class MultiQuadEnv(MujocoEnv):
         # Return initial observation
         obs = self._get_obs()
 
-        # Initialize the observation buffer fully with the initial observation
-        self.obs_buffer = [obs] * self.obs_buffer_size
 
         self.max_distance = 5
 
-        return self._stack_obs()
+        return obs
