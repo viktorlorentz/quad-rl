@@ -887,21 +887,21 @@ class DroneEnv(MujocoEnv):
         print("payload offset", payload_offset)
         self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
-            #randomize payload mass from 1 to 11g
-            self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
+        #randomize payload mass from 1 to 11g
+        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
 
-            # warmup sim to stabilize rope
-            while self.data.time < self.warmup_time:
-                self.do_simulation(np.zeros(4), 10)
-                # reset qpos
-                self.data.qpos[:3] = random_position
-                self.data.qpos[3:7] = q
-                # keep payload vel low
-                self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
+        # warmup sim to stabilize rope
+        while self.data.time < self.warmup_time:
+            self.do_simulation(np.zeros(4), 10)
+            # reset qpos
+            self.data.qpos[:3] = random_position
+            self.data.qpos[3:7] = q
+            # keep payload vel low
+            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
 
-                # also keep payload pos fixed for initial cable stabilization
-                if self.data.time < 0.2 * self.warmup_time:
-                    self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            # also keep payload pos fixed for initial cable stabilization
+            if self.data.time < 0.2 * self.warmup_time:
+                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
                 
 
         self.warmup_time = self.data.time

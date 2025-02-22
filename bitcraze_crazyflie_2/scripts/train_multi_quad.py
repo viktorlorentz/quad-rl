@@ -133,7 +133,7 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
 def main():
 
-    env_id = "DroneEnv-v0"
+    env_id = "MultiQuadEnv"
 
     # Define parameters
     n_envs = 64
@@ -175,9 +175,7 @@ def main():
         "gamma": 0.99,
         "use_sde": False,
         "policy_kwargs": {
-            "activation_fn": "Tanh",
-            "net_arch": {"pi": [64, 64], "vf": [64, 64]},
-            "squash_output": False,  # this adds tanh to the output of the policy
+            "net_arch": {"pi": [128, 128, 128], "vf": [128, 128, 128]},
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
@@ -205,12 +203,9 @@ def main():
     )
     config = wandb.config
 
-    # Map activation function name from config to actual function
-    activation_fn = getattr(torch.nn, config["policy_kwargs"]["activation_fn"])
-
+   
     # Build policy_kwargs with correct net_arch
     policy_kwargs = dict(
-        activation_fn=activation_fn,
         net_arch=dict(
             pi=config["policy_kwargs"]["net_arch"]["pi"],
             vf=config["policy_kwargs"]["net_arch"]["vf"],

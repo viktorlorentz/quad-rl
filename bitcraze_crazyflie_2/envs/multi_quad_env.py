@@ -89,7 +89,7 @@ def np_to_spherical(vec):
     return np.array([r, theta, phi])
 
 
-class DroneEnv(MujocoEnv):
+class MultiQuadEnv(MujocoEnv):
     def __init__(
         self,
         reward_coefficients=None,
@@ -103,25 +103,14 @@ class DroneEnv(MujocoEnv):
         **kwargs,
     ):
         # Path to the MuJoCo XML model
-        model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene_payload.xml")
+        model_path = os.path.join(os.path.dirname(__file__), "mujoco", "two_quad_payload.xml")
 
-        self.payload = env_config.get("connect_payload", True)
 
-        if not self.payload:
-            model_path = os.path.join(os.path.dirname(__file__), "mujoco", "scene.xml")
-        
-        self.curriculum = env_config.get("curriculum", False)
-        if  self.curriculum:
-        
-            self.randomness_max = env_config.get("randomness", 1.0)
+        self.randomness_max = env_config.get("randomness", 0.1)
 
-            self.randomness = 0.01
-        else:
-            self.randomness = env_config.get("randomness", 0.0)
-          
 
-        self.average_episode_length = 0
         self.debug_rates_enabled = env_config.get("debug_rates_enabled", False)
+
         self.debug_rates = {'sim': [], 'obs': [], 'reward': [], 'total': []}
 
        
@@ -138,41 +127,28 @@ class DroneEnv(MujocoEnv):
         # Set frame_skip to sim_steps_per_action
         frame_skip = self.sim_steps_per_action
 
-        self.max_time = env_config.get("max_time", 20.0)
-        self.total_max_time = 100
+        self.max_time = env_config.get("max_time", 10.0)
 
-        self.warmup_time = 0.0  # 1s warmup time
 
-        self.obs_vel = env_config.get("velocity_observaiton", True)
+        self.warmup_time = 1.0  # 1s warmup time
 
-        # Define observation space
-        if self.obs_vel:
-            # orientation_rot,
-            # linear_velocity_local,
-            # local_angular_velocity,
-            # position_error_local,  
-            # last_action,
-            # relative_payload_pos_local,
-            # payload_vel_local
-            base_obs_dim =  9 + 3 + 3 + 3 + 4 + 3 + 3 # = 28
-        else:
-            # orientation_rot,
-            # position_error_local,
-            # last_action,
-            # relative_payload_pos_local
-            base_obs_dim = 9 + 3 + 4 + 3  # = 19
 
-        self.num_stack_frames = env_config.get("num_stack_frames", 3)
-        self.stack_stride = env_config.get("stack_stride", 1)
-        self.obs_buffer_size = (self.num_stack_frames - 1) * self.stack_stride + 1
-        self.obs_buffer = []
+    
+        # orientation_rot,
+        # linear_velocity_local,
+        # local_angular_velocity,
+        # position_error_local,  
+        # last_action,
+        # relative_payload_pos_local,
+        # payload_vel_local
+        base_obs_dim =  9 + 3 + 3 + 3 + 4 + 3 + 3 # = 28
+        
 
         
 
-        stack_obs_dim = base_obs_dim * self.num_stack_frames
         
-        obs_low = np.full(stack_obs_dim, -np.inf, dtype=np.float32)
-        obs_high = np.full(stack_obs_dim, np.inf, dtype=np.float32)
+        obs_low = np.full(base_obs_dim, -np.inf, dtype=np.float32)
+        obs_high = np.full(base_obs_dim, np.inf, dtype=np.float32)
         self.observation_space = spaces.Box(
             low=obs_low, high=obs_high, dtype=np.float32
         )
@@ -887,22 +863,22 @@ class DroneEnv(MujocoEnv):
         print("payload offset", payload_offset)
         self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
 
-            #randomize payload mass from 1 to 11g
-            self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
+        #randomize payload mass from 1 to 11g
+        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
 
-            # warmup sim to stabilize rope
-            while self.data.time < self.warmup_time:
-                self.do_simulation(np.zeros(4), 10)
-                # reset qpos
-                self.data.qpos[:3] = random_position
-                self.data.qpos[3:7] = q
-                # keep payload vel low
-                self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
+        # warmup sim to stabilize rope
+        while self.data.time < self.warmup_time:
+            self.do_simulation(np.zeros(4), 10)
+            # reset qpos
+            self.data.qpos[:3] = random_position
+            self.data.qpos[3:7] = q
+            # keep payload vel low
+            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
 
-                # also keep payload pos fixed for initial cable stabilization
-                if self.data.time < 0.2 * self.warmup_time:
-                    self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
-                
+            # also keep payload pos fixed for initial cable stabilization
+            if self.data.time < 0.2 * self.warmup_time:
+                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            
 
         self.warmup_time = self.data.time
 

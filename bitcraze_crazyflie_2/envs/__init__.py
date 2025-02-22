@@ -1,1 +1,2 @@
 from bitcraze_crazyflie_2.envs.drone_env import DroneEnv
+from bitcraze_crazyflie_2.envs.multi_quad_env import MultiQuadEnv

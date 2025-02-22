@@ -29,6 +29,8 @@ setup(
         'console_scripts': [
             'train-drone=bitcraze_crazyflie_2.scripts.train_agent:main',
             'evaluate-drone=bitcraze_crazyflie_2.scripts.evaluate_agent:main',
+            'train-multi-quad=bitcraze_crazyflie_2.scripts.train_multi_quad:main',
+            'evaluate-multi-quad=bitcraze_crazyflie_2.scripts.evaluate_multi_quad:main',
         ],
     },
     python_requires='>=3.10',
