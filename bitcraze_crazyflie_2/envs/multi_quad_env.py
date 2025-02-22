@@ -261,7 +261,6 @@ class MultiQuadEnv(MujocoEnv):
         self.motor_tau_down = 1.0 # this is high, because we dont want pulsing actions
         self.current_thrust = np.zeros(4)
 
-        self.print_stack_time_offsets()
 
     
 
