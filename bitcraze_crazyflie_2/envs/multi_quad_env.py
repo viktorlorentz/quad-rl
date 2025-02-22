@@ -18,23 +18,6 @@ DEFAULT_CAMERA_CONFIG = {
 
 MAX_THRUST = 0.11772
 
-#src: https://github.com/Zhehui-Huang/quad-swarm-rl/blob/master/gym_art/quadrotor_multi/quad_utils.py
-class OUNoise:
-    def __init__(self, size=4, mu=0.0, theta=0.15, sigma=0.2 ):
-        self.size = size
-        self.mu = mu
-        self.theta = theta
-        self.sigma = sigma
-        self.state = np.ones(self.size) * self.mu
-    
-    def reset(self):
-        self.state = np.ones(self.size) * self.mu
-    
-    def noise(self):
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(len(x))
-        self.state = x + dx
-        return self.state
 
 
 @njit
@@ -106,7 +89,7 @@ class MultiQuadEnv(MujocoEnv):
         model_path = os.path.join(os.path.dirname(__file__), "mujoco", "two_quad_payload.xml")
 
 
-        self.randomness_max = env_config.get("randomness", 0.1)
+        self.randomness = env_config.get("randomness", 0.1)
 
 
         self.debug_rates_enabled = env_config.get("debug_rates_enabled", False)
@@ -254,12 +237,8 @@ class MultiQuadEnv(MujocoEnv):
         self.target_move_prob = target_move_prob
 
 
-        self.motor_dynamics = env_config.get("motor_dynamics", False)
-        self.thrust_noise_ratio = 0.05
-        self.ou_noise = OUNoise(size=self.action_space.shape, sigma=self.thrust_noise_ratio)  # OU noise for motor signals
-        self.motor_tau_up = 0.2
-        self.motor_tau_down = 1.0 # this is high, because we dont want pulsing actions
-        self.current_thrust = np.zeros(4)
+    
+        self.current_thrust = np.zeros(8)
 
 
     
@@ -607,7 +586,7 @@ class MultiQuadEnv(MujocoEnv):
             self.do_simulation(np.zeros(8), 10)
         
         # disable equality constraints
-        self.model.eq_active[:] = 0
+        self.data.eq_active[:] = 0
             
 
         self.warmup_time = self.data.time
