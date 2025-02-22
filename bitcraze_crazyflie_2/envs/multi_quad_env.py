@@ -403,22 +403,27 @@ class MultiQuadEnv(MujocoEnv):
                 break
 
         # Constraint orientation to 90 degrees
+        # Global up vector in world frame
         up = np.array([0, 0, 1])
+
+        # Get the orientations (quaternions) for each quad
         q1_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
         q2_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
 
-        # Calculate the quad's local up vector (assumed to be third column)
+        # Convert quaternions to rotation matrices and extract local up vectors (third column)
         q1_local_up = self.R_from_quat(q1_orientation)[:, 2]
         q2_local_up = self.R_from_quat(q2_orientation)[:, 2]
 
-        # Calculate the angles between the local up vectors and the global up vector.
+        # Compute the tilt angle for each quad (0 means perfectly horizontal)
         angle_q1 = self.angle_between(q1_local_up, up)
         angle_q2 = self.angle_between(q2_local_up, up)
 
-        # Check if either quad's orientation deviates more than 90 degrees:
-        if angle_q1 > np.pi / 2 or angle_q2 > np.pi / 2:
+       
+
+        # Check if either quad's orientation deviates more than 45 degrees:
+        if angle_q1 > np.pi / 4 or angle_q2 > np.pi / 4:
             out_of_bounds = True
-            #print("Quad orientation exceeded 90 degrees from vertical")
+            #print("Quad orientation exceeded 45 degrees from horizontal")
         
 
 
@@ -535,10 +540,10 @@ class MultiQuadEnv(MujocoEnv):
         quad_acc = quad_obs[15:18]
         quad_gyro = quad_obs[18:21]
     
-        rotation_penalty = np.abs(angle*10)**2
+        rotation_penalty = np.abs(angle)**2
         angular_velocity_penalty = np.linalg.norm(quad_gyro)**2
         acceleration_penalty = np.linalg.norm(quad_acc)
-    
+
         return rotation_penalty, angular_velocity_penalty, acceleration_penalty
     
     
@@ -551,8 +556,8 @@ class MultiQuadEnv(MujocoEnv):
     ):
         
         team_obs = obs[:6]
-        quad1_obs = obs[6:24]
-        quad2_obs = obs[24:42]
+        quad1_obs = obs[6:27]
+        quad2_obs = obs[27:48]
 
         quad_distance = np.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
         
