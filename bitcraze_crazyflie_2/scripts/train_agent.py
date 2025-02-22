@@ -136,7 +136,7 @@ def main():
     env_id = "DroneEnv-v0"
 
     # Define parameters
-    n_envs = 64
+    n_envs = 16
     n_steps = 128
     batch_size = 64
     time_steps = 150_000_000
@@ -286,9 +286,9 @@ def main():
         policy='MlpPolicy', #config["policy_type"],  # CustomActorCriticPolicy,
         env=env,
         n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        learning_rate=config["learning_rate"],
-        gamma=config["gamma"],
+        #batch_size=config["batch_size"],
+        # learning_rate=config["learning_rate"],
+        #gamma=config["gamma"],
         # gae_lambda=config["gae_lambda"],
         # ent_coef=config["ent_coef"],
         # vf_coef=config["vf_coef"],

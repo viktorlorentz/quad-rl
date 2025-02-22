@@ -121,7 +121,7 @@ class MultiQuadEnv(MujocoEnv):
     
    
 
-        base_obs_dim =65
+        base_obs_dim = 56
 
 
         
@@ -260,33 +260,27 @@ class MultiQuadEnv(MujocoEnv):
         # Get payload state via named lookup 
         payload_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "payload")
         payload_pos = self.data.xpos[payload_body_id].copy()
-        payload_vel = self.data.cvel[payload_body_id].copy()
+        payload_linvel = self.data.cvel[payload_body_id].copy()[3:6]  # Extract linear part from cvel (indices 3:6)
         payload_error = self.target_position - payload_pos
 
         # Get quad 1 state via named lookup
         quad1_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")
         quad1_pos = self.data.xpos[quad1_body_id].copy()
         quad1_quat = self.data.xquat[quad1_body_id].copy()  # Quaternion [w, x, y, z]
-        quad1_linvel = self.data.cvel[quad1_body_id].copy()
+        quad1_linvel = self.data.cvel[quad1_body_id].copy()[3:6]  # Direct indexing in one line
         quad1_rel = quad1_pos - payload_pos
-
-        # Convert quad1 quaternion to rotation matrix and flatten it to 1D (9 elements)
-        quad1_rot = self.R_from_quat(quad1_quat).flatten()
+        quad1_rot = self.R_from_quat(quad1_quat).flatten()  # 9 elements
 
         # Get quad 2 state via named lookup
         quad2_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")
         quad2_pos = self.data.xpos[quad2_body_id].copy()
         quad2_quat = self.data.xquat[quad2_body_id].copy()  # Quaternion [w, x, y, z]
-        quad2_linvel = self.data.cvel[quad2_body_id].copy()
+        quad2_linvel = self.data.cvel[quad2_body_id].copy()[3:6]  # Direct indexing in one line
         quad2_rel = quad2_pos - payload_pos
-
-        # Convert quad2 quaternion to rotation matrix and flatten it to 1D (9 elements)
-        quad2_rot = self.R_from_quat(quad2_quat).flatten()
+        quad2_rot = self.R_from_quat(quad2_quat).flatten()  # 9 elements
 
         # Get sensor readings (accelerometer and gyro for both quads)
         def get_sensor(sensor_name):
-            # Helper function to extract sensor readings.
-            # It retrieves the sensor's starting address and its dimension.
             sensor_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SENSOR, sensor_name)
             adr = self.model.sensor_adr[sensor_id]
             dim = self.model.sensor_dim[sensor_id]
@@ -300,14 +294,14 @@ class MultiQuadEnv(MujocoEnv):
         # Retrieve last_action (default to zeros if not set)
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(8, dtype=np.float32)
 
-        # Build observation vector with updated components:
-        #   payload_error (3), payload_vel (3),
+        # Build observation vector:
+        #   payload_error (3), payload_linvel (3),
         #   quad1: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
         #   quad2: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
-        #   last_action (4)
+        #   last_action (8)
         obs = np.concatenate([
             payload_error,        # (3,)
-            payload_vel,          # (3,)
+            payload_linvel,         # (3,)
             quad1_rel,            # (3,)
             quad1_rot,            # (9,)
             quad1_linvel,         # (3,)
@@ -321,12 +315,8 @@ class MultiQuadEnv(MujocoEnv):
             last_action           # (8,)
         ])
 
-        # total dims = 3+3 + (3+9+3+3+3)*2 + 8 = 56
-
-        # Optionally add noise to the observation.
+        # Total dims = 3+3 + (3+9+3+3+3)*2 + 8 = 56
         obs = self.noise_observation(obs, noise_level=0.05)
-
-        # print("shape" , obs.shape)
         return obs.astype(np.float32)
 
     def noise_observation(self, obs, noise_level=0.02):
@@ -544,7 +534,7 @@ class MultiQuadEnv(MujocoEnv):
         quad_gyro = quad_obs[18:21]
     
         rotation_penalty = np.linalg.norm(quad_rot)
-        angular_velocity_penalty = np.linalg.norm(quad_gyro)
+        angular_velocity_penalty = np.linalg.norm(quad_gyro)**2
         acceleration_penalty = np.linalg.norm(quad_acc)
     
         return rotation_penalty, angular_velocity_penalty, acceleration_penalty
