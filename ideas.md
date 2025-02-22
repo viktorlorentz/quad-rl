@@ -12,8 +12,9 @@
 * Ideas from https://arxiv.org/pdf/2403.12203
     * Train Critic with priveleged info maybe freeze actor
     * Dynamically change Clip range
-    * Assymetric  Priveleged Critic
+    * Assymetric Priveleged Critic
     * Spherical coords for OBS pos error and payload error
+    * Train priveleged expert with full state -> IL for decentralization
 
 * Set starting pos as origin frame instead of fully local
 
