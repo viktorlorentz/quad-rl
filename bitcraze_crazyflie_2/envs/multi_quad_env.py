@@ -420,10 +420,10 @@ class MultiQuadEnv(MujocoEnv):
 
        
 
-        # Check if either quad's orientation deviates more than 45 degrees:
-        if angle_q1 > np.pi / 4 or angle_q2 > np.pi / 4:
+        # Check if either quad's orientation deviates more than 90 degrees:
+        if angle_q1 > np.pi / 2 or angle_q2 > np.pi / 2:
             out_of_bounds = True
-            #print("Quad orientation exceeded 45 degrees from horizontal")
+            #print("Quad orientation exceeded 90 degrees from horizontal")
         
 
 
@@ -517,7 +517,7 @@ class MultiQuadEnv(MujocoEnv):
         payload_vel = team_obs[3:6]
 
         # Compute distance to target position
-        distance_penalty = np.linalg.norm(payload_error)
+        distance_penalty = np.linalg.norm(10*payload_error)
         
         # Safe distance of quads reward as gaussian
         safe_distance_penalty = np.exp(-0.5 * (quad_distance - 0.5)**2 / 0.1**2)
@@ -526,8 +526,15 @@ class MultiQuadEnv(MujocoEnv):
         collision_penalty = 1 if collision else 0
         out_of_bounds_penalty = 1 if out_of_bounds else 0
 
+        # Smooth action penalty
+        if hasattr(self, "last_action"):
+            smooth_action_penalty = np.mean(
+                np.abs(action - last_action)/self.max_thrust
+            )
+        else:
+            smooth_action_penalty = 0
 
-        return distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty
+        return distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty
         
         
     
@@ -540,11 +547,12 @@ class MultiQuadEnv(MujocoEnv):
         quad_acc = quad_obs[15:18]
         quad_gyro = quad_obs[18:21]
     
-        rotation_penalty = np.abs(angle)**2
-        angular_velocity_penalty = np.linalg.norm(quad_gyro)**2
+        rotation_penalty = np.abs(angle)
+        angular_velocity_penalty = np.linalg.norm(quad_gyro)
         acceleration_penalty = np.linalg.norm(quad_acc)
+        above_payload_penalty = -quad_rel[2] # positive reward for being above payload
 
-        return rotation_penalty, angular_velocity_penalty, acceleration_penalty
+        return rotation_penalty, angular_velocity_penalty, acceleration_penalty, above_payload_penalty
     
     
 
@@ -562,7 +570,7 @@ class MultiQuadEnv(MujocoEnv):
         quad_distance = np.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
         
 
-        distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
+        distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
         quad1_reward = self.calc_quad_reward(quad1_obs, angle_q1)
         quad2_reward = self.calc_quad_reward(quad2_obs, angle_q2)
 
@@ -570,14 +578,15 @@ class MultiQuadEnv(MujocoEnv):
         rotation_penalty = quad1_reward[0] + quad2_reward[0]
         angular_velocity_penalty = quad1_reward[1] + quad2_reward[1]
         acceleration_penalty = quad1_reward[2] + quad2_reward[2]
+        above_payload_penalty = quad1_reward[3] + quad2_reward[3]
 
 
 
         # Initialize reward components
         reward_components = {}
         
-        reward_components["alive_reward"] = 1
-        reward = 1
+        reward_components["alive_reward"] = 10
+        reward = 10
         
         reward_components["distance_penalty"] = -distance_penalty
         reward += -distance_penalty
@@ -599,6 +608,12 @@ class MultiQuadEnv(MujocoEnv):
 
         reward_components["acceleration_penalty"] = -acceleration_penalty
         reward += -acceleration_penalty
+
+        reward_components["above_payload_penalty"] = -above_payload_penalty
+        reward += -above_payload_penalty
+
+        reward_components["smooth_action_penalty"] = -smooth_action_penalty
+        reward += -smooth_action_penalty
 
 
 
