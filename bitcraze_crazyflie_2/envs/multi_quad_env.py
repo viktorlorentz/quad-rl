@@ -492,224 +492,97 @@ class MultiQuadEnv(MujocoEnv):
     def angle_between(self, v1, v2):
         # Call the njit-optimized helper.
         return np_angle_between(np.array(v1), np.array(v2))
+    
+
+    def calc_team_reward(self, team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action):
+        payload_error = team_obs[:3]
+        payload_vel = team_obs[3:6]
+
+        # Compute distance to target position
+        distance_penalty = np.linalg.norm(payload_error)
+        
+        # Safe distance of quads reward as gaussian
+        safe_distance_penalty = np.exp(-0.5 * (quad_distance - 0.5)**2 / 0.1**2)
+
+        # Collision and out of bounds penalties
+        collision_penalty = 1 if collision else 0
+        out_of_bounds_penalty = 1 if out_of_bounds else 0
+
+
+        return distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty
+        
+        
+    
+
+    
+    def calc_quad_reward(self, quad_obs):
+        quad_rel = quad_obs[:3]
+        quad_rot = quad_obs[3:12]
+        quad_linvel = quad_obs[12:15]
+        quad_acc = quad_obs[15:18]
+        quad_gyro = quad_obs[18:21]
+    
+        rotation_penalty = np.linalg.norm(quad_rot)
+        angular_velocity_penalty = np.linalg.norm(quad_gyro)
+        acceleration_penalty = np.linalg.norm(quad_acc)
+    
+        return rotation_penalty, angular_velocity_penalty, acceleration_penalty
+    
+    
+
+        
+
 
     def calc_reward(
-        self,
-        position,
-        orientation,
-        angular_velocity,
-        linear_velocity,
-        sim_time,
-        collision,
-        out_of_bounds,
-        action,
-        last_action,
+        self, obs, sim_time, collision, out_of_bounds, action, last_action
     ):
-        # Compute distance to target position
-        if self.target_mode == "payload" and self.payload:
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-            position_error = self.target_position - payload_pos
-        else:
-            position_error = self.target_position - position
-        distance = np.linalg.norm(position_error)
+        
+        team_obs = obs[:6]
+        quad1_obs = obs[6:24]
+        quad2_obs = obs[24:42]
 
-        # Compute rotation penalty
+        quad_distance = np.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
+        
 
-        body_z_axis = np.array([0, 0, 1], dtype=np.float64)
-        world_z_axis = np.zeros(3, dtype=np.float64)
-        mujoco.mju_rotVecQuat(world_z_axis, body_z_axis, orientation)
+        distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
+        quad1_reward = self.calc_quad_reward(quad1_obs)
+        quad2_reward = self.calc_quad_reward(quad2_obs)
 
-        # Compute the norm of world_z_axis
-        norm_world_z_axis = np.linalg.norm(world_z_axis)
+        #unpack quad rewards
+        rotation_penalty = quad1_reward[0] + quad2_reward[0]
+        angular_velocity_penalty = quad1_reward[1] + quad2_reward[1]
+        acceleration_penalty = quad1_reward[2] + quad2_reward[2]
 
-        # Prevent division by zero
-        if norm_world_z_axis < 1e-8:
-            # Handle the zero vector case
-            # Set world_z_axis to the global z-axis
-            world_z_axis = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-        else:
-            # Normalize world_z_axis
-            world_z_axis /= norm_world_z_axis
 
-        cos_theta = np.clip(world_z_axis[2], -1.0, 1.0)
-        rotation_penalty = np.arccos(cos_theta)
-
-        # Compute angular velocity penalties
-        z_angular_velocity = angular_velocity[2]
-        angular_velocity_penalty = np.linalg.norm(angular_velocity)
-
-        # Compute position errors
-        distance_z = np.abs(position[2] - self.target_position[2])
-        distance_xy = np.linalg.norm(position[:2] - self.target_position[:2])
-
-        # Compute action saturation penalty
-        action_saturation = np.mean(
-                np.max(np.exp(-0.5 * ((action + 0.001) / 0.001) ** 2)
-                + np.exp(-0.5 * ((action - self.max_thrust - 0.001) / 0.001) ** 2) - 0.01, 0)
-        )
-     
 
         # Initialize reward components
         reward_components = {}
-
-        rc = self.reward_coefficients
-        reward = rc["alive_reward"]
-        reward_components["alive_reward"] = reward
-
-        # Subtract penalties and distances
-        distance_z_penalty = rc["distance_z"] * distance_z
-        reward -= distance_z_penalty
-        reward_components["distance_z_penalty"] = -distance_z_penalty
-
-        distance_xy_penalty = rc["distance_xy"] * distance_xy
-        reward -= distance_xy_penalty
-        reward_components["distance_xy_penalty"] = -distance_xy_penalty
-
-        distance_penalty = rc["distance"] * distance
-        reward -= distance_penalty
+        
+        reward_components["alive_reward"] = 10
+        reward = 10
+        
         reward_components["distance_penalty"] = -distance_penalty
+        reward += -distance_penalty
 
-        rotation_penalty_value = rc["rotation_penalty"] * rotation_penalty
-        reward -= rotation_penalty_value
-        reward_components["rotation_penalty"] = -rotation_penalty_value
+        reward_components["safe_distance_penalty"] = -safe_distance_penalty
+        reward += -safe_distance_penalty
 
-        z_ang_vel_penalty = rc["z_angular_velocity"] * abs(z_angular_velocity)
-        reward -= z_ang_vel_penalty
-        reward_components["z_angular_velocity_penalty"] = -z_ang_vel_penalty
+        reward_components["collision_penalty"] = -collision_penalty
+        reward += -collision_penalty
 
-        angular_vel_penalty = rc["angular_velocity"] * angular_velocity_penalty
-        reward -= angular_vel_penalty
-        reward_components["angular_velocity_penalty"] = -angular_vel_penalty
+        reward_components["out_of_bounds_penalty"] = -out_of_bounds_penalty
+        reward += -out_of_bounds_penalty
 
-        action_saturation_penalty = rc["action_saturation"] * action_saturation
-        reward -= action_saturation_penalty
-        reward_components["action_saturation_penalty"] = -action_saturation_penalty
+        reward_components["rotation_penalty"] = -rotation_penalty
+        reward += -rotation_penalty
 
-        action_energy_penalty = rc["energy_penalty"] * np.mean(action/self.max_thrust)**2
-        reward -= action_energy_penalty
-        reward_components["action_energy_penalty"] = -action_energy_penalty
+        reward_components["angular_velocity_penalty"] = -angular_velocity_penalty
+        reward += -angular_velocity_penalty
 
-        # Smooth action penalty
-        if hasattr(self, "last_action"):
-            action_difference_penalty = rc["smooth_action"] * np.mean(
-                np.abs(action - last_action)/self.max_thrust
-            )**2
-
-            # penalize variance in action
-            # action_variance_penalty = (np.mean(np.abs(action - np.mean(action)))/self.max_thrust)**2
-
-            # action_difference_penalty += action_variance_penalty
+        reward_components["acceleration_penalty"] = -acceleration_penalty
+        reward += -acceleration_penalty
 
 
-            reward -= action_difference_penalty
-            reward_components["action_difference_penalty"] = -action_difference_penalty
-
-        # Move towards target
-        # Compute the unit vector towards the target
-        if distance > 0.005:
-            desired_direction = position_error / distance
-        else:
-            desired_direction = np.zeros_like(position_error)
-
-       
-
-        # Compute the velocity towards the target
-        velocity_towards_target = np.dot(linear_velocity, desired_direction)* self.time_per_action
-
-        #only negative velocity is penalized
-        #velocity_towards_target = np.clip(velocity_towards_target, -1000, 0)
-
-         # More distance more penalty less distance more reward
-        # velocity_towards_target = (self.last_position_error - np.linalg.norm(position_error))
-        # self.last_position_error = np.linalg.norm(position_error)
-
-
-        # normalize over time
-        velocity_towards_target /= self.time_per_action
-
-
-        reward += rc["velocity_towards_target"] * velocity_towards_target
-        reward_components["velocity_towards_target"] = (
-            rc["velocity_towards_target"] * velocity_towards_target
-        )
-
-        # Linear velocity penalty
-        # linear_vel_penalty = rc["linear_velocity"] * (
-        #     np.linalg.norm(velocity_towards_target) - distance
-        # )
-        # reward -= linear_vel_penalty
-        # reward_components["linear_velocity_penalty"] = -linear_vel_penalty
-
-        # Goal bonus
-        
-        # goal_bonus = (
-        #     0.5 * rc["goal_bonus"] * np.exp(-(distance**2) / 0.08**2)
-        # )  
-        # exact peek at position
-        peak_bonus =  rc["goal_bonus"] * np.exp(-(distance**2) / 0.01**2)
-        # only give bonus if velocity is near zero
-        #peak_bonus *=  np.exp(-(np.linalg.norm(linear_velocity)+ np.linalg.norm(angular_velocity))**2 / 0.1**2)
-
-        goal_bonus = peak_bonus
-    
-        # # # Move the target if good tracking
-        # if distance < 0.01:
-        #     if np.random.default_rng().uniform() < self.target_move_prob * np.exp(-(distance**2) / 0.01**2):
-        #         # Move the target to a new random position
-        #         self.target_position = self.np_random.uniform(
-        #             low=self.workspace["low"] + 0.1,
-        #             high=self.workspace["high"] - 0.1,
-        #         )
-        #         # Update the goal marker's position if applicable
-        #         self.model.geom_pos[self.goal_geom_id] = self.target_position
-
-        #         self.max_time += 10  # add more time to reach the target
-        #         # goal_bonus += (
-        #         #     100 * rc["goal_bonus"]
-        #         # )  # add more bonus for reaching the target and to prevent policy avoiding it
-        #         goal_bonus += 100 * rc["goal_bonus"]
-        reward += goal_bonus
-        reward_components["goal_bonus"] = goal_bonus
-        
-
-        # Collision penalty
-        if collision:
-            collision_penalty = rc["collision_penalty"]
-            reward -= collision_penalty
-            reward_components["collision_penalty"] = -collision_penalty
-        else:
-            reward_components["collision_penalty"] = 0
-
-        # Out of bounds penalty
-        if out_of_bounds:
-            out_of_bounds_penalty = rc["out_of_bounds_penalty"]
-            reward -= out_of_bounds_penalty
-            reward_components["out_of_bounds_penalty"] = -out_of_bounds_penalty
-        else:
-            reward_components["out_of_bounds_penalty"] = 0
-
-        # Payload penalties:
-        if self.payload:
-            #payload id
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_velocity = self.data.qvel[payload_joint_id : payload_joint_id + 3]
-
-            # Compute payload velocity penalty
-            payload_velocity_penalty = rc["payload_velocity"] * np.linalg.norm(payload_velocity)**2
-            reward -= payload_velocity_penalty
-            reward_components["payload_velocity"] = -payload_velocity_penalty
-
-            # above payload reward see reward.ipynb
-            quad_target_offset = position - self.target_position
-            z_offset = quad_target_offset[2]
-            xy_distance = np.linalg.norm(quad_target_offset[:2])
-            above_payload_reward = rc["above_payload"]*  (.04-3*(z_offset - 0.34)**4 - 6*(xy_distance)**2)
-            reward += above_payload_reward
-            reward_components["above_payload_reward"] = above_payload_reward
-
-        # normalize reward
-        reward /= self.sum_coefficients
 
         #frequency normalize
         reward /= self.time_per_action*1000
@@ -717,97 +590,30 @@ class MultiQuadEnv(MujocoEnv):
         # Additional info
         additional_info = {
             "rotation_penalty": rotation_penalty,
-            "distance_to_target_z": distance_z,
-            "distance_to_target_xy": distance_xy,
-            "distance_to_target": distance,
+            "distance_to_target": distance_penalty,
         }
 
         return reward, reward_components, additional_info
 
     def reset_model(self):
-        # Randomize initial position around the target position
-        position_std_dev = 0.5 * self.randomness  # Standard deviation in meters
-        random_position = self.np_random.normal(
-            loc=self.target_position, scale=position_std_dev
-        )
-        # Clip the position to be within the workspace bounds
-        random_position = np.clip(
-            random_position, self.workspace["low"]+0.1, self.workspace["high"]-0.1
-        )
 
-        if self.target_mode == "payload" and self.payload:
-            random_position[2] += 0.2 # Start 20cm above the target position
+        #reset mujoco model
+        mujoco.mj_resetData(self.model, self.data)
 
-        self.data.qpos[:3] = random_position
-
-        #randomize intertial properties around <inertial pos="0 0 0" mass="0.034" diaginertia="1.657171e-5 1.6655602e-5 2.9261652e-5"/>
-        self.model.body_mass[self.drone_body_id] = np.clip(self.np_random.normal(loc=0.034, scale=0.005 * self.randomness), 0.025, 0.04)
-        #self.model.body_inertia[self.drone_body_id] = self.np_random.normal(loc=1, scale=0.1 * self.randomness) * np.array([1.657171e-5, 1.6655602e-5, 2.9261652e-5])
-
-        # Randomize initial orientation around upright orientation
-        orientation_std_dev = np.deg2rad(20) * self.randomness  # Standard deviation of 20 degrees
-        roll = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
-        pitch = self.np_random.normal(loc=0.0, scale=orientation_std_dev)
-        #clip roll and pitch to be within reasonable range
-        max_deg = 40
-        roll = np.clip(roll, -np.deg2rad(max_deg), np.deg2rad(max_deg))
-        pitch = np.clip(pitch, -np.deg2rad(max_deg), np.deg2rad(max_deg))
-      
-        yaw = self.np_random.uniform(low=-np.pi, high=np.pi)  # Random yaw
-
-        # Convert Euler angles to quaternion
-        euler = np.array([roll, pitch, yaw])
-        q = np.zeros(4)
-        seq = "xyz"  # Intrinsic rotations around x, y, z
-
-        mujoco.mju_euler2Quat(q, euler, seq)
-        mujoco.mju_normalize4(q)
-        self.data.qpos[3:7] = q
-
-        if self.payload:
-        # set payload position
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_qpos_index = self.model.jnt_qposadr[payload_joint_id]
-
-            #randomize payload pos with negative z direction
-            payload_direction = np.array([0, 0, -1])
-            payload_direction[0:2] = self.np_random.normal(loc=0.0, scale=0.1 * self.randomness, size=2)
-            payload_direction = payload_direction / np.linalg.norm(payload_direction)
-
-        # scale to max cable length
-        payload_offset = payload_direction * np.clip(np.random.normal(loc=0.18, scale=0.1 * self.randomness), 0.05, 0.18)
-    
-        print("payload offset", payload_offset)
-        self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
-
-        #randomize payload mass from 1 to 11g
-        self.model.body_mass[self.payload_body_id] = np.clip(self.np_random.normal(loc=0.005, scale=0.02 * self.randomness), 0.001, 0.011)
+        # Reset the simulation time
+        self.data.time = 0.0
 
         # warmup sim to stabilize rope
         while self.data.time < self.warmup_time:
-            self.do_simulation(np.zeros(4), 10)
-            # reset qpos
-            self.data.qpos[:3] = random_position
-            self.data.qpos[3:7] = q
-            # keep payload vel low
-            self.data.qvel[payload_qpos_index : payload_qpos_index + 3] = np.zeros(3)
-
-            # also keep payload pos fixed for initial cable stabilization
-            if self.data.time < 0.2 * self.warmup_time:
-                self.data.qpos[payload_qpos_index : payload_qpos_index + 3] = random_position + payload_offset
+            self.do_simulation(np.zeros(8), 10)
+        
+        # disable equality constraints
+        self.model.eq_active[:] = 0
             
 
         self.warmup_time = self.data.time
 
-        # Randomize velocity
-        self.data.qvel[:3] = np.clip(self.np_random.normal(
-            loc=0.0, scale=0.4 * self.randomness, size=3
-        ), -1, 1) # Random linear velocity
-
-        self.data.qvel[3:6] = np.clip(self.np_random.normal(
-            loc=0.0, scale=0.1 * self.randomness, size=3
-        ), -3, 3)
-
+        
         #randomize max_thrust of motors
         self.max_thrust = np.clip(self.np_random.normal(loc=MAX_THRUST, scale=0.01 * self.randomness), 0.095, 0.13)
         self.motor_offset = self.np_random.normal(loc=1.0, scale=0.05 * self.randomness, size=4)
@@ -817,19 +623,20 @@ class MultiQuadEnv(MujocoEnv):
         # Randomize initial actions in the action space
         initial_action = self.action_space.sample()
 
-        # initial_action = np.ones(4)*0.5 # start with 3/4 thrust
-        # initial_action += self.np_random.normal(loc=0, scale=0.1 * self.randomness, size=4)
-        # initial_action = np.clip(initial_action, -1, 1)
-        self.data.ctrl[:] = initial_action[:4]
+        # scale actions
+        thrust_cmds = 0.5 * (initial_action + 1.0)
+        initial_action_scaled = thrust_cmds * self.max_thrust
+
         # Initialize last_action for future steps.
-        self.last_action = initial_action.copy()
+        self.last_action = initial_action_scaled.copy()
 
 
         # Update the goal marker position
         self.model.geom_pos[self.goal_geom_id] = self.target_position
 
 
-        mujoco.mj_forward(self.model, self.data)
+        # step simulation to get initial observation
+        self.do_simulation(initial_action_scaled, self.frame_skip)
 
         # Return initial observation
         obs = self._get_obs()
@@ -837,18 +644,6 @@ class MultiQuadEnv(MujocoEnv):
         # Initialize the observation buffer fully with the initial observation
         self.obs_buffer = [obs] * self.obs_buffer_size
 
-        self.last_position_error = np.linalg.norm(obs[9:12])
         self.max_distance = 5
-        self.last_position_error = np.linalg.norm(obs[9:12])
 
         return self._stack_obs()
-
-
-    def print_stack_time_offsets(self):
-        """Prints the time offsets (in ms) for each observation in the stack."""
-        offsets = []
-        # The most recent observation (offset 0) is at index 0; subsequent ones are spaced by stack_stride
-        for i in range(self.num_stack_frames):
-            offset_ms = i * self.stack_stride * self.time_per_action * 1000
-            offsets.append(offset_ms)
-        print("Observation stack time offsets (ms):", offsets)
