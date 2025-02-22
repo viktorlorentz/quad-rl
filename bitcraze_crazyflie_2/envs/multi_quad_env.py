@@ -134,14 +134,14 @@ class MultiQuadEnv(MujocoEnv):
 
 
     
-        # orientation_rot,
-        # linear_velocity_local,
-        # local_angular_velocity,
-        # position_error_local,  
-        # last_action,
-        # relative_payload_pos_local,
-        # payload_vel_local
-        base_obs_dim =  9 + 3 + 3 + 3 + 4 + 3 + 3 # = 28
+        # Observation vector composition:
+        #   payload_error (3)
+        #   payload_vel (3)
+        #   [Quad1] relative position (3), flattened rotation matrix (9), linear velocity (3), accelerometer (3), gyro (3)
+        #   [Quad2] relative position (3), flattened rotation matrix (9), linear velocity (3), accelerometer (3), gyro (3)
+        #   last_action (4)
+        # Total dimension = 3+3 + (3+9+3+3+3)*2 + 4 = 52
+        base_obs_dim = 3+3 + 3+9+3+3+3 + 3+9+3+3+3 + 4  # = 52
         
 
         
@@ -180,8 +180,8 @@ class MultiQuadEnv(MujocoEnv):
 
         # Define action space: thrust inputs for the four motors
         self.action_space = spaces.Box(
-            low=np.full(4, -1, dtype=np.float32),
-            high=np.full(4, 1, dtype=np.float32),
+            low=np.full(8, -1, dtype=np.float32),
+            high=np.full(8, 1, dtype=np.float32),
             dtype=np.float32,
         )
 
@@ -280,87 +280,72 @@ class MultiQuadEnv(MujocoEnv):
 
 
     def _get_obs(self):
-        # Get observations
-        position = self.data.qpos[:3].copy()
-        orientation = self.data.qpos[3:7].copy()  # Quaternion [w, x, y, z]
-        linear_velocity = self.data.qvel[:3].copy()
-        local_angular_velocity = self.data.qvel[3:6].copy()
-        # local. See: https://github.com/google-deepmind/mujoco/issues/691
+        # Get payload state via named lookup 
+        payload_body_id = self.model.body_name2id("payload")
+        payload_pos = self.data.body_xpos[payload_body_id].copy()
+        payload_vel = self.data.body_linvel[payload_body_id].copy()
+        payload_error = self.target_position - payload_pos
 
-        # Convert quaternion to rotation matrix
-        orientation_rot = self.R_from_quat(orientation)
-        # Orientation as rotation matrix. Flatten to 1D array with 9 elements. 
-        # Numpy flattesn row-wise so its 
-        # [r11, r12, r13, r21, r22, r23, r31, r32, r33]
-        orientation_rot = orientation_rot.flatten()
-        # Compute position error in world coordinates
-        if self.target_mode == "payload" and self.payload:
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-            position_error_world = self.target_position - payload_pos
-        else:
-            position_error_world = self.target_position - position
+        # Get quad 1 state via named lookup
+        quad1_body_id = self.model.body_name2id("q0_cf2")
+        quad1_pos = self.data.body_xpos[quad1_body_id].copy()
+        quad1_quat = self.data.body_quat[quad1_body_id].copy()  # Quaternion [w, x, y, z]
+        quad1_linvel = self.data.body_linvel[quad1_body_id].copy()
+        quad1_rel = quad1_pos - payload_pos
 
+        # Convert quad1 quaternion to rotation matrix and flatten it to 1D (9 elements)
+        quad1_rot = self.R_from_quat(quad1_quat).flatten()
 
-        # Rotate position error vector into drone's local frame
-        position_error_local = self.to_frame(orientation, position_error_world)
+        # Get quad 2 state via named lookup
+        quad2_body_id = self.model.body_name2id("q1_cf2")
+        quad2_pos = self.data.body_xpos[quad2_body_id].copy()
+        quad2_quat = self.data.body_quat[quad2_body_id].copy()  # Quaternion [w, x, y, z]
+        quad2_linvel = self.data.body_linvel[quad2_body_id].copy()
+        quad2_rel = quad2_pos - payload_pos
 
-        #turn into spherical coordinates
-        #position_error_local = self.to_spherical(position_error_local)
+        # Convert quad2 quaternion to rotation matrix and flatten it to 1D (9 elements)
+        quad2_rot = self.R_from_quat(quad2_quat).flatten()
 
+        # Get sensor readings (accelerometer and gyro for both quads)
+        def get_sensor(sensor_name):
+            # Helper function to extract sensor readings.
+            # It retrieves the sensor's starting address and its dimension.
+            sensor_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjSENSOR, sensor_name)
+            adr = self.model.sensor_adr[sensor_id]
+            dim = self.model.sensor_dim[sensor_id]
+            return self.data.sensordata[adr:adr + dim].copy()
 
+        quad1_gyro = get_sensor("q0_gyro")
+        quad1_acc = get_sensor("q0_linacc")
+        quad2_gyro = get_sensor("q1_gyro")
+        quad2_acc = get_sensor("q1_linacc")
 
-        # Rotate linear velocity into drone's local frame
-        linear_velocity_local = self.to_frame(orientation, linear_velocity)
-        # Extract IMU data
-        # imu_gyro_data = self.data.sensordata[:3]  # First 3 values (gyroscope)
-        # imu_acc_data = self.data.sensordata[3:6]  # Next 3 values (accelerometer)
+        # Retrieve last_action (default to zeros if not set)
+        last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4, dtype=np.float32)
 
-        # Last action
-        last_action = self.last_action if hasattr(self, "last_action") else np.zeros(4)
+        # Build observation vector with updated components:
+        #   payload_error (3), payload_vel (3),
+        #   quad1: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
+        #   quad2: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
+        #   last_action (4)
+        obs = np.concatenate([
+            payload_error,        # (3,)
+            payload_vel,          # (3,)
+            quad1_rel,            # (3,)
+            quad1_rot,            # (9,)
+            quad1_linvel,         # (3,)
+            quad1_acc,            # (3,)
+            quad1_gyro,           # (3,)
+            quad2_rel,            # (3,)
+            quad2_rot,            # (9,)
+            quad2_linvel,         # (3,)
+            quad2_acc,            # (3,)
+            quad2_gyro,           # (3,)
+            last_action           # (4,)
+        ])
 
-        # define zero placeholders for payload
-        relative_payload_pos_local = np.zeros(3)
-        payload_vel_local = np.zeros(3)
-        
-        if self.payload:
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-            relative_payload_pos = payload_pos - position
-            
-            relative_payload_pos_local = self.to_frame(orientation, relative_payload_pos)
-            
-            payload_vel = self.data.qvel[payload_joint_id : payload_joint_id + 3]
-            payload_vel_local = self.to_frame(orientation, payload_vel)
-
-        if self.obs_vel:
-            obs = [     
-                orientation_rot,
-                linear_velocity_local,
-                local_angular_velocity,
-                position_error_local,  
-                last_action,
-                relative_payload_pos_local,
-                payload_vel_local
-                ]
-            
-        else:
-            obs = [     
-                orientation_rot,
-                position_error_local,  
-                last_action,
-                relative_payload_pos_local
-                ]
-        
-           
-
-        
-        # Combine all observations
-
-        obs = np.concatenate(obs)
-
-        obs = self.noise_observation(obs, noise_level=0.1)
-
+        # Optionally add noise to the observation.
+        obs = self.noise_observation(obs, noise_level=0.05)
         return obs.astype(np.float32)
 
     def noise_observation(self, obs, noise_level=0.02):
@@ -375,13 +360,8 @@ class MultiQuadEnv(MujocoEnv):
         return stacked
 
     def step(self, action):
-        if self.debug_rates_enabled:
-            step_start = time.time()
+        sim_time = self.data.time
         
-        if not hasattr(self, "thrust_rot_damp"):
-            self.thrust_rot_damp = np.zeros(4)
-        if not hasattr(self, "thrust_cmds_damp"):
-            self.thrust_cmds_damp = np.zeros(4)
 
         # Convert action from [-1,1] to [0,1]
         thrust_cmds = 0.5 * (action + 1.0)
@@ -392,92 +372,70 @@ class MultiQuadEnv(MujocoEnv):
 
         action_scaled = thrust_cmds * self.max_thrust
 
-        if self.motor_dynamics:
-            # Motor tau
-            motor_tau = self.motor_tau_up * np.ones(4)
-            motor_tau[thrust_cmds < self.thrust_cmds_damp] = self.motor_tau_down
-            motor_tau[motor_tau > 1.0] = 1.0
 
-            # Convert to sqrt scale
-            thrust_rot = thrust_cmds ** 0.5
-            self.thrust_rot_damp = motor_tau * (thrust_rot - self.thrust_rot_damp) + self.thrust_rot_damp
-       
-
-            # Add noise
-            thr_noise = self.ou_noise.noise()
-            thrust_noise = thrust_cmds * thr_noise
-            self.thrust_cmds_damp = np.clip(self.thrust_cmds_damp + thrust_noise, 0.0, 1.0)
-
-            self.thrust_cmds_damp = self.thrust_rot_damp ** 2
-            
-            # Scale to actual thrust
-            self.current_thrust = self.max_thrust * self.thrust_cmds_damp 
-        else:
-            self.current_thrust = action_scaled
+        self.current_thrust = action_scaled
 
         # Apply motor offset
         self.current_thrust *= self.motor_offset
 
         # Store last action
-        self.last_action = (self.data.ctrl[:4].copy() / self.max_thrust) * 2.0 - 1.0
+        self.last_action = (self.data.ctrl[:8].copy() / self.max_thrust) * 2.0 - 1.0
         
         #reset position and orientation to 0
         # self.data.qpos[:3] = [0, 0 ,1]
         # self.data.qpos[3:7] = np.array([1, 0, 0, 0])
         
         # Run simulation
-        if self.debug_rates_enabled:
-            t_sim_start = time.time()
+        
         self.do_simulation(self.current_thrust, self.frame_skip)
-        if self.debug_rates_enabled:
-            t_sim = time.time() - t_sim_start
-            sim_rate = 1 / t_sim if t_sim > 1e-9 else float("inf")
-            self.debug_rates['sim'].append(sim_rate)
+       
         
         # Get observation
-        if self.debug_rates_enabled:
-            t_obs_start = time.time()
-        obs = self._get_obs()
-        self.obs_buffer.append(obs)
-        if self.debug_rates_enabled:
-            t_obs = time.time() - t_obs_start
-            obs_rate = 1 / t_obs if t_obs > 1e-9 else float("inf")
-            self.debug_rates['obs'].append(obs_rate)
-        
-        if len(self.obs_buffer) > self.obs_buffer_size:
-            self.obs_buffer.pop(0)
-        stacked_obs = self._stack_obs()
 
-        # Extract state variables
-        position = self.data.qpos[:3]
-        orientation = self.data.qpos[3:7]  # Quaternion [w, x, y, z]
-        angular_velocity = self.data.qvel[3:6]
-        linear_velocity = self.data.qvel[:3]
-        sim_time = self.data.time
+        obs = self._get_obs()
+
+        if self.obs_buffer_size > 1:
+            self.obs_buffer.append(obs)
+        
+            if len(self.obs_buffer) > self.obs_buffer_size:
+                self.obs_buffer.pop(0)
+
+            stacked_obs = self._stack_obs()
+        else:
+            stacked_obs = obs
+
 
         # Check for collisions
         collision = False
+
+        quad_ids = [self.model.body_name2id("q0_cf2"), self.model.body_name2id("q1_cf2")]
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
             body1 = self.model.geom_bodyid[contact.geom1]
             body2 = self.model.geom_bodyid[contact.geom2]
-
-            if body1 == self.drone_body_id or body2 == self.drone_body_id:
+ 
+            if body1 in quad_ids and body2 in quad_ids:
                 collision = True
-                break  # Exit the loop if a collision is detected
+                break
 
         # Check if out of bounds
-        out_of_bounds = not np.all(self.workspace["low"] <= position) or not np.all(
-            position <= self.workspace["high"]
-        )
+        
+        out_of_bounds = False
+        q1_pos = self.data.body_xpos[self.model.body_name2id("q0_cf2")]
+        q2_pos = self.data.body_xpos[self.model.body_name2id("q1_cf2")]
+        positions = [q1_pos, q2_pos]
+        for position in positions:
+            out_of_bounds = not np.all(self.workspace["low"] <= position) or not np.all(
+                position <= self.workspace["high"]
+            )
+            if out_of_bounds:
+                break
 
          # Terminate if going away from target again
-        if self.target_mode == "payload" and self.payload:
-            payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-            payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-            position_error = self.target_position - payload_pos
-        else:
-            position_error = self.target_position - position
+        payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+        payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+        position_error = self.target_position - payload_pos
+        
         distance = np.linalg.norm(position_error)
 
         max_delta_distance = 1.5
@@ -490,37 +448,22 @@ class MultiQuadEnv(MujocoEnv):
             out_of_bounds = True
 
         # Compute reward
-        if self.debug_rates_enabled:
-            t_reward_start = time.time()
         reward, reward_components, additional_info = self.calc_reward(
-            position,
-            orientation,
-            angular_velocity,
-            linear_velocity,
+            obs
             sim_time,
             collision,
             out_of_bounds,
             action_scaled,
             last_action= self.last_action_scaled if hasattr(self, "last_action_scaled") else action_scaled,
         )
-        if self.debug_rates_enabled:
-            t_reward = time.time() - t_reward_start
-            reward_rate = 1 / t_reward if t_reward > 1e-9 else float("inf")
-            self.debug_rates['reward'].append(reward_rate)
-        
+      
+
         self.last_action_scaled = action_scaled
         # Determine termination conditions
-        terminated = False
+        terminated = terminated or collision or out_of_bounds
         truncated = False
-        if collision:
-            terminated = self.reward_coefficients["terminate_collision"]
-        if out_of_bounds:
-            terminated = True  # Terminate the episode
 
-       
-
-        
-        elif distance < self.max_distance:
+        if distance < self.max_distance:
             self.max_distance = distance
 
 
@@ -535,40 +478,16 @@ class MultiQuadEnv(MujocoEnv):
         # Additional info
         info = {
             "position": position.copy(),
-            "angular_velocity": angular_velocity.copy(),
+         
             "reward_components": reward_components,
             "action": action_scaled,
         }
         info.update(additional_info)
 
-        # Update average episode length and env randomness
-        if terminated and self.curriculum:
-            self.average_episode_length = (
-                self.average_episode_length * 0.95 + (self.data.time - self.warmup_time) * 0.05
-            )
-            if self.average_episode_length >  0.9 * self.max_time and self.randomness < self.randomness_max:
-                self.randomness += 0.01
-            
-           
-            info["env_randomness"] = self.randomness
-            info["average_episode_length"] = self.average_episode_length
-
-
+        
         # if self.render_mode == "human":
         #     self.render()
 
-        if self.debug_rates_enabled:
-            total_step_time = time.time() - step_start
-            total_rate = 1 / total_step_time if total_step_time > 1e-9 else float("inf")
-            self.debug_rates['total'].append(total_rate)
-
-        if terminated and self.debug_rates_enabled:
-            avg_sim_rate = np.mean(self.debug_rates['sim'])
-            avg_obs_rate = np.mean(self.debug_rates['obs'])
-            avg_reward_rate = np.mean(self.debug_rates['reward'])
-            avg_total_rate = np.mean(self.debug_rates['total'])
-            print(f"[DEBUG] Average rates - Sim: {avg_sim_rate:.4f} it/s, Obs: {avg_obs_rate:.4f} it/s, Reward: {avg_reward_rate:.4f} it/s, Total: {avg_total_rate:.4f} it/s")
-            self.debug_rates = {'sim': [], 'obs': [], 'reward': [], 'total': []}
 
         return stacked_obs, reward, terminated, truncated, info
     
@@ -904,6 +823,8 @@ class MultiQuadEnv(MujocoEnv):
         # initial_action += self.np_random.normal(loc=0, scale=0.1 * self.randomness, size=4)
         # initial_action = np.clip(initial_action, -1, 1)
         self.data.ctrl[:] = initial_action[:4]
+        # Initialize last_action for future steps.
+        self.last_action = initial_action.copy()
 
 
         # Update the goal marker position
