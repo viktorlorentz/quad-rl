@@ -1,5 +1,5 @@
 import os
-from bitcraze_crazyflie_2.envs.drone_env import DroneEnv
+from bitcraze_crazyflie_2.envs.multi_quad_env import MultiQuadEnv
 import gymnasium as gym
 import torch
 import wandb
@@ -215,7 +215,7 @@ def main():
 
     # Create the vectorized environments
     env = make_vec_env(
-        DroneEnv,
+        MultiQuadEnv,
         n_envs=n_envs,
         vec_env_cls=SubprocVecEnv,
         env_kwargs={
@@ -248,7 +248,7 @@ def main():
             gc.collect()
 
     eval_env = make_vec_env(
-        DroneEnv,
+        MultiQuadEnv,
         n_envs=1,
         vec_env_cls=DummyVecEnv,
         seed=0,
