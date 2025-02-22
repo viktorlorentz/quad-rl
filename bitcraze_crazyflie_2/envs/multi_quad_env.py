@@ -119,13 +119,11 @@ class MultiQuadEnv(MujocoEnv):
 
 
     
-        # Observation vector composition:
-        #   payload_error (3), payload_vel (3),
-        #   quad1: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
-        #   quad2: relative position (3), rotation matrix flatten (9), linear velocity (3), accelerometer (3), gyro (3),
-        #   last_action (8)
-        # total dims = 3+3 + (3+9+3+3+3)*2 + 8 = 56
+   
+
         base_obs_dim =65
+
+
         
 
         
@@ -415,21 +413,33 @@ class MultiQuadEnv(MujocoEnv):
                 break
 
         # Constraint orientation to 90 degrees
+        up = np.array([0, 0, 1])
         q1_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
         q2_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
-        q1_orientation = R.from_quat(q1_orientation).as_euler("xyz")
-        q2_orientation = R.from_quat(q2_orientation).as_euler("xyz")
-        if np.abs(q1_orientation[0]) > np.pi/2 or np.abs(q1_orientation[1]) > np.pi/2 or np.abs(q1_orientation[2]) > np.pi/2:
+
+        # Calculate the quad's local up vector (assumed to be third column)
+        q1_local_up = self.R_from_quat(q1_orientation)[:, 2]
+        q2_local_up = self.R_from_quat(q2_orientation)[:, 2]
+
+        # Calculate the angles between the local up vectors and the global up vector.
+        angle_q1 = self.angle_between(q1_local_up, up)
+        angle_q2 = self.angle_between(q2_local_up, up)
+
+        # Check if either quad's orientation deviates more than 90 degrees:
+        if angle_q1 > np.pi / 2 or angle_q2 > np.pi / 2:
             out_of_bounds = True
+            #print("Quad orientation exceeded 90 degrees from vertical")
         
-        if np.abs(q2_orientation[0]) > np.pi/2 or np.abs(q2_orientation[1]) > np.pi/2 or np.abs(q2_orientation[2]) > np.pi/2:
-            out_of_bounds = True
+
 
         # limit velocity to 2m/s
         q1_vel = self.data.cvel[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
         q2_vel = self.data.cvel[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
-        if np.linalg.norm(q1_vel) > 2 or np.linalg.norm(q2_vel) > 2:
+        
+       
+        if np.linalg.norm(q1_vel) > 15 or np.linalg.norm(q2_vel) > 15:
             out_of_bounds = True
+            #print("Velocity out of bounds", np.linalg.norm(q1_vel), np.linalg.norm(q2_vel))
     
 
         
@@ -437,6 +447,7 @@ class MultiQuadEnv(MujocoEnv):
         if not np.all(np.isfinite(self.data.qacc)):
             # Simulation gets unstable because of fast movements
             out_of_bounds = True
+            #print("Simulation unstable")
 
         terminated = False
         
