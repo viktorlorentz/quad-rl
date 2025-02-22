@@ -11,7 +11,7 @@ import numpy as np
 #from stable_baselines3 import PPO
 from sbx import PPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.policies import ActorCriticPolicy
 from torch import nn
@@ -225,6 +225,14 @@ def main():
             "env_config": config["env_config"],
         },
         monitor_dir=f"monitor/{run.id}",
+    )
+    
+    # Wrap environment with normalization
+    env = VecNormalize(
+        env, 
+        training=True, 
+        norm_obs=True, 
+        norm_reward=True, 
     )
 
     # Create the evaluation environment
