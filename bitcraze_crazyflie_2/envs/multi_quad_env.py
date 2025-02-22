@@ -259,26 +259,26 @@ class MultiQuadEnv(MujocoEnv):
 
     def _get_obs(self):
         # Get payload state via named lookup 
-        payload_body_id = self.model.body_name2id("payload")
-        payload_pos = self.data.body_xpos[payload_body_id].copy()
-        payload_vel = self.data.body_linvel[payload_body_id].copy()
+        payload_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "payload")
+        payload_pos = self.data.xpos[payload_body_id].copy()
+        payload_vel = self.data.cvel[payload_body_id].copy()
         payload_error = self.target_position - payload_pos
 
         # Get quad 1 state via named lookup
-        quad1_body_id = self.model.body_name2id("q0_cf2")
-        quad1_pos = self.data.body_xpos[quad1_body_id].copy()
-        quad1_quat = self.data.body_quat[quad1_body_id].copy()  # Quaternion [w, x, y, z]
-        quad1_linvel = self.data.body_linvel[quad1_body_id].copy()
+        quad1_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")
+        quad1_pos = self.data.xpos[quad1_body_id].copy()
+        quad1_quat = self.data.xquat[quad1_body_id].copy()  # Quaternion [w, x, y, z]
+        quad1_linvel = self.data.cvel[quad1_body_id].copy()
         quad1_rel = quad1_pos - payload_pos
 
         # Convert quad1 quaternion to rotation matrix and flatten it to 1D (9 elements)
         quad1_rot = self.R_from_quat(quad1_quat).flatten()
 
         # Get quad 2 state via named lookup
-        quad2_body_id = self.model.body_name2id("q1_cf2")
-        quad2_pos = self.data.body_xpos[quad2_body_id].copy()
-        quad2_quat = self.data.body_quat[quad2_body_id].copy()  # Quaternion [w, x, y, z]
-        quad2_linvel = self.data.body_linvel[quad2_body_id].copy()
+        quad2_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")
+        quad2_pos = self.data.xpos[quad2_body_id].copy()
+        quad2_quat = self.data.xquat[quad2_body_id].copy()  # Quaternion [w, x, y, z]
+        quad2_linvel = self.data.cvel[quad2_body_id].copy()
         quad2_rel = quad2_pos - payload_pos
 
         # Convert quad2 quaternion to rotation matrix and flatten it to 1D (9 elements)
@@ -384,7 +384,10 @@ class MultiQuadEnv(MujocoEnv):
         # Check for collisions
         collision = False
 
-        quad_ids = [self.model.body_name2id("q0_cf2"), self.model.body_name2id("q1_cf2")]
+        quad_ids = [
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2"),
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2"),
+        ]
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
             body1 = self.model.geom_bodyid[contact.geom1]
@@ -397,8 +400,8 @@ class MultiQuadEnv(MujocoEnv):
         # Check if out of bounds
         
         out_of_bounds = False
-        q1_pos = self.data.body_xpos[self.model.body_name2id("q0_cf2")]
-        q2_pos = self.data.body_xpos[self.model.body_name2id("q1_cf2")]
+        q1_pos = self.data.xpos[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
+        q2_pos = self.data.xpos[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
         positions = [q1_pos, q2_pos]
         for position in positions:
             out_of_bounds = not np.all(self.workspace["low"] <= position) or not np.all(
