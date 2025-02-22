@@ -447,7 +447,7 @@ class MultiQuadEnv(MujocoEnv):
 
         # Compute reward
         reward, reward_components, additional_info = self.calc_reward(
-            obs
+            obs,
             sim_time,
             collision,
             out_of_bounds,
