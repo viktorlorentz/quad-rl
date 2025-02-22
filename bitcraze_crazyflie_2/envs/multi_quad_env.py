@@ -568,8 +568,8 @@ class MultiQuadEnv(MujocoEnv):
         # Initialize reward components
         reward_components = {}
         
-        reward_components["alive_reward"] = 10
-        reward = 10
+        reward_components["alive_reward"] = 1
+        reward = 1
         
         reward_components["distance_penalty"] = -distance_penalty
         reward += -distance_penalty
