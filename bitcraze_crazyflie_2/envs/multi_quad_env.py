@@ -381,9 +381,7 @@ class MultiQuadEnv(MujocoEnv):
         # Store last action
         self.last_action = (self.data.ctrl[:8].copy() / self.max_thrust) * 2.0 - 1.0
         
-        #reset position and orientation to 0
-        # self.data.qpos[:3] = [0, 0 ,1]
-        # self.data.qpos[3:7] = np.array([1, 0, 0, 0])
+    
         
         # Run simulation
         
