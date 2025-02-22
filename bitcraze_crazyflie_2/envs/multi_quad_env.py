@@ -547,7 +547,7 @@ class MultiQuadEnv(MujocoEnv):
 
 
     def calc_reward(
-        self, obs, sim_time, collision, out_of_bounds, action, , angle_q1, angle_q2, last_action
+        self, obs, sim_time, collision, out_of_bounds, action, angle_q1, angle_q2, last_action
     ):
         
         team_obs = obs[:6]
