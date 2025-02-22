@@ -414,6 +414,30 @@ class MultiQuadEnv(MujocoEnv):
             if out_of_bounds:
                 break
 
+        # Constraint orientation to 90 degrees
+        q1_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
+        q2_orientation = self.data.xquat[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
+        q1_orientation = R.from_quat(q1_orientation).as_euler("xyz")
+        q2_orientation = R.from_quat(q2_orientation).as_euler("xyz")
+        if np.abs(q1_orientation[0]) > np.pi/2 or np.abs(q1_orientation[1]) > np.pi/2 or np.abs(q1_orientation[2]) > np.pi/2:
+            out_of_bounds = True
+        
+        if np.abs(q2_orientation[0]) > np.pi/2 or np.abs(q2_orientation[1]) > np.pi/2 or np.abs(q2_orientation[2]) > np.pi/2:
+            out_of_bounds = True
+
+        # limit velocity to 2m/s
+        q1_vel = self.data.cvel[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q0_cf2")]
+        q2_vel = self.data.cvel[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "q1_cf2")]
+        if np.linalg.norm(q1_vel) > 2 or np.linalg.norm(q2_vel) > 2:
+            out_of_bounds = True
+    
+
+        
+
+        if not np.all(np.isfinite(self.data.qacc)):
+            # Simulation gets unstable because of fast movements
+            out_of_bounds = True
+
         terminated = False
         
          # Terminate if going away from target again
