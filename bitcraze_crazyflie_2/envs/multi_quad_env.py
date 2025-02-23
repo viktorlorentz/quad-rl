@@ -121,7 +121,7 @@ class MultiQuadEnv(MujocoEnv):
     
    
 
-        base_obs_dim = 62
+        base_obs_dim = 63
 
 
         
@@ -300,14 +300,17 @@ class MultiQuadEnv(MujocoEnv):
         # Retrieve last_action (default to zeros if not set)
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(8, dtype=np.float32)
 
+        # Time progress for value function
+        time_progress = (self.data.time - self.warmup_time) / self.max_time
+
         # Build observation vector:
         #   payload_error (3), payload_linvel (3),
         #   quad1: relative position (3), rotation matrix flatten (9), linear velocity (3), angular velocity (3), linear acceleration (3), angular acceleration (3),
         #   quad2: relative position (3), rotation matrix flatten (9), linear velocity (3), angular velocity (3), linear acceleration (3), angular acceleration (3),
-        #   last_action (8)
+        #   last_action (8) and time_progress (1)
         obs = np.concatenate([
             payload_error,        # (3,)
-            payload_linvel,         # (3,)
+            payload_linvel,       # (3,)
             quad1_rel,            # (3,)
             quad1_rot,            # (9,)
             quad1_linvel,         # (3,)
@@ -320,10 +323,11 @@ class MultiQuadEnv(MujocoEnv):
             quad2_angvel,         # (3,)
             quad2_linear_acc,     # (3,)
             quad2_angular_acc,    # (3,)
-            last_action           # (8,)
+            last_action,          # (8,)
+            time_progress         # (1,)
         ])
-
-        # Total dims = 3+3 + (3+9+3+3+3+3)*2 + 8 = 62
+        
+        # Total dims = 3+3 + (3+9+3+3+3+3)*2 + 8 + 1 = 63
         obs = self.noise_observation(obs, noise_level=0.05)
         return obs.astype(np.float32)
 
@@ -526,7 +530,7 @@ class MultiQuadEnv(MujocoEnv):
 
 
         # Compute distance to target position
-        distance_penalty = np.linalg.norm(10*payload_error)
+        distance_penalty = np.linalg.norm(10*payload_error)*sim_time
 
         # Velocity towards target
         velocity_towards_target = np.dot(payload_error, payload_vel) / (np.linalg.norm(payload_error) * np.linalg.norm(payload_vel) + 1e-6)
@@ -556,16 +560,17 @@ class MultiQuadEnv(MujocoEnv):
         quad_rel = quad_obs[:3]
         # quad_rot = quad_obs[3:12]  # unused for penalty computation
         linvel = quad_obs[12:15]
-        angvel = quad_obs[15:18]            # new angular velocity
+        angvel = quad_obs[15:18]            
         linacc = quad_obs[18:21]
         angacc = quad_obs[21:24]
 
         rotation_penalty = np.abs(angle)
-        angular_velocity_penalty = np.linalg.norm(angvel)  # new penalty
+        linear_velocity_penalty = np.linalg.norm(linvel)
+        angular_velocity_penalty = np.linalg.norm(angvel) 
         linear_acc_penalty = np.linalg.norm(linacc)
         angular_acc_penalty = np.linalg.norm(angacc)
         above_payload_penalty = -quad_rel[2]
-        return rotation_penalty, angular_velocity_penalty, linear_acc_penalty, angular_acc_penalty, above_payload_penalty
+        return rotation_penalty, angular_velocity_penalty, linear_velocity_penalty, linear_acc_penalty, angular_acc_penalty, above_payload_penalty
 
     def calc_reward(
         self, obs, sim_time, collision, out_of_bounds, action, angle_q1, angle_q2, last_action
@@ -585,9 +590,10 @@ class MultiQuadEnv(MujocoEnv):
         # Unpack quad rewards: each returns (rotation, angular_velocity, linacc, angacc, above_payload)
         rotation_penalty = quad1_reward[0] + quad2_reward[0]
         angular_velocity_penalty = quad1_reward[1] + quad2_reward[1]
-        linear_acc_penalty = quad1_reward[2] + quad2_reward[2]
-        angular_acc_penalty = quad1_reward[3] + quad2_reward[3]
-        above_payload_penalty = quad1_reward[4] + quad2_reward[4]
+        linear_velocity_penalty = quad1_reward[2] + quad2_reward[2]
+        linear_acc_penalty = quad1_reward[3] + quad2_reward[3]
+        angular_acc_penalty = quad1_reward[4] + quad2_reward[4]
+        above_payload_penalty = quad1_reward[5] + quad2_reward[5]
 
         reward_components = {}
         reward_components["alive_reward"] = 3
@@ -607,6 +613,8 @@ class MultiQuadEnv(MujocoEnv):
         reward += -rotation_penalty
         reward_components["angular_velocity_penalty"] = -angular_velocity_penalty
         reward += -angular_velocity_penalty
+        reward_components["linear_velocity_penalty"] = -linear_velocity_penalty
+        reward += -linear_velocity_penalty
         reward_components["linear_acc_penalty"] = -linear_acc_penalty
         reward += -linear_acc_penalty
         reward_components["angular_acc_penalty"] = -angular_acc_penalty
