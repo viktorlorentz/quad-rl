@@ -136,7 +136,7 @@ def main():
     env_id = "MultiQuadEnv"
 
     # Define parameters
-    n_envs = 8
+    n_envs = 16
     n_steps = 128
     batch_size = 64
     time_steps = 150_000_000
@@ -175,7 +175,7 @@ def main():
         "gamma": 0.99,
         "use_sde": False,
         "policy_kwargs": {
-            "net_arch": {"pi": [64,64], "vf": [64,64]},
+            "net_arch": {"pi": [128,128,128], "vf": [128,128,128]},
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
@@ -308,7 +308,7 @@ def main():
         # normalize_advantage=config["normalize_advantage"],
         # use_sde=config["use_sde"],
         device="cpu",
-        #policy_kwargs=policy_kwargs,
+        policy_kwargs=policy_kwargs,
         tensorboard_log=f"runs/{run.id}",
     )
 
