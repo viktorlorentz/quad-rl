@@ -596,8 +596,8 @@ class MultiQuadEnv(MujocoEnv):
         above_payload_penalty = quad1_reward[5] + quad2_reward[5]
 
         reward_components = {}
-        reward_components["alive_reward"] = 3
-        reward = 3
+        reward_components["alive_reward"] = 5
+        reward = 5
         
         reward_components["distance_penalty"] = -distance_penalty
         reward += -distance_penalty
