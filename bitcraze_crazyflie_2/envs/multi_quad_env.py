@@ -89,7 +89,7 @@ class MultiQuadEnv(MujocoEnv):
         model_path = os.path.join(os.path.dirname(__file__), "mujoco", "two_quad_payload.xml")
 
 
-        self.randomness = env_config.get("randomness", 0.1)
+        self.randomness = 0#env_config.get("randomness", 0.1)
         self.obs_buffer_size = 1
  
 
@@ -301,7 +301,7 @@ class MultiQuadEnv(MujocoEnv):
         last_action = self.last_action if hasattr(self, "last_action") else np.zeros(8, dtype=np.float32)
 
         # Time progress for value function
-        time_progress = (self.data.time - self.warmup_time) / self.max_time
+        time_progress = np.array([(self.data.time - self.warmup_time) / self.max_time])
 
         # Build observation vector:
         #   payload_error (3), payload_linvel (3),
@@ -333,7 +333,7 @@ class MultiQuadEnv(MujocoEnv):
 
     def noise_observation(self, obs, noise_level=0.02):
 
-        obs *= np.random.normal(loc=0, scale=noise_level*self.randomness, size=obs.shape)
+        obs *= np.random.normal(loc=0, scale=noise_level, size=obs.shape)
         return obs
     
     def _stack_obs(self):
