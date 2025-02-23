@@ -459,11 +459,11 @@ class MultiQuadEnv(MujocoEnv):
         terminated = False
         
         #  # Terminate if going away from target again
-        # payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-        # payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-        # position_error = self.target_position - payload_pos
+        payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+        payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+        position_error = self.target_position - payload_pos
         
-        # distance = np.linalg.norm(position_error)
+        distance = np.linalg.norm(position_error)
 
         # max_delta_distance = 1.5
         # #lower max delta wiht time
