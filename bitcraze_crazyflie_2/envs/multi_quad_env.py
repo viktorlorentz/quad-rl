@@ -549,8 +549,11 @@ class MultiQuadEnv(MujocoEnv):
             )/10
         else:
             smooth_action_penalty = 0
+        
+        # Encourage thrust reward
+        thrust_reward = np.sum(action)
 
-        return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty
+        return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty, thrust_reward
         
         
     
@@ -583,7 +586,7 @@ class MultiQuadEnv(MujocoEnv):
         quad_distance = np.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
         
 
-        distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
+        distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty, thrust_reward = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
         quad1_reward = self.calc_quad_reward(quad1_obs, angle_q1)
         quad2_reward = self.calc_quad_reward(quad2_obs, angle_q2)
 
@@ -623,6 +626,8 @@ class MultiQuadEnv(MujocoEnv):
         reward += -above_payload_penalty
         reward_components["smooth_action_penalty"] = -smooth_action_penalty
         reward += -smooth_action_penalty
+        reward_components["thrust_reward"] = thrust_reward
+        reward += thrust_reward
 
 
 
