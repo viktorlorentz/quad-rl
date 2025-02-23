@@ -175,7 +175,7 @@ def main():
         "gamma": 0.99,
         "use_sde": False,
         "policy_kwargs": {
-            "net_arch": {"pi": [128, 128, 128], "vf": [128, 128, 128]},
+            "net_arch": {"pi": [64,64], "vf": [64,64]},
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
@@ -295,10 +295,10 @@ def main():
     model = PPO(
         policy='MlpPolicy', #config["policy_type"],  # CustomActorCriticPolicy,
         env=env,
-        n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        learning_rate=config["learning_rate"],
-        gamma=config["gamma"],
+        #n_steps=config["n_steps"],
+        #batch_size=config["batch_size"],
+        #learning_rate=config["learning_rate"],
+        #gamma=config["gamma"],
         # gae_lambda=config["gae_lambda"],
         # ent_coef=config["ent_coef"],
         # vf_coef=config["vf_coef"],
