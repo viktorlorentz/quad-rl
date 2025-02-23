@@ -551,7 +551,7 @@ class MultiQuadEnv(MujocoEnv):
             smooth_action_penalty = 0
         
         # Encourage thrust reward
-        thrust_reward = np.sum(action)*10
+        thrust_reward =0 #np.sum(action)*0
 
         return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty, thrust_reward
         
@@ -568,10 +568,12 @@ class MultiQuadEnv(MujocoEnv):
         angacc = quad_obs[21:24]
 
         rotation_penalty = np.abs(angle)
-        linear_velocity_penalty = np.linalg.norm(linvel)
-        angular_velocity_penalty = np.linalg.norm(angvel) 
-        linear_acc_penalty = np.linalg.norm(linacc)**2
-        angular_acc_penalty = np.linalg.norm(angacc)/10
+        linear_velocity_penalty = np.linalg.norm(linvel) **2
+        angular_velocity_penalty = np.linalg.norm(angvel) **2
+        linear_acc_penalty = 0 #np.linalg.norm(linacc) **2
+        angular_acc_penalty = 0# np.linalg.norm(angacc)/10
+
+
         above_payload_penalty = -quad_rel[2]
         return rotation_penalty, angular_velocity_penalty, linear_velocity_penalty, linear_acc_penalty, angular_acc_penalty, above_payload_penalty
 
