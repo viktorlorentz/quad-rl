@@ -530,7 +530,7 @@ class MultiQuadEnv(MujocoEnv):
 
 
         # Compute distance to target position
-        distance_penalty = np.linalg.norm(10*payload_error)*sim_time
+        distance_penalty = np.linalg.norm(10*payload_error)*(1+sim_time)
 
         # Velocity towards target
         velocity_towards_target = np.dot(payload_error, payload_vel) / (np.linalg.norm(payload_error) * np.linalg.norm(payload_vel) + 1e-6)
@@ -567,8 +567,8 @@ class MultiQuadEnv(MujocoEnv):
         rotation_penalty = np.abs(angle)
         linear_velocity_penalty = np.linalg.norm(linvel)
         angular_velocity_penalty = np.linalg.norm(angvel) 
-        linear_acc_penalty = np.linalg.norm(linacc)
-        angular_acc_penalty = np.linalg.norm(angacc)
+        linear_acc_penalty = np.linalg.norm(linacc)**2
+        angular_acc_penalty = np.linalg.norm(angacc)/10
         above_payload_penalty = -quad_rel[2]
         return rotation_penalty, angular_velocity_penalty, linear_velocity_penalty, linear_acc_penalty, angular_acc_penalty, above_payload_penalty
 

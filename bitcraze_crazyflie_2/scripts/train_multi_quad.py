@@ -55,7 +55,7 @@ class RewardLoggingCallback(BaseCallback):
 
         # Accumulate actions
         if "action" in info:
-            self.actions_sum += sum(info["action"]) / 4
+            self.actions_sum += sum(info["action"]) / len(info["action"])
             self.actions_hist += np.histogram(
                 info["action"], bins=20, range=(0, 0.118)
             )[0]
