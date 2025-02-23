@@ -458,21 +458,21 @@ class MultiQuadEnv(MujocoEnv):
 
         terminated = False
         
-         # Terminate if going away from target again
-        payload_joint_id = self.model.body_jntadr[self.payload_body_id]
-        payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
-        position_error = self.target_position - payload_pos
+        #  # Terminate if going away from target again
+        # payload_joint_id = self.model.body_jntadr[self.payload_body_id]
+        # payload_pos = self.data.qpos[payload_joint_id : payload_joint_id + 3]
+        # position_error = self.target_position - payload_pos
         
-        distance = np.linalg.norm(position_error)
+        # distance = np.linalg.norm(position_error)
 
-        max_delta_distance = 1.5
-        #lower max delta wiht time
-        current_time_progress = (sim_time - self.warmup_time) / self.max_time
-        min_delta_distance = (0.3+ 0.2*self.randomness) * (1.1-current_time_progress)
+        # max_delta_distance = 1.5
+        # #lower max delta wiht time
+        # current_time_progress = (sim_time - self.warmup_time) / self.max_time
+        # min_delta_distance = (0.3+ 0.2*self.randomness) * (1.1-current_time_progress)
 
-        if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
-            terminated = True
-            out_of_bounds = True
+        # if distance > max(self.max_distance * max_delta_distance, min_delta_distance):
+        #     terminated = True
+        #     out_of_bounds = True
 
         # Compute reward
         reward, reward_components, additional_info = self.calc_reward(
@@ -551,7 +551,7 @@ class MultiQuadEnv(MujocoEnv):
             smooth_action_penalty = 0
         
         # Encourage thrust reward
-        thrust_reward = np.sum(action)
+        thrust_reward = np.sum(action)*10
 
         return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty, thrust_reward
         
