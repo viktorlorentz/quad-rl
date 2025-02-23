@@ -136,7 +136,7 @@ def main():
     env_id = "MultiQuadEnv"
 
     # Define parameters
-    n_envs = 64
+    n_envs = 16
     n_steps = 128
     batch_size = 64
     time_steps = 150_000_000

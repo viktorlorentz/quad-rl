@@ -533,7 +533,7 @@ class MultiQuadEnv(MujocoEnv):
         distance_penalty = np.linalg.norm(10*payload_error)*(1+sim_time)
 
         # Velocity towards target
-        velocity_towards_target = np.dot(payload_error, payload_vel) / (np.linalg.norm(payload_error) * np.linalg.norm(payload_vel) + 1e-6)
+        velocity_towards_target = 10 * np.dot(payload_error, payload_vel) / (np.linalg.norm(payload_error) * np.linalg.norm(payload_vel) + 1e-6)
         
         # Safe distance of quads reward as gaussian
         safe_distance_penalty = np.exp(-0.5 * (quad_distance - 0.5)**2 / 0.1**2)
