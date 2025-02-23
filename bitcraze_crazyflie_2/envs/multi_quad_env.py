@@ -516,8 +516,12 @@ class MultiQuadEnv(MujocoEnv):
         payload_error = team_obs[:3]
         payload_vel = team_obs[3:6]
 
+
         # Compute distance to target position
         distance_penalty = np.linalg.norm(10*payload_error)
+
+        # Velocity towards target
+        velocity_towards_target = np.dot(payload_error, payload_vel) / (np.linalg.norm(payload_error) * np.linalg.norm(payload_vel) + 1e-6)
         
         # Safe distance of quads reward as gaussian
         safe_distance_penalty = np.exp(-0.5 * (quad_distance - 0.5)**2 / 0.1**2)
@@ -530,11 +534,11 @@ class MultiQuadEnv(MujocoEnv):
         if hasattr(self, "last_action"):
             smooth_action_penalty = np.mean(
                 np.abs(action - last_action)/self.max_thrust
-            )
+            )/10
         else:
             smooth_action_penalty = 0
 
-        return distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty
+        return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty
         
         
     
@@ -546,6 +550,7 @@ class MultiQuadEnv(MujocoEnv):
         quad_linvel = quad_obs[12:15]
         quad_acc = quad_obs[15:18]
         quad_gyro = quad_obs[18:21]
+
     
         rotation_penalty = np.abs(angle)
         angular_velocity_penalty = np.linalg.norm(quad_gyro)
@@ -570,7 +575,7 @@ class MultiQuadEnv(MujocoEnv):
         quad_distance = np.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
         
 
-        distance_penalty, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
+        distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty = self.calc_team_reward(team_obs, quad_distance, sim_time, collision, out_of_bounds, action, last_action)
         quad1_reward = self.calc_quad_reward(quad1_obs, angle_q1)
         quad2_reward = self.calc_quad_reward(quad2_obs, angle_q2)
 
@@ -590,6 +595,9 @@ class MultiQuadEnv(MujocoEnv):
         
         reward_components["distance_penalty"] = -distance_penalty
         reward += -distance_penalty
+
+        reward_components["velocity_towards_target"] = velocity_towards_target
+        reward += velocity_towards_target
 
         reward_components["safe_distance_penalty"] = -safe_distance_penalty
         reward += -safe_distance_penalty
