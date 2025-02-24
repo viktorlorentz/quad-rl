@@ -136,7 +136,7 @@ def main():
     env_id = "MultiQuadEnv"
 
     # Define parameters
-    n_envs = 16
+    n_envs = 32
     n_steps = 128
     batch_size = 64
     time_steps = 150_000_000
@@ -175,7 +175,7 @@ def main():
         "gamma": 0.99,
         "use_sde": False,
         "policy_kwargs": {
-            "net_arch": {"pi": [128,128,128], "vf": [128,128,128]},
+            "net_arch": {"pi": [64,64,64], "vf": [64,64,64]},
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,
