@@ -175,7 +175,7 @@ def main():
         "gamma": 0.99,
         "use_sde": False,
         "policy_kwargs": {
-            "net_arch": {"pi": [64,64,64], "vf": [64,64,64]},
+            "net_arch": {"pi": [128,128,128], "vf": [128,128,128]},
         },
         "reward_coefficients": reward_coefficients,
         "policy_freq": 250,

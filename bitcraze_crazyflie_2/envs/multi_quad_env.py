@@ -539,8 +539,8 @@ class MultiQuadEnv(MujocoEnv):
         safe_distance_penalty = np.exp(-0.5 * (quad_distance - 0.5)**2 / 0.1**2)
 
         # Collision and out of bounds penalties
-        collision_penalty = 100 if collision else 0
-        out_of_bounds_penalty = 100 if out_of_bounds else 0
+        collision_penalty = 10 if collision else 0
+        out_of_bounds_penalty = 10 if out_of_bounds else 0
 
         # Smooth action penalty
         if hasattr(self, "last_action"):
@@ -551,7 +551,7 @@ class MultiQuadEnv(MujocoEnv):
             smooth_action_penalty = 0
         
         # Encourage thrust reward
-        thrust_reward =0 #np.sum(action)*0
+        thrust_reward = np.sum(action)* 10
 
         return distance_penalty, velocity_towards_target, safe_distance_penalty, collision_penalty, out_of_bounds_penalty, smooth_action_penalty, thrust_reward
         
