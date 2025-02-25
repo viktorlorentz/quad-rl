@@ -139,7 +139,7 @@ def main():
     n_envs = 32
     n_steps = 128
     batch_size = 64
-    time_steps = 150_000_000
+    time_steps = 250_000_000
 
     # Reward function coefficients
     reward_coefficients = {  # based on single_quad_rl_1731931528

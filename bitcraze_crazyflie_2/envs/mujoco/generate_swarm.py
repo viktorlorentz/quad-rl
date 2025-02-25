@@ -371,6 +371,8 @@ class QuadSceneGenerator:
             payload = ""
         else:
             init_pos = self.config["payload"]["start_pos"]
+            type = self.config["payload"]["geom_type"]
+            p_size = " ".join(map(str, self.config["payload"]["size"]))
             if init_pos is False:
                 # If no start pos is given, average out the quad start positions
                 init_pos = np.mean([np.array(quad["start_pos"]) for quad in self.config["quads"]], axis=0) - np.array([0, 0, 0.1])
@@ -380,7 +382,7 @@ class QuadSceneGenerator:
             <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
                 mode="trackcom" />
             <joint type="free" actuatorfrclimited="false" damping="0.00001"/>
-            <geom size="0.007 0.01" type="cylinder" mass="0.001" rgba="0.8 0.8 0.8 1" />
+            <geom size="{p_size}" type="{type}" mass="0.001" rgba="0.8 0.8 0.8 1" />
             <site name="payload_s" pos="0 0 0.01" />
             {"</body>" if payload_connection != "cable" else ""}
             """

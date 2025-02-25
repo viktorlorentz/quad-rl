@@ -17,8 +17,8 @@ goal:
   rgba: "1 0 0 0.8"
 payload:
   mass: 0.005 
-  geom_type: cylinder
-  size: [0.007, 0.01]
+  geom_type: sphere
+  size: [0.01]
   start_pos: false  # array or false; payload start site
   start_euler: [0, 0, 1]
   rgba: "0.8 0.8 0.8 1"
