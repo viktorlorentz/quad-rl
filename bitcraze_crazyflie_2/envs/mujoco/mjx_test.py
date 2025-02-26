@@ -7,8 +7,14 @@ import mujoco.mjx as mjx
 import matplotlib.pyplot as plt
 
 
+jax.config.update("jax_compilation_cache_dir",  "/tmp/jax-cache")  # current directory
+jax.config.update("jax_persistent_cache_min_entry_size_bytes", -1)
+jax.config.update("jax_persistent_cache_min_compile_time_secs", 0)
+jax.config.update("jax_persistent_cache_enable_xla_caches", "xla_gpu_per_fusion_autotune_cache_dir")
+
+
 # Find and load the XML file
-xml_path = os.path.join(os.path.dirname(__file__), "two_quad_payload.xml")
+xml_path = os.path.join(os.path.dirname(__file__), "single_quad.xml")
 with open(xml_path, "r") as f:
     xml = f.read()
 
@@ -97,7 +103,7 @@ print(f"MJX single simulation time: {mjx_single_time:.4f} seconds")
 save_video(frames, "mjx_sim.mp4", framerate)
 
 # Part 3: Batched simulation with 512 environments and 10000 timesteps
-batch_size = 512
+batch_size = 64
 num_steps = 10000
 print(f"Running batched MJX simulation with {batch_size} environments for {num_steps} steps...")
 
