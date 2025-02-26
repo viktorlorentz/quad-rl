@@ -5,7 +5,7 @@ import mujoco
 import jax
 import mujoco.mjx as mjx
 import matplotlib.pyplot as plt
-from IPython import display
+
 
 # Find and load the XML file
 xml_path = os.path.join(os.path.dirname(__file__), "two_quad_payload.xml")
