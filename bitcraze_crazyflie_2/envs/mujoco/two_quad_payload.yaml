@@ -1,5 +1,5 @@
 # YAML configuration for the scene configuration
-payload_connection: cable  # options: "cable", "tendon", "none"
+payload_connection: tendon  # options: "cable", "tendon", "none"
 options:
   timestep: 0.004
   density: 1.2  # air density
