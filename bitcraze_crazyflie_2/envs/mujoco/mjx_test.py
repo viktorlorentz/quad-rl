@@ -14,7 +14,7 @@ jax.config.update("jax_persistent_cache_enable_xla_caches", "xla_gpu_per_fusion_
 
 
 # Find and load the XML file
-xml_path = os.path.join(os.path.dirname(__file__), "single_quad.xml")
+xml_path = os.path.join(os.path.dirname(__file__), "two_quad_payload.xml")
 with open(xml_path, "r") as f:
     xml = f.read()
 
