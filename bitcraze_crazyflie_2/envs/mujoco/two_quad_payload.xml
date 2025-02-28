@@ -1,6 +1,6 @@
 
     <mujoco>
-    <compiler angle="radian" meshdir="assets/" discardvisual="true" />
+    <compiler angle="radian" meshdir="assets/" discardvisual="true" fitaabb="true"/>
     <option timestep="0.004" gravity="0 0 -9.81" solver="Newton"  jacobian="dense" iterations="1" ls_iterations="4" >
         <flag eulerdamp="disable"/>
     </option>
