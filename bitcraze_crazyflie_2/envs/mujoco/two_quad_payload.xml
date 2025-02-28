@@ -468,7 +468,7 @@
 
     </actuator>
 
-    <sensor>
+    <!-- <sensor>
         <gyro site="q0_imu" name="q0_gyro" />
 <accelerometer site="q0_imu" name="q0_linacc" />
 <framequat objtype="site" objname="q0_imu" name="q0_framequat" />
@@ -478,5 +478,5 @@
 <framequat objtype="site" objname="q1_imu" name="q1_framequat" />
 <force name="q1_cable_force" site="q1_attachment" />
 
-    </sensor>
+    </sensor> -->
 </mujoco>
