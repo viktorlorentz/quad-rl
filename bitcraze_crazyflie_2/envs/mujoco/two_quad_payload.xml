@@ -1,6 +1,6 @@
 
     <mujoco>
-    <compiler angle="radian" meshdir="assets/" discardvisual="true" fitaabb="true"/>
+    <compiler angle="radian" meshdir="assets/" discardvisual="true"/>
     <option timestep="0.004" gravity="0 0 -9.81" solver="Newton"  jacobian="dense" iterations="1" ls_iterations="4" >
         <flag eulerdamp="disable"/>
     </option>
@@ -46,38 +46,7 @@
         <mesh name="cf2_4" file="cf2_4.obj" />
         <mesh name="cf2_5" file="cf2_5.obj" />
         <mesh name="cf2_6" file="cf2_6.obj" />
-        <mesh name="cf2_collision_0" file="cf2_collision_0.obj" />
-        <mesh name="cf2_collision_1" file="cf2_collision_1.obj" />
-        <mesh name="cf2_collision_2" file="cf2_collision_2.obj" />
-        <mesh name="cf2_collision_3" file="cf2_collision_3.obj" />
-        <mesh name="cf2_collision_4" file="cf2_collision_4.obj" />
-        <mesh name="cf2_collision_5" file="cf2_collision_5.obj" />
-        <mesh name="cf2_collision_6" file="cf2_collision_6.obj" />
-        <mesh name="cf2_collision_7" file="cf2_collision_7.obj" />
-        <mesh name="cf2_collision_8" file="cf2_collision_8.obj" />
-        <mesh name="cf2_collision_9" file="cf2_collision_9.obj" />
-        <mesh name="cf2_collision_10" file="cf2_collision_10.obj" />
-        <mesh name="cf2_collision_11" file="cf2_collision_11.obj" />
-        <mesh name="cf2_collision_12" file="cf2_collision_12.obj" />
-        <mesh name="cf2_collision_13" file="cf2_collision_13.obj" />
-        <mesh name="cf2_collision_14" file="cf2_collision_14.obj" />
-        <mesh name="cf2_collision_15" file="cf2_collision_15.obj" />
-        <mesh name="cf2_collision_16" file="cf2_collision_16.obj" />
-        <mesh name="cf2_collision_17" file="cf2_collision_17.obj" />
-        <mesh name="cf2_collision_18" file="cf2_collision_18.obj" />
-        <mesh name="cf2_collision_19" file="cf2_collision_19.obj" />
-        <mesh name="cf2_collision_20" file="cf2_collision_20.obj" />
-        <mesh name="cf2_collision_21" file="cf2_collision_21.obj" />
-        <mesh name="cf2_collision_22" file="cf2_collision_22.obj" />
-        <mesh name="cf2_collision_23" file="cf2_collision_23.obj" />
-        <mesh name="cf2_collision_24" file="cf2_collision_24.obj" />
-        <mesh name="cf2_collision_25" file="cf2_collision_25.obj" />
-        <mesh name="cf2_collision_26" file="cf2_collision_26.obj" />
-        <mesh name="cf2_collision_27" file="cf2_collision_27.obj" />
-        <mesh name="cf2_collision_28" file="cf2_collision_28.obj" />
-        <mesh name="cf2_collision_29" file="cf2_collision_29.obj" />
-        <mesh name="cf2_collision_30" file="cf2_collision_30.obj" />
-        <mesh name="cf2_collision_31" file="cf2_collision_31.obj" />
+       
     </asset>
 
     <worldbody>
@@ -147,102 +116,7 @@
                     class="visual"
                     material="white"
                     mesh="cf2_6" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_0" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_1" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_2" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_3" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_4" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_5" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_6" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_7" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_8" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_9" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_10" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_11" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_12" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_13" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_14" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_15" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_16" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_17" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_18" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_19" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_20" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_21" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_22" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_23" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_24" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_25" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_26" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_27" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_28" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_29" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_30" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_31" />
+               <geom class="collision" type="box" pos="0 0 0" size="0.05 0.05 0.015" group="3" rgba="1 0 0 0.5" />
                 <site
                     name="q0_imu"
                     pos="0 0 0" />
@@ -309,102 +183,7 @@
                     class="visual"
                     material="white"
                     mesh="cf2_6" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_0" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_1" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_2" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_3" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_4" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_5" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_6" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_7" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_8" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_9" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_10" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_11" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_12" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_13" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_14" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_15" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_16" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_17" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_18" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_19" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_20" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_21" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_22" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_23" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_24" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_25" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_26" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_27" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_28" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_29" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_30" />
-                <geom
-                    class="collision"
-                    mesh="cf2_collision_31" />
+                <geom class="collision" type="box" pos="0 0 0" size="0.05 0.05 0.015" group="3" rgba="1 0 0 0.5" />
                 <site
                     name="q1_imu"
                     pos="0 0 0" />
