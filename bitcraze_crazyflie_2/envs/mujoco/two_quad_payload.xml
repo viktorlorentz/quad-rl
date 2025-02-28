@@ -225,11 +225,11 @@
                 
     </tendon>
 
-    <equality>
+    <!-- <equality>
         <weld site1="q0_start" site2="q0_imu" solref="0.01 4" />
 <weld site1="q1_start" site2="q1_imu" solref="0.01 4" />
        
-    </equality>
+    </equality> -->
 
     <actuator>
         <general name="q0_thrust1" class="cf2" site="q0_thrust1" ctrlrange="0 0.14" gear="0 0 1 0 0 6e-06" />
