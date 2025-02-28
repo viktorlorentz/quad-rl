@@ -1,7 +1,7 @@
 
     <mujoco>
     <compiler angle="radian" meshdir="assets/" discardvisual="false" />
-    <option timestep="0.004" density="1.2" viscosity="2e-05" integrator="Euler" gravity="0 0 -9.81" wind="0 0 0" />
+    <option timestep="0.004" density="1.2" viscosity="2e-05" integrator="Euler" gravity="0 0 -9.81" wind="0 0 0" solver="Newton"  />
 
     <visual>
         <global azimuth="-20" elevation="-20" ellipsoidinertia="true" />
