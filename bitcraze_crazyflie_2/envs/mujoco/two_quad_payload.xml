@@ -5,11 +5,11 @@
         <flag eulerdamp="disable"/>
     </option>
 
-    <visual>
+    <!-- <visual>
         <global azimuth="-20" elevation="-20" ellipsoidinertia="true" />
         <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0" />
         <rgba haze="0.15 0.25 0.35 1" />
-    </visual>
+    </visual> -->
 
     <default>
         <default class="cf2">
