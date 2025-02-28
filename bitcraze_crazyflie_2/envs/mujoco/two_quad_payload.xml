@@ -23,13 +23,7 @@
         </default>
     </default>
 
-    <extension>
-        <plugin plugin="mujoco.elasticity.cable">
-            <instance name="compositecable0_" /> 
-<instance name="compositecable1_" /> 
-
-        </plugin>
-    </extension>
+  
 
     <asset>
         <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
