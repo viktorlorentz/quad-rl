@@ -1,6 +1,6 @@
 from datetime import datetime
 import functools
-from IPython.display import HTML
+
 from typing import Any, Dict, Sequence, Tuple, Union
 import os
 from ml_collections import config_dict
