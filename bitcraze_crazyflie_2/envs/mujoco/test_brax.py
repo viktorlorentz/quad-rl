@@ -259,7 +259,7 @@ for i in range(10):
   state = jit_step(state, ctrl)
   rollout.append(state.pipeline_state)
 
-media.show_video(env.render(rollout), fps=1.0 / env.dt)
+# media.show_video(env.render(rollout), fps=1.0 / env.dt)
 
 train_fn = functools.partial(
     ppo.train,
@@ -328,10 +328,10 @@ for i in range(n_steps):
   if state.done:
     break
 
-media.show_video(
-    eval_env.render(rollout[::render_every]),
-    fps=1.0 / eval_env.dt / render_every
-)
+# media.show_video(
+#     eval_env.render(rollout[::render_every]),
+#     fps=1.0 / eval_env.dt / render_every
+# )
 
 # ----------------------------------------
 # Demonstrate MJX Policy in MuJoCo (Optional)
@@ -356,4 +356,4 @@ for i in range(n_steps):
     renderer.update_scene(mj_data)
     images.append(renderer.render())
 
-media.show_video(images, fps=1.0 / eval_env.dt / render_every)
+# media.show_video(images, fps=1.0 / eval_env.dt / render_every)
