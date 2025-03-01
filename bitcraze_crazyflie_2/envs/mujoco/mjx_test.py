@@ -21,7 +21,9 @@ with open(xml_path, "r") as f:
 # Make mujoco model, data, and renderer
 mj_model = mujoco.MjModel.from_xml_string(xml)
 mj_data = mujoco.MjData(mj_model)
-renderer = mujoco.Renderer(mj_model)
+ctx = mujoco.GLContext(1920, 1080)
+ctx.make_current()
+renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
 
 # Convert to MJX model and data
 mjx_model = mjx.put_model(mj_model)
@@ -159,7 +161,7 @@ times = [
     mjx_single_time / (duration / mj_model.opt.timestep),
     batch_sim_time / batch_size / num_steps * 1e6  # microseconds per step
 ]
-
+renderer.close()
 plt.figure(figsize=(10, 6))
 plt.bar(labels, times, color=['blue', 'green', 'red'])
 plt.yscale('log')

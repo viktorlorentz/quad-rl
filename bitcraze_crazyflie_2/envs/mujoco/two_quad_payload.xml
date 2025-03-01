@@ -1,15 +1,17 @@
 
     <mujoco>
-    <compiler angle="radian" meshdir="assets/" discardvisual="true"/>
+    <compiler angle="radian" meshdir="assets/" discardvisual="false"/>
     <option timestep="0.004" gravity="0 0 -9.81" solver="Newton"  jacobian="dense" iterations="1" ls_iterations="4" >
         <flag eulerdamp="disable"/>
     </option>
 
-    <!-- <visual>
-        <global azimuth="-20" elevation="-20" ellipsoidinertia="true" />
+    <visual>
+        <global azimuth="-20" elevation="-20" ellipsoidinertia="true" offwidth="1920" offheight="1080"/>
         <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0" />
         <rgba haze="0.15 0.25 0.35 1" />
-    </visual> -->
+        <scale jointlength="0" jointwidth="0"/>
+    </visual>
+
 
     <default>
         <default class="cf2">
