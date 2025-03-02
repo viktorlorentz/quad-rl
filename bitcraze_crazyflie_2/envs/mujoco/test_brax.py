@@ -295,6 +295,9 @@ def progress(num_steps, metrics):
   plt.errorbar(x_data, y_data, yerr=ydataerr)
   plt.savefig('mjx_brax_multiquad_policy.png')
   print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
+  print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
+  print(f'time: {times[-1] - times[0]}')
+  print(f'eval_metrics: {metrics}')
 
   
 
