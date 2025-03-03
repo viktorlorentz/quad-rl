@@ -384,13 +384,25 @@ def progress(num_steps, metrics):
     
     video_name = f'progress_rollout_{num_steps}.mp4'
     try:
-        # Simulate a rollout using the current trained policy following the provided code example.
+        # Check if inference function exists, create if not
+        if jit_inference_fn is None:
+            # Use the current params from metrics
+            current_params = metrics.get('params', None)
+            if current_params is not None:
+                inference_fn = make_inference_fn(current_params)
+                jit_inference_fn = jax.jit(inference_fn)
+            else:
+                print("Warning: No params available, can't create inference function")
+                return
+
+        # Reset the environment and generate a rollout
         rng_rollout = jax.random.PRNGKey(0)
         state_rollout = jit_reset(rng_rollout)
         rollout = [state_rollout.pipeline_state]
-        # 10 seconds of simulation at 250 Hz.
-        n_steps_rl = 2500
+        
+        n_steps_rl = 1000
         render_every = 2
+        
         for i in range(n_steps_rl):
             act_rng, rng_rollout = jax.random.split(rng_rollout)
             ctrl, _ = jit_inference_fn(state_rollout.obs, act_rng)
@@ -398,13 +410,37 @@ def progress(num_steps, metrics):
             rollout.append(state_rollout.pipeline_state)
             if state_rollout.done:
                 break
-        # Render the rollout using eval_env with camera='side'.
-        frames = eval_env.render(rollout[::render_every], camera='side')
-        # Use provided FPS calculation.
-
-        fps = 1.0 / env.dt / render_every
+                
+        # Render with MuJoCo renderer
+        mj_model = eval_env.sys.mj_model
+        frames = []
+        
+        # Set up the renderer
+        width, height = 640, 480
+        renderer = mujoco.Renderer(mj_model, width=width, height=height)
+        
+        # Render each frame in the rollout with proper camera
+        for i, pipeline_state in enumerate(rollout[::render_every]):
+            # Convert MJX state back to MuJoCo state for rendering
+            mj_data = mujoco.MjData(mj_model)
+            
+            # Update mj_data with the state data from pipeline_state
+            mj_data.qpos = np.array(pipeline_state.q)
+            mj_data.qvel = np.array(pipeline_state.qd)
+            mj_data.time = float(pipeline_state.time)
+            
+            # Update scene and render
+            renderer.update_scene(mj_data, camera='side')
+            frame = renderer.render()
+            frames.append(frame)
+        
+        # Calculate FPS from environment dt and render frequency
+        fps = 1.0 / eval_env.dt / render_every
+        
+        # Save the video
         save_video(frames, video_name, fps=fps)
         
+        # Log to wandb
         log_dict = {
             "progress_rollout_video": wandb.Video(video_name, format="mp4"),
             "progress/num_steps": num_steps,
@@ -415,17 +451,38 @@ def progress(num_steps, metrics):
             "progress/avg_action": avg_action,
             "progress/action_histogram": action_hist
         }
-        # Log all provided metrics.
+        
+        # Log all provided metrics
         for k, v in metrics.items():
-            log_dict[k] = v.item() if hasattr(v, "item") else v
+            if k != 'params':  # Don't try to log the large parameter arrays
+                log_dict[k] = v.item() if hasattr(v, "item") else v
+                
         wandb.log(log_dict)
     except Exception as e:
-        print("Video rendering failed:", e)
+        print(f"Video rendering failed: {e}")
+        import traceback
+        traceback.print_exc()
 
-# Before calling train_fn, assign the evaluation environment:
+# Before calling train_fn, make sure to initialize eval_env properly
+
+# Modify the environment setup code to ensure eval_env is defined before training starts
+env_name = 'multiquad'
+env = envs.get_environment(env_name)
+
+# Set up evaluation environment
 eval_env = envs.get_environment(env_name)
 jit_reset = jax.jit(eval_env.reset)
 jit_step = jax.jit(eval_env.step)
+
+# Add support for egl rendering if available
+try:
+    # Configure MuJoCo to use the EGL rendering backend (requires GPU)
+    os.environ['MUJOCO_GL'] = 'egl'
+    print('Using EGL for rendering (GPU acceleration)')
+except:
+    print('Using default rendering backend')
+
+
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
