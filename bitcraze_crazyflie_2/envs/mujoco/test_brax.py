@@ -28,6 +28,9 @@ from brax.training.agents.ppo import train as ppo
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.io import html, mjcf, model
 
+import wandb
+import time
+
 jax.config.update('jax_platform_name', 'gpu')
 
 # ----------------------------------------
@@ -284,6 +287,9 @@ train_fn = functools.partial(
 x_data, y_data, ydataerr = [], [], []
 times = [datetime.now()]
 
+# Initialize wandb for logging.
+wandb.init(project="single_quad_rl", name=f"quad_rl_{int(time.time())}")
+
 # Helper function to save videos.
 def save_video(frames, filename, fps=30):
     try:
@@ -347,6 +353,13 @@ def progress(num_steps, metrics):
     video_name = f'progress_rollout_{num_steps}.mp4'
     try:
         render_video(video_name, env, duration=5.0, framerate=30)  # pass env to render_video
+        # Log the rendered video with wandb.
+        wandb.log({
+            "progress_rollout_video": wandb.Video(video_name, fps=30, format="mp4"),
+            "num_steps": num_steps,
+            "eval/episode_reward": y_data[-1],
+            "eval/episode_reward_std": ydataerr[-1]
+        })
     except Exception as e:
         print("Video rendering failed:", e)
 
