@@ -278,6 +278,11 @@ for i in range(10):
 
 # media.show_video(env.render(rollout), fps=1.0 / env.dt)
 
+make_networks_factory = functools.partial(
+    ppo_networks.make_ppo_networks,
+    policy_hidden_layer_sizes=(128, 128, 128, 128)
+)
+
 train_fn = functools.partial(
     ppo.train,
     num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
@@ -294,7 +299,8 @@ train_fn = functools.partial(
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=1024,               # Use a batch size that balances throughput with memory usage.
-    seed=1                        # A fixed seed for reproducibility.
+    seed=1,                        # A fixed seed for reproducibility.
+    network_factory=make_networks_factory
 )
 
 x_data, y_data, ydataerr = [], [], []
