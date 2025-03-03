@@ -378,90 +378,116 @@ def progress(num_steps, metrics):
         action_hist = None
 
     print(f'it/s: {it_per_s}')
-    print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
     print(f'time: {times[-1] - times[0]}')
-    print(f'eval_metrics: {metrics}')
+    print(f'progress: {num_steps / train_fn.keywords["num_timesteps"] * 100:.2f}%, reward: {y_data[-1]}')
     
-    video_name = f'progress_rollout_{num_steps}.mp4'
-    try:
-        # Check if inference function exists, create if not
-        if jit_inference_fn is None:
-            # Use the current params from metrics
-            current_params = metrics.get('params', None)
-            if current_params is not None:
-                inference_fn = make_inference_fn(current_params)
-                jit_inference_fn = jax.jit(inference_fn)
-            else:
-                print("Warning: No params available, can't create inference function")
-                return
-
-        # Reset the environment and generate a rollout
-        rng_rollout = jax.random.PRNGKey(0)
-        state_rollout = jit_reset(rng_rollout)
-        rollout = [state_rollout.pipeline_state]
-        
-        n_steps_rl = 1000
-        render_every = 2
-        
-        for i in range(n_steps_rl):
-            act_rng, rng_rollout = jax.random.split(rng_rollout)
-            ctrl, _ = jit_inference_fn(state_rollout.obs, act_rng)
-            state_rollout = jit_step(state_rollout, ctrl)
-            rollout.append(state_rollout.pipeline_state)
-            if state_rollout.done:
-                break
+    # Get policy parameters from the training state in Brax's PPO implementation
+    # In Brax's PPO, parameters are directly passed in the 'params' key during evaluation
+    current_params = None
+    if 'params' in metrics:
+        current_params = metrics['params']
+    elif 'training_params' in metrics:
+        current_params = metrics['training_params']
+    
+    # If we can't get parameters from metrics, try to access them from the current training state
+    if current_params is None and hasattr(ppo, 'get_params'):
+        try:
+            current_params = ppo.get_params()
+        except:
+            pass
+    
+    # Only attempt to create video if we have parameters
+    if current_params is not None:
+        video_name = f'progress_rollout_{num_steps}.mp4'
+        try:
+            # Create a new inference function with the current parameters
+            inference_fn = make_inference_fn(current_params)
+            local_jit_inference_fn = jax.jit(inference_fn)
+            
+            # Reset the environment and generate a rollout
+            rng_rollout = jax.random.PRNGKey(0)
+            state_rollout = jit_reset(rng_rollout)
+            rollout = [state_rollout.pipeline_state]
+            
+            n_steps_rl = 250  # Shortened for quicker rendering
+            render_every = 2
+            
+            for i in range(n_steps_rl):
+                act_rng, rng_rollout = jax.random.split(rng_rollout)
+                ctrl, _ = local_jit_inference_fn(state_rollout.obs, act_rng)
+                state_rollout = jit_step(state_rollout, ctrl)
+                rollout.append(state_rollout.pipeline_state)
+                if state_rollout.done:
+                    break
+            
+            # Render with MuJoCo renderer
+            mj_model = eval_env.sys.mj_model
+            frames = []
+            
+            # Set up the renderer
+            width, height = 640, 480
+            renderer = mujoco.Renderer(mj_model, width=width, height=height)
+            
+            # Render each frame in the rollout with proper camera
+            for i, pipeline_state in enumerate(rollout[::render_every]):
+                # Convert MJX state back to MuJoCo state for rendering
+                mj_data = mujoco.MjData(mj_model)
                 
-        # Render with MuJoCo renderer
-        mj_model = eval_env.sys.mj_model
-        frames = []
-        
-        # Set up the renderer
-        width, height = 640, 480
-        renderer = mujoco.Renderer(mj_model, width=width, height=height)
-        
-        # Render each frame in the rollout with proper camera
-        for i, pipeline_state in enumerate(rollout[::render_every]):
-            # Convert MJX state back to MuJoCo state for rendering
-            mj_data = mujoco.MjData(mj_model)
+                # Update mj_data with the state data from pipeline_state
+                mj_data.qpos = np.array(pipeline_state.q)
+                mj_data.qvel = np.array(pipeline_state.qd)
+                mj_data.time = float(pipeline_state.time)
+                
+                # Update scene and render
+                renderer.update_scene(mj_data, camera='side')
+                frame = renderer.render()
+                frames.append(frame)
             
-            # Update mj_data with the state data from pipeline_state
-            mj_data.qpos = np.array(pipeline_state.q)
-            mj_data.qvel = np.array(pipeline_state.qd)
-            mj_data.time = float(pipeline_state.time)
+            # Calculate FPS from environment dt and render frequency
+            fps = 1.0 / eval_env.dt / render_every
             
-            # Update scene and render
-            renderer.update_scene(mj_data, camera='side')
-            frame = renderer.render()
-            frames.append(frame)
-        
-        # Calculate FPS from environment dt and render frequency
-        fps = 1.0 / eval_env.dt / render_every
-        
-        # Save the video
-        save_video(frames, video_name, fps=fps)
-        
-        # Log to wandb
+            # Save the video
+            save_video(frames, video_name, fps=fps)
+            
+            # Log to wandb
+            log_dict = {
+                "progress_rollout_video": wandb.Video(video_name, format="mp4"),
+                "progress/num_steps": num_steps,
+                "progress/eval_episode_reward": y_data[-1],
+                "progress/eval_episode_reward_std": ydataerr[-1],
+                "progress/it_per_s": it_per_s,
+                "progress/avg_episode_reward": avg_reward,
+                "progress/avg_action": avg_action,
+                "progress/action_histogram": action_hist
+            }
+            
+            # Log selected metrics
+            for k in ['eval/episode_reward', 'eval/episode_reward_std', 'eval/episode_length']:
+                if k in metrics:
+                    log_dict[k] = metrics[k].item() if hasattr(metrics[k], "item") else metrics[k]
+                    
+            wandb.log(log_dict)
+        except Exception as e:
+            print(f"Video rendering failed: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("Warning: No params available, can't create inference function")
+        print("Available metrics keys:", list(metrics.keys()))
+        # Log metrics without video
         log_dict = {
-            "progress_rollout_video": wandb.Video(video_name, format="mp4"),
             "progress/num_steps": num_steps,
             "progress/eval_episode_reward": y_data[-1],
             "progress/eval_episode_reward_std": ydataerr[-1],
             "progress/it_per_s": it_per_s,
             "progress/avg_episode_reward": avg_reward,
-            "progress/avg_action": avg_action,
-            "progress/action_histogram": action_hist
         }
-        
-        # Log all provided metrics
-        for k, v in metrics.items():
-            if k != 'params':  # Don't try to log the large parameter arrays
-                log_dict[k] = v.item() if hasattr(v, "item") else v
+        # Log selected metrics
+        for k in ['eval/episode_reward', 'eval/episode_reward_std', 'eval/episode_length']:
+            if k in metrics:
+                log_dict[k] = metrics[k].item() if hasattr(metrics[k], "item") else metrics[k]
                 
         wandb.log(log_dict)
-    except Exception as e:
-        print(f"Video rendering failed: {e}")
-        import traceback
-        traceback.print_exc()
 
 # Before calling train_fn, make sure to initialize eval_env properly
 
