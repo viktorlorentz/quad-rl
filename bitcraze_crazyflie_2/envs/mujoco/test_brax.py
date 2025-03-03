@@ -84,7 +84,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # set sim timestep based on freq and steps per action and set timestep
     dt = self.time_per_action / self.sim_steps_per_action
-    sys.model.opt.timestep = dt
+    sys.mj_model.opt.timestep = dt
 
     # Maximum thrust from original env.
     self.max_thrust = 0.11772
