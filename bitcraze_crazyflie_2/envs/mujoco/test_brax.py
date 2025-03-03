@@ -60,17 +60,14 @@ class MultiQuadEnv(PipelineEnv):
   def __init__(
       self,
       policy_freq: float = 250,              # Policy frequency in Hz.
-      sim_steps_per_action: int = 3,           # Physics steps between control actions.
+      sim_steps_per_action: int = 2,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
       reset_noise_scale: float = 1e-2,
       **kwargs,
   ):
     # Load the MJX model from the XML file.
     mj_model = mujoco.MjModel.from_xml_path("two_quad_payload.xml")
-    # Adjust solver options similar to the Humanoid example.
-    mj_model.opt.solver = mujoco.mjtSolver.mjSOL_CG
-    mj_model.opt.iterations = 6
-    mj_model.opt.ls_iterations = 6
+
 
     sys = mjcf.load_model(mj_model)
     kwargs['n_frames'] = kwargs.get('n_frames', sim_steps_per_action)
@@ -84,6 +81,12 @@ class MultiQuadEnv(PipelineEnv):
     self.max_time = max_time
     self._reset_noise_scale = reset_noise_scale
     self.warmup_time = 1.0
+
+    # set sim timestep based on freq and steps per action and set timestep
+    sim_dt = self.time_per_action / self.sim_steps_per_action
+    self.sys = self.sys.replace(dt=sim_dt)
+    self.sys = self.sys.replace(timestep=sim_dt)
+    
 
     # Maximum thrust from original env.
     self.max_thrust = 0.11772
@@ -214,7 +217,7 @@ class MultiQuadEnv(PipelineEnv):
     quad_distance = jp.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
 
     payload_error = team_obs[:3]
-    payload_linvel = team_obs[3:6]
+    payload_linvel_penalty = jp.linalg.norm(team_obs[3:6])
     distance_reward = jp.exp(-jp.linalg.norm(payload_error))
     # velocity_towards_target = 10 * (jp.dot(payload_error, payload_linvel) /
     #                                 (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
@@ -230,7 +233,7 @@ class MultiQuadEnv(PipelineEnv):
     # reward += velocity_towards_target
     reward += safe_distance_reward
     reward += jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
-    reward -= payload_linvel
+    reward -= payload_linvel_penalty
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
     reward -= smooth_action_penalty
@@ -283,23 +286,71 @@ train_fn = functools.partial(
 x_data, y_data, ydataerr = [], [], []
 times = [datetime.now()]
 
-def progress(num_steps, metrics):
-  times.append(datetime.now())
-  x_data.append(num_steps)
-  y_data.append(metrics['eval/episode_reward'])
-  ydataerr.append(metrics['eval/episode_reward_std'])
-  plt.xlim([0, train_fn.keywords['num_timesteps'] * 1.25])
-  plt.xlabel('# environment steps')
-  plt.ylabel('reward per episode')
-  plt.title(f'y={y_data[-1]:.3f}')
-  plt.errorbar(x_data, y_data, yerr=ydataerr)
-  plt.savefig('mjx_brax_multiquad_policy.png')
-  print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
-  print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
-  print(f'time: {times[-1] - times[0]}')
-  print(f'eval_metrics: {metrics}')
+# Helper function to save videos.
+def save_video(frames, filename, fps=30):
+    try:
+        import cv2
+        height, width, _ = frames[0].shape
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(filename, fourcc, fps, (width, height))
+        for frame in frames:
+            video.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        video.release()
+        print(f"Video saved to {filename}")
+    except ImportError:
+        try:
+            import imageio
+            imageio.mimsave(filename, frames, fps=fps)
+            print(f"Video saved to {filename}")
+        except ImportError:
+            print("Could not save video. Install OpenCV or imageio.")
 
-  
+# Helper function to render a rollout video.
+def render_video(video_filename, duration=5.0, framerate=30):
+    # Use the evaluation environment's mujoco model.
+    mj_model = eval_env.sys.mj_model
+    mj_data = mj_model.make_data()
+    # Set up a GL context and renderer.
+    ctx = mujoco.GLContext(1920, 1080)
+    ctx.make_current()
+    renderer = mjcf.Renderer(mj_model, width=1920, height=1080)
+    scene_option = mujoco.MjvOption()
+    scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
+    frames = []
+    mujoco.mj_resetData(mj_model, mj_data)
+    while mj_data.time < duration:
+        mujoco.mj_step(mj_model, mj_data)
+        # Capture a frame approximately at the desired framerate.
+        if len(frames) < mj_data.time * framerate:
+            renderer.update_scene(mj_data, scene_option=scene_option)
+            frame = renderer.render()
+            frames.append(frame)
+    renderer.close()
+    save_video(frames, video_filename, fps=framerate)
+
+# Updated progress callback.
+def progress(num_steps, metrics):
+    times.append(datetime.now())
+    x_data.append(num_steps)
+    y_data.append(metrics['eval/episode_reward'])
+    ydataerr.append(metrics['eval/episode_reward_std'])
+    plt.xlim([train_fn.keywords['num_timesteps'] * -0.1, train_fn.keywords['num_timesteps'] * 1.25])
+    plt.xlabel('# environment steps')
+    plt.ylabel('reward per episode')
+    plt.title(f'y={y_data[-1]:.3f}')
+    plt.errorbar(x_data, y_data, yerr=ydataerr)
+    plt.savefig('mjx_brax_multiquad_policy.png')
+    print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
+    print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
+    print(f'time: {times[-1] - times[0]}')
+    print(f'eval_metrics: {metrics}')
+    
+    # Render and save a short rollout video at every progress call.
+    video_name = f'progress_rollout_{num_steps}.mp4'
+    try:
+        render_video(video_name, duration=5.0, framerate=30)
+    except Exception as e:
+        print("Video rendering failed:", e)
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
