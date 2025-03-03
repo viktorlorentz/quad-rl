@@ -219,10 +219,10 @@ class MultiQuadEnv(PipelineEnv):
     quad_distance = jp.linalg.norm(quad1_obs[:3] - quad2_obs[:3])
 
     payload_error = team_obs[:3]
-    payload_linvel_penalty = jp.linalg.norm(team_obs[3:6])
+    payload_linvel = team_obs[3:6]
     distance_reward = jp.exp(-jp.linalg.norm(payload_error))
-    # velocity_towards_target = 10 * (jp.dot(payload_error, payload_linvel) /
-    #                                 (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
+    velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
+                                    (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 if collision else 0.0
     out_of_bounds_penalty = 10.0 if out_of_bounds else 0.0
@@ -231,11 +231,11 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += distance_reward
-    # reward += velocity_towards_target
+    reward += 5 * distance_reward
+    reward += velocity_towards_target
     reward += safe_distance_reward
     reward += jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
-    reward -= payload_linvel_penalty
+
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
     reward -= smooth_action_penalty
@@ -268,11 +268,11 @@ for i in range(10):
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=1_000_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=1000,                  # Evaluate frequently to monitor performance.
+    num_timesteps=200_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_evals=200,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
-    episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
-    normalize_observations=True,   # Normalize observations for stable training.
+    episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
+    normalize_observations=False,   # Normalize observations for stable training.
     action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
     unroll_length=10,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
@@ -280,7 +280,7 @@ train_fn = functools.partial(
     discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
+    num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=1024,               # Use a batch size that balances throughput with memory usage.
     seed=1                        # A fixed seed for reproducibility.
 )
