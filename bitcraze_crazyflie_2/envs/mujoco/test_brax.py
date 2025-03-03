@@ -151,7 +151,12 @@ class MultiQuadEnv(PipelineEnv):
     collision = jp.any(data.contact.geom)
 
     # out of bounds if angle is greater than 80 degrees
-    out_of_bounds = jp.absolute(jp.array([angle_q1, angle_q2])) > jp.radians(80)
+    out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
+    out_of_bounds = jp.logical_or(out_of_bounds, jp.absolute(angle_q2) > jp.radians(80))
+
+    # Terminate if quad below the payload.
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
 
     # Compute new observation using the previous last_action.
@@ -163,17 +168,13 @@ class MultiQuadEnv(PipelineEnv):
     done = out_of_bounds
     done = jp.logical_or(done, collision)
 
-    # Terminate if quad below the payload.
-    done = jp.logical_or(done, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
-    done = jp.logical_or(done, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
-
     # Terminate if time exceeds the maximum time.
     done = jp.logical_or(done, data.time > self.max_time)
 
     # Convert done to float32.
     done = jp.where(done, jp.ones_like(state.done, dtype=jp.float32), jp.zeros_like(state.done, dtype=jp.float32))
     
-    done = jp.where(data.time > self.max_time, 1.0, 0.0)
+
     new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
