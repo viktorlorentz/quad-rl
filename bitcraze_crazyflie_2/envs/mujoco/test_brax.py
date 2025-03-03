@@ -160,7 +160,7 @@ class MultiQuadEnv(PipelineEnv):
         obs, data.time, collision, out_of_bounds, action_scaled, angle_q1, angle_q2, prev_last_action)
 
     # Terminate if simulation time exceeds max_time.
-    done = jp.where(data.time > self.max_time, 1.0, 0.0)
+    done = data.time > self.max_time
 
     # Terminate if collision or out of bounds.
     done |= collision
