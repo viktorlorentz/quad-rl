@@ -336,8 +336,6 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     renderer.close()
     save_video(frames, video_filename, fps=framerate)
 
-# Updated progress callback.
-from render_helper import render_rollout  # assuming helper is in this file
 
 def progress(num_steps, metrics):
     global jit_inference_fn, eval_env
@@ -386,8 +384,10 @@ def progress(num_steps, metrics):
             rollout.append(state_rollout.pipeline_state)
             if state_rollout.done:
                 break
-        # Use render_rollout instead of eval_env.render.
-        frames = render_rollout(eval_env, rollout[::render_every], camera='side')
+        # Render the rollout using eval_env with camera='side'.
+        frames = eval_env.render(rollout[::render_every], camera='side')
+        # Use provided FPS calculation.
+
         fps = 1.0 / env.dt / render_every
         save_video(frames, video_name, fps=fps)
         
