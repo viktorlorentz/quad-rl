@@ -284,6 +284,11 @@ for i in range(10):
 
 # media.show_video(env.render(rollout), fps=1.0 / env.dt)
 
+# Add the callback to capture policy parameters during training:
+def policy_params_callback(state):
+    global current_policy_params
+    current_policy_params = state.params
+
 train_fn = functools.partial(
     ppo.train,
     num_timesteps=500_000_000,      # Give the agent enough interactions to learn complex dynamics.
