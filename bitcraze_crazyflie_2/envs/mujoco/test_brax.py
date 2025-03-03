@@ -387,7 +387,7 @@ render_every = 2
 # Initialize evaluation state and set a command in state.info.
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
-state.info = {'command': "video_rendering"}  # Replace with your desired command if needed.
+
 rollout = [state.pipeline_state]
 
 
