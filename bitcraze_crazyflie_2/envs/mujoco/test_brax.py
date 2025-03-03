@@ -307,7 +307,7 @@ def save_video(frames, filename, fps=30):
 def render_video(video_filename, env, duration=5.0, framerate=30):  # modified signature to include env
     # Use the environment's mujoco model.
     mj_model = env.sys.mj_model  # replaced eval_env with env
-    mj_data = mj_model.make_data()
+    mj_data = mujoco.MjData(mj_model)
     # Set up a GL context and renderer.
     ctx = mujoco.GLContext(1920, 1080)
     ctx.make_current()
@@ -389,7 +389,7 @@ for i in range(n_steps):
 # Demonstrate MJX Policy in MuJoCo (Optional)
 # ----------------------------------------
 mj_model = eval_env.sys.mj_model
-mj_data = mj_model.make_data()
+mj_data = mujoco.MjData(mj_model)
 
 renderer = mjcf.Renderer(mj_model)
 ctrl = jp.zeros(mj_model.nu)
