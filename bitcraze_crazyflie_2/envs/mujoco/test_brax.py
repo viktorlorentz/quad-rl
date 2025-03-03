@@ -159,16 +159,16 @@ class MultiQuadEnv(PipelineEnv):
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled, angle_q1, angle_q2, prev_last_action)
 
-    # Terminate if simulation time exceeds max_time.
-    done = data.time > self.max_time
-
     # Terminate if collision or out of bounds.
-    done |= collision
+    done = collision
     done |= out_of_bounds
 
     # Terminate if quad below the payload.
     done |= data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2]
     done |= data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2]
+
+    # Terminate if time exceeds the maximum time.
+    done |= data.time > self.max_time
 
     new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
