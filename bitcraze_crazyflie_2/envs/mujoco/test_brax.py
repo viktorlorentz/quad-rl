@@ -150,6 +150,12 @@ class MultiQuadEnv(PipelineEnv):
 
     # collision = jp.any(data.contact.geom , axis=0) # Broken
 
+    # distacne between quads
+    quad1_pos = data.xpos[self.q1_body_id]
+    quad2_pos = data.xpos[self.q2_body_id]
+    quad_distance = jp.linalg.norm(quad1_pos - quad2_pos)
+    collision = quad_distance < 0.13 # hacky collision detection
+
     # out of bounds if angle is greater than 80 degrees
     out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
     out_of_bounds = jp.logical_or(out_of_bounds, jp.absolute(angle_q2) > jp.radians(80))
@@ -246,7 +252,7 @@ class MultiQuadEnv(PipelineEnv):
     # norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
     # velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
   
-    safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
+    safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.12 ** 2))
     collision_penalty = 10.0 * collision
     out_of_bounds_penalty = 10.0 * out_of_bounds
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
@@ -263,8 +269,8 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += distance_reward
-    reward += safe_distance_reward
+    reward += 2 * distance_reward
+    reward += 2 * safe_distance_reward
     # reward += velocity_towards_target
     reward += quad_above_reward
     reward += up_reward
