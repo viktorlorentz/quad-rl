@@ -350,7 +350,6 @@ def progress(num_steps, metrics):
     it_per_s = num_steps / total_time if total_time > 0 else 0
     avg_reward = float(np.mean(y_data))
     
-    # Calculate average actions and histogram if available.
     if 'actions' in metrics:
         actions = np.array(metrics['actions'])
         avg_action = float(np.mean(actions))
@@ -365,10 +364,28 @@ def progress(num_steps, metrics):
     print(f'time: {times[-1] - times[0]}')
     print(f'eval_metrics: {metrics}')
     
-    # Render and save a short rollout video at every progress call.
     video_name = f'progress_rollout_{num_steps}.mp4'
     try:
-        render_video(video_name, env, duration=5.0, framerate=30)
+        # Simulate a rollout using the current trained policy following the provided code example.
+        rng_rollout = jax.random.PRNGKey(0)
+        state_rollout = jit_reset(rng_rollout)
+        rollout = [state_rollout.pipeline_state]
+        # 10 seconds of simulation at 250 Hz.
+        n_steps_rl = 2500
+        render_every = 2
+        for i in range(n_steps_rl):
+            act_rng, rng_rollout = jax.random.split(rng_rollout)
+            ctrl, _ = jit_inference_fn(state_rollout.obs, act_rng)
+            state_rollout = jit_step(state_rollout, ctrl)
+            rollout.append(state_rollout.pipeline_state)
+            if state_rollout.done:
+                break
+        # Render the rollout using eval_env with camera='side'.
+        frames = eval_env.render(rollout[::render_every], camera='side')
+        # Use provided FPS calculation.
+        fps = 1.0 / env.dt / render_every
+        save_video(frames, video_name, fps=fps)
+        
         log_dict = {
             "progress_rollout_video": wandb.Video(video_name, format="mp4"),
             "progress/num_steps": num_steps,
@@ -379,12 +396,9 @@ def progress(num_steps, metrics):
             "progress/avg_action": avg_action,
             "progress/action_histogram": action_hist
         }
-        # Add all metrics from the metrics object, converting arrays to scalars if needed.
+        # Log all provided metrics.
         for k, v in metrics.items():
-            if hasattr(v, "item"):
-                log_dict[k] = v.item()
-            else:
-                log_dict[k] = v
+            log_dict[k] = v.item() if hasattr(v, "item") else v
         wandb.log(log_dict)
     except Exception as e:
         print("Video rendering failed:", e)
