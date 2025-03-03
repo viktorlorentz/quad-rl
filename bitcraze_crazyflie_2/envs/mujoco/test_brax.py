@@ -33,11 +33,6 @@ import time
 
 jax.config.update('jax_platform_name', 'gpu')
 
-jit_inference_fn = None
-eval_env = None
-current_policy_params = None  # Store the latest policy parameters
-training_has_started = False  # Flag to track if training has begun
-
 # ----------------------------------------
 # Helper functions in JAX (converted from numpy/numba)
 def jp_R_from_quat(q: jp.ndarray) -> jp.ndarray:
@@ -248,20 +243,6 @@ class MultiQuadEnv(PipelineEnv):
    
     return reward, None, {}
 
-  def render(self, rollout, camera='track'):
-      """Render a rollout using the environment's mj_model."""
-      mj_model = self.sys.mj_model
-      mj_data = mujoco.MjData(mj_model)
-      renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
-      frames = []
-      for _ in rollout:
-          # Update mj_data per frame if needed (placeholder for custom state-setting)
-          mujoco.mj_resetData(mj_model, mj_data)
-          renderer.update_scene(mj_data, camera=camera)
-          frames.append(renderer.render())
-      renderer.close()
-      return frames
-
 # Register the environment under the name 'multiquad'
 envs.register_environment('multiquad', MultiQuadEnv)
 
@@ -284,14 +265,9 @@ for i in range(10):
 
 # media.show_video(env.render(rollout), fps=1.0 / env.dt)
 
-# Add the callback to capture policy parameters during training:
-def policy_params_callback(state):
-    global current_policy_params
-    current_policy_params = state.params
-
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=500_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=50_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=10,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
@@ -305,8 +281,7 @@ train_fn = functools.partial(
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=1024,               # Use a batch size that balances throughput with memory usage.
-    seed=1,                        # A fixed seed for reproducibility.
-    callback=policy_params_callback  # Add the callback to get parameters during training
+    seed=1                        # A fixed seed for reproducibility.
 )
 
 x_data, y_data, ydataerr = [], [], []
@@ -340,9 +315,9 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     mj_model = env.sys.mj_model  # replaced eval_env with env
     mj_data = mujoco.MjData(mj_model)
     # Set up a GL context and renderer.
-    ctx = mujoco.GLContext(1080, 720)
-    ctx.make_current() 
-    renderer = mujoco.Renderer(mj_model, width=1080, height=720)
+    # ctx = mujoco.GLContext(1920, 1080)
+    # ctx.make_current()
+    renderer = mujoco.Renderer(mj_model) # , width=1920, height=1080
     scene_option = mujoco.MjvOption()
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
     frames = []
@@ -358,179 +333,38 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     renderer.close()
     save_video(frames, video_filename, fps=framerate)
 
-
+# Updated progress callback.
 def progress(num_steps, metrics):
-    global jit_inference_fn, eval_env, current_policy_params, training_has_started
     times.append(datetime.now())
+    x_data.append(num_steps)
+    y_data.append(metrics['eval/episode_reward'])
+    ydataerr.append(metrics['eval/episode_reward_std'])
+    plt.xlim([train_fn.keywords['num_timesteps'] * -0.1, train_fn.keywords['num_timesteps'] * 1.25])
+    plt.xlabel('# environment steps')
+    plt.ylabel('reward per episode')
+    plt.title(f'y={y_data[-1]:.3f}')
+    plt.errorbar(x_data, y_data, yerr=ydataerr)
+    plt.savefig('mjx_brax_multiquad_policy.png')
+    print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
+    print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
+    print(f'time: {times[-1] - times[0]}')
+    print(f'eval_metrics: {metrics}')
     
- 
-    # Calculate stats
-    total_time = (times[-1] - times[0]).total_seconds()
-    it_per_s = num_steps / total_time if total_time > 0 else 0
-    avg_reward = float(np.mean(y_data))
-    
-    # Process action metrics if available
-    if 'actions' in metrics:
-        actions = np.array(metrics['actions'])
-        avg_action = float(np.mean(actions))
-        hist, bins = np.histogram(actions, bins=10)
-        action_hist = {'hist': hist.tolist(), 'bins': bins.tolist()}
-    else:
-        avg_action = None
-        action_hist = None
-
-    # Print progress information
-    print(f'Progress: {num_steps / train_fn.keywords["num_timesteps"] * 100:.1f}%')
-    print(f'Step: {num_steps}, Reward: {y_data[-1]:.3f} ± {ydataerr[-1]:.3f}')
-    print(f'Speed: {it_per_s:.1f} steps/sec, Time elapsed: {total_time:.1f} sec')
-    
-    # Mark that training has started
-    training_has_started = True
-    
-    # Skip video rendering for the first evaluation to avoid errors with policy not being ready
-    if num_steps == 0:
-        print("Skipping initial video rendering...")
-        log_dict = {
-            "progress/num_steps": num_steps,
-            "progress/eval_episode_reward": y_data[-1],
-            "progress/eval_episode_reward_std": ydataerr[-1],
-        }
-        # Log all metrics from the dictionary
-        for k, v in metrics.items():
-            log_dict[k] = v.item() if hasattr(v, "item") else v
-        wandb.log(log_dict)
-        return
-    
-    # Attempt video rendering if we have parameters
+    # Render and save a short rollout video at every progress call.
     video_name = f'progress_rollout_{num_steps}.mp4'
-    
-    if current_policy_params is not None:
-        try:
-            # Create an inference function with the most recent parameters
-            inference_fn = make_inference_fn(current_policy_params)
-            local_jit_inference_fn = jax.jit(inference_fn)
-            
-            # Generate rollout
-            rng_rollout = jax.random.PRNGKey(0)
-            state_rollout = jit_reset(rng_rollout)
-            rollout = [state_rollout.pipeline_state]
-            
-            n_steps_rl = 250  # Shortened for quicker rendering
-            render_every = 2
-            
-            for i in range(n_steps_rl):
-                act_rng, rng_rollout = jax.random.split(rng_rollout)
-                ctrl, _ = local_jit_inference_fn(state_rollout.obs, act_rng)
-                state_rollout = jit_step(state_rollout, ctrl)
-                rollout.append(state_rollout.pipeline_state)
-                if state_rollout.done:
-                    break
-            
-            # Render with MuJoCo renderer
-            mj_model = eval_env.sys.mj_model
-            frames = []
-            
-            # Set up the renderer
-            width, height = 640, 480
-            renderer = mujoco.Renderer(mj_model, width=width, height=height)
-            
-            # Render each frame
-            for i, pipeline_state in enumerate(rollout[::render_every]):
-                # Convert MJX state to MuJoCo state for rendering
-                mj_data = mujoco.MjData(mj_model)
-                
-                # Update mj_data with the state data
-                mj_data.qpos = np.array(pipeline_state.q)
-                mj_data.qvel = np.array(pipeline_state.qd)
-                mj_data.time = float(pipeline_state.time)
-                
-                # Update scene and render
-                renderer.update_scene(mj_data, camera='side')
-                frame = renderer.render()
-                frames.append(frame)
-            
-            # Calculate FPS from environment dt
-            fps = 1.0 / eval_env.dt / render_every
-            
-            # Save the video
-            save_video(frames, video_name, fps=fps)
-            
-            # Log to wandb with video
-            log_dict = {
-                "progress_rollout_video": wandb.Video(video_name, format="mp4"),
-                "progress/num_steps": num_steps,
-                "progress/eval_episode_reward": y_data[-1],
-                "progress/eval_episode_reward_std": ydataerr[-1],
-                "progress/it_per_s": it_per_s,
-                "progress/avg_episode_reward": avg_reward,
-            }
-            
-            # Add all remaining metrics to log_dict
-            for k, v in metrics.items():
-                log_dict[k] = v.item() if hasattr(v, "item") else v
-                
-            wandb.log(log_dict)
-            print(f"Video saved to {video_name} and uploaded to wandb")
-            
-        except Exception as e:
-            print(f"Video rendering failed: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            # Log metrics even if video fails
-            log_dict = {
-                "progress/num_steps": num_steps,
-                "progress/eval_episode_reward": y_data[-1],
-                "progress/eval_episode_reward_std": ydataerr[-1],
-                "progress/it_per_s": it_per_s,
-            }
-            for k, v in metrics.items():
-                log_dict[k] = v.item() if hasattr(v, "item") else v
-            wandb.log(log_dict)
-    else:
-        print("Warning: No params available, can't create inference function")
-        
-        # Log metrics without video
-        log_dict = {
-            "progress/num_steps": num_steps,
-            "progress/eval_episode_reward": y_data[-1],
-            "progress/eval_episode_reward_std": ydataerr[-1],
-            "progress/it_per_s": it_per_s,
-        }
-        for k, v in metrics.items():
-            log_dict[k] = v.item() if hasattr(v, "item") else v
-        wandb.log(log_dict)
-
-# Create a function to capture policy parameters during training
-# This will be passed to the train function
-def policy_params_callback(state):
-    global current_policy_params
-    # Extract policy parameters from training state
-    current_policy_params = state.params
-
-# Before calling train_fn, make sure to initialize eval_env properly
-
-# Modify the environment setup code to ensure eval_env is defined before training starts
-env_name = 'multiquad'
-env = envs.get_environment(env_name)
-
-# Set up evaluation environment
-eval_env = envs.get_environment(env_name)
-jit_reset = jax.jit(eval_env.reset)
-jit_step = jax.jit(eval_env.step)
-
-# Add support for egl rendering if available
-try:
-    # Configure MuJoCo to use the EGL rendering backend (requires GPU)
-    os.environ['MUJOCO_GL'] = 'egl'
-    print('Using EGL for rendering (GPU acceleration)')
-except:
-    print('Using default rendering backend')
-
-
+    try:
+        render_video(video_name, env, duration=5.0, framerate=30)  # pass env to render_video
+        # Log the rendered video with wandb.
+        wandb.log({
+            "progress_rollout_video": wandb.Video(video_name, format="mp4"),
+            "num_steps": num_steps,
+            "eval/episode_reward": y_data[-1],
+            "eval/episode_reward_std": ydataerr[-1]
+        })
+    except Exception as e:
+        print("Video rendering failed:", e)
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
-current_policy_params = params  # Store the final parameters globally
 print(f'time to jit: {times[1] - times[0]}')
 print(f'time to train: {times[-1] - times[1]}')
 
