@@ -268,9 +268,9 @@ for i in range(10):
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=30_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=5,                  # Evaluate frequently to monitor performance.
-    reward_scaling=10,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
+    num_timesteps=1_000_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_evals=1000,                  # Evaluate frequently to monitor performance.
+    reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
     normalize_observations=True,   # Normalize observations for stable training.
     action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
@@ -405,7 +405,7 @@ for i in range(n_steps):
 
 # Log the final trained policy video to wandb.
 dt = eval_env.time_per_action / eval_env.sim_steps_per_action
-fps = 1.0 / dt / render_every
+fps = 1.0 / dt 
 final_video_path = "trained_policy_video.mp4"
 save_video(images, final_video_path, fps=float(fps))
 wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
