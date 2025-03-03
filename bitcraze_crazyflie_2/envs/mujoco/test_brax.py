@@ -268,7 +268,7 @@ for i in range(10):
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=50_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=30_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=5,                  # Evaluate frequently to monitor performance.
     reward_scaling=10,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
@@ -335,25 +335,15 @@ def progress(num_steps, metrics):
     plt.title(f'y={y_data[-1]:.3f}')
     plt.errorbar(x_data, y_data, yerr=ydataerr)
     plt.savefig('mjx_brax_multiquad_policy.png')
-    print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
-    print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
-    print(f'time: {times[-1] - times[0]}')
-    print(f'eval_metrics: {metrics}')
-    
-    # Build logging dictionary iterating through metrics.
-    log_dict = {"num_steps": num_steps}
-    for key, value in metrics.items():
-        try:
-            # Attempt to convert value directly
-            log_dict[key] = float(value)
-        except Exception:
-            try:
-                # If value is a 1D array-like, iterate and log each element.
-                for idx, val in enumerate(value):
-                    log_dict[f"{key}_{idx}"] = float(val)
-            except Exception:
-                log_dict[key] = value
-    wandb.log(log_dict)
+
+    it_per_sec = num_steps / (times[-1] - times[0]).total_seconds()
+    progress = num_steps / train_fn.keywords['num_timesteps']
+    reward = y_data[-1]
+    time = times[-1] - times[0]
+    print(f'time: {time}, progress: {progress:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}\r', end='')
+
+    # Log all metrics to wandb.
+    wandb.log({"num_steps": num_steps, **metrics})
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
@@ -414,6 +404,6 @@ for i in range(n_steps):
     images.append(renderer.render())
 
 # Log the final trained policy video to wandb.
-final_video_path = "/Users/viktorlorentz/Dev/ma/quad-rl/trained_policy_video.mp4"
+final_video_path = "trained_policy_video.mp4"
 save_video(images, final_video_path, fps=1.0 / eval_env.dt / render_every)
 wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
