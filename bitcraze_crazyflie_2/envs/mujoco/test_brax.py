@@ -30,6 +30,7 @@ from brax.io import html, mjcf, model
 
 import wandb
 import time
+import imageio
 
 jax.config.update('jax_platform_name', 'gpu')
 
@@ -268,7 +269,7 @@ for i in range(10):
 train_fn = functools.partial(
     ppo.train,
     num_timesteps=50_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=50,                  # Evaluate frequently to monitor performance.
+    num_evals=5,                  # Evaluate frequently to monitor performance.
     reward_scaling=10,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
     normalize_observations=True,   # Normalize observations for stable training.
@@ -292,22 +293,11 @@ wandb.init(project="single_quad_rl", name=f"quad_rl_{int(time.time())}")
 
 # Helper function to save videos.
 def save_video(frames, filename, fps=30):
-    try:
-        import cv2
-        height, width, _ = frames[0].shape
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(filename, fourcc, fps, (width, height))
-        for frame in frames:
-            video.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        video.release()
-        print(f"Video saved to {filename}")
-    except ImportError:
-        try:
-            import imageio
-            imageio.mimsave(filename, frames, fps=fps)
-            print(f"Video saved to {filename}")
-        except ImportError:
-            print("Could not save video. Install OpenCV or imageio.")
+  try:
+      imageio.mimsave(filename, frames, fps=fps)
+      print(f"Video saved to {filename}")
+  except ImportError:
+      print("Could not save video. Install OpenCV or imageio.")
 
 # Helper function to render a rollout video.
 def render_video(video_filename, env, duration=5.0, framerate=30):  # modified signature to include env
@@ -348,9 +338,22 @@ def progress(num_steps, metrics):
     print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
     print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
     print(f'time: {times[-1] - times[0]}')
-
-    # Log all metrics to wandb.
-    wandb.log({"num_steps": num_steps, **metrics})
+    print(f'eval_metrics: {metrics}')
+    
+    # Build logging dictionary iterating through metrics.
+    log_dict = {"num_steps": num_steps}
+    for key, value in metrics.items():
+        try:
+            # Attempt to convert value directly
+            log_dict[key] = float(value)
+        except Exception:
+            try:
+                # If value is a 1D array-like, iterate and log each element.
+                for idx, val in enumerate(value):
+                    log_dict[f"{key}_{idx}"] = float(val)
+            except Exception:
+                log_dict[key] = value
+    wandb.log(log_dict)
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
