@@ -148,6 +148,9 @@ class MultiQuadEnv(PipelineEnv):
     collision = False
     out_of_bounds = False
 
+    collision = jp.any(data.contact)
+
+
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
     reward, _, _ = self.calc_reward(
@@ -220,9 +223,10 @@ class MultiQuadEnv(PipelineEnv):
 
     payload_error = team_obs[:3]
     payload_linvel = team_obs[3:6]
+    linvel_penalty = jp.linalg.norm(payload_linvel)**2
     distance_reward = jp.exp(-jp.linalg.norm(payload_error))
-    velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
-                                    (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
+    # velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
+    #                                 (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 if collision else 0.0
     out_of_bounds_penalty = 10.0 if out_of_bounds else 0.0
@@ -231,11 +235,11 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 5 * distance_reward
-    reward += velocity_towards_target
+    reward += distance_reward
     reward += safe_distance_reward
     reward += jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
 
+    reward -= linvel_penalty
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
     reward -= smooth_action_penalty
@@ -268,8 +272,8 @@ for i in range(10):
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=200_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=200,                  # Evaluate frequently to monitor performance.
+    num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_evals=100,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
     normalize_observations=False,   # Normalize observations for stable training.
@@ -365,7 +369,7 @@ jit_step = jax.jit(eval_env.step)
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
 rollout = [state.pipeline_state]
-n_steps = 4000
+n_steps = 2000
 render_every = 2
 for i in range(n_steps):
   act_rng, rng = jax.random.split(rng)
@@ -405,7 +409,7 @@ for i in range(n_steps):
 
 # Log the final trained policy video to wandb.
 dt = eval_env.time_per_action / eval_env.sim_steps_per_action
-fps = 1.0 / dt 
+fps = 1.0 / dt / render_every
 final_video_path = "trained_policy_video.mp4"
 save_video(images, final_video_path, fps=float(fps))
 wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
