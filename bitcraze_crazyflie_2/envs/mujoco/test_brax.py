@@ -333,7 +333,7 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     renderer.close()
     save_video(frames, video_filename, fps=framerate)
 
-# Updated progress callback.
+# Updated progress callback: remove per-progress video logging and log all metrics.
 def progress(num_steps, metrics):
     times.append(datetime.now())
     x_data.append(num_steps)
@@ -348,21 +348,9 @@ def progress(num_steps, metrics):
     print(f'it/s: {num_steps / (times[-1] - times[0]).total_seconds()}')
     print(f'progress: {num_steps} steps, reward: {y_data[-1]}')
     print(f'time: {times[-1] - times[0]}')
-    print(f'eval_metrics: {metrics}')
-    
-    # Render and save a short rollout video at every progress call.
-    video_name = f'progress_rollout_{num_steps}.mp4'
-    try:
-        render_video(video_name, env, duration=5.0, framerate=30)  # pass env to render_video
-        # Log the rendered video with wandb.
-        wandb.log({
-            "progress_rollout_video": wandb.Video(video_name, format="mp4"),
-            "num_steps": num_steps,
-            "eval/episode_reward": y_data[-1],
-            "eval/episode_reward_std": ydataerr[-1]
-        })
-    except Exception as e:
-        print("Video rendering failed:", e)
+
+    # Log all metrics to wandb.
+    wandb.log({"num_steps": num_steps, **metrics})
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
@@ -419,8 +407,10 @@ for i in range(n_steps):
   for _ in range(eval_env._n_frames):
     mujoco.mj_step(mj_model, mj_data)
   if i % render_every == 0:
-    # Use track camera by passing camera="track"
     renderer.update_scene(mj_data, camera="track")
     images.append(renderer.render())
 
-# media.show_video(images, fps=1.0 / eval_env.dt / render_every)
+# Log the final trained policy video to wandb.
+final_video_path = "/Users/viktorlorentz/Dev/ma/quad-rl/trained_policy_video.mp4"
+save_video(images, final_video_path, fps=1.0 / eval_env.dt / render_every)
+wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
