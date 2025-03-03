@@ -304,9 +304,9 @@ def save_video(frames, filename, fps=30):
             print("Could not save video. Install OpenCV or imageio.")
 
 # Helper function to render a rollout video.
-def render_video(video_filename, duration=5.0, framerate=30):
-    # Use the evaluation environment's mujoco model.
-    mj_model = eval_env.sys.mj_model
+def render_video(video_filename, env, duration=5.0, framerate=30):  # modified signature to include env
+    # Use the environment's mujoco model.
+    mj_model = env.sys.mj_model  # replaced eval_env with env
     mj_data = mj_model.make_data()
     # Set up a GL context and renderer.
     ctx = mujoco.GLContext(1920, 1080)
@@ -346,7 +346,7 @@ def progress(num_steps, metrics):
     # Render and save a short rollout video at every progress call.
     video_name = f'progress_rollout_{num_steps}.mp4'
     try:
-        render_video(video_name, duration=5.0, framerate=30)
+        render_video(video_name, env, duration=5.0, framerate=30)  # pass env to render_video
     except Exception as e:
         print("Video rendering failed:", e)
 
