@@ -151,8 +151,8 @@ class MultiQuadEnv(PipelineEnv):
     collision = jp.any(data.contact.geom)
 
     # out of bounds if angle is greater than 80 degrees
-    out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
-    out_of_bounds = jp.logical_or(out_of_bounds, jp.absolute(angle_q2) > jp.radians(80))
+    # out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
+    # out_of_bounds = jp.logical_or(out_of_bounds, jp.absolute(angle_q2) > jp.radians(80))
 
     # Terminate if quad below the payload.
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
