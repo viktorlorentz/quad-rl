@@ -405,10 +405,6 @@ for i in range(n_steps):
     state = jit_step(state, ctrl)
     rollout.append(state.pipeline_state)
 
-# cal average action
-avg_action = jp.mean(jp.array([s.action for s in rollout]), axis=0)
-print(f"Average action: {avg_action}")
-
 
 frames = eval_env.render(rollout[::render_every], camera='track')
 video_filename = "trained_policy_video.mp4"
