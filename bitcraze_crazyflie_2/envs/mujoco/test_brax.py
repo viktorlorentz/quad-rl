@@ -246,6 +246,20 @@ class MultiQuadEnv(PipelineEnv):
    
     return reward, None, {}
 
+  def render(self, rollout, camera='track'):
+      """Render a rollout using the environment's mj_model."""
+      mj_model = self.sys.mj_model
+      mj_data = mujoco.MjData(mj_model)
+      renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
+      frames = []
+      for _ in rollout:
+          # Update mj_data per frame if needed (placeholder for custom state-setting)
+          mujoco.mj_resetData(mj_model, mj_data)
+          renderer.update_scene(mj_data, camera=camera)
+          frames.append(renderer.render())
+      renderer.close()
+      return frames
+
 # Register the environment under the name 'multiquad'
 envs.register_environment('multiquad', MultiQuadEnv)
 
