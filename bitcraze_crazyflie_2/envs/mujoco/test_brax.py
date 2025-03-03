@@ -172,7 +172,8 @@ class MultiQuadEnv(PipelineEnv):
 
     # Convert done to float32.
     done = jp.where(done, jp.ones_like(state.done, dtype=jp.float32), jp.zeros_like(state.done, dtype=jp.float32))
-
+    
+    done = jp.where(data.time > self.max_time, 1.0, 0.0)
     new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
