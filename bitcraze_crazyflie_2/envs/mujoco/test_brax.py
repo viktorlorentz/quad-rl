@@ -407,6 +407,11 @@ def progress(num_steps, metrics):
     except Exception as e:
         print("Video rendering failed:", e)
 
+# Before calling train_fn, assign the evaluation environment:
+eval_env = envs.get_environment(env_name)
+jit_reset = jax.jit(eval_env.reset)
+jit_step = jax.jit(eval_env.step)
+
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
 print(f'time to train: {times[-1] - times[1]}')
