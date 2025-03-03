@@ -297,7 +297,7 @@ train_fn = functools.partial(
     unroll_length=20,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
-    discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
+    discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=8192,                 # Run 2048 parallel environment instances for efficient data collection.
@@ -411,5 +411,5 @@ for i in range(n_steps):
 
 frames = eval_env.render(rollout[::render_every], camera='track')
 video_filename = "trained_policy_video.mp4"
-save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
+save_video(frames, video_filename, fps=float(1.0 / eval_env.dt / render_every))
 wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
