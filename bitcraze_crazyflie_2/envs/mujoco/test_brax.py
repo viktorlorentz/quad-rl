@@ -225,8 +225,11 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     # linvel_penalty = jp.linalg.norm(payload_linvel)**2
     distance_reward = jp.exp(-jp.linalg.norm(payload_error))
-    velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
-                                    (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
+    # Use clamped norms to avoid division by zero.
+    norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
+    norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
+    velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
+  
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 * collision
     out_of_bounds_penalty = 10.0 * out_of_bounds
