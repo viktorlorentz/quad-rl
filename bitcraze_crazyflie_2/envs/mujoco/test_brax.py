@@ -151,8 +151,8 @@ class MultiQuadEnv(PipelineEnv):
     collision = jp.any(data.contact.geom)
 
     # out of bounds if angle is greater than 80 degrees
-    out_of_bounds = jp.any(jp.absolute(jp.array([angle_q1, angle_q2])) > jp.radians(80))
-    print(f"Collision: {collision}, Out of bounds: {out_of_bounds}")
+    out_of_bounds = jp.absolute(jp.array([angle_q1, angle_q2])) > jp.radians(80)
+
 
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
@@ -163,8 +163,12 @@ class MultiQuadEnv(PipelineEnv):
     done = jp.where(data.time > self.max_time, 1.0, 0.0)
 
     # Terminate if collision or out of bounds.
-    done = jp.where(collision, 1.0, done)
-    done = jp.where(out_of_bounds, 1.0, done)
+    done |= collision
+    done |= out_of_bounds
+
+    # Terminate if quad below the payload.
+    done |= data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2]
+    done |= data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2]
 
     new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
@@ -418,7 +422,10 @@ for i in range(n_steps):
     rollout.append(state.pipeline_state)
 
 
-frames = eval_env.render(rollout[::render_every], camera='track')
+ctx = mujoco.GLContext(1920, 1080)
+ctx.make_current()
+
+frames = eval_env.render(rollout[::render_every], camera='track', width=1920, height=1080)
 video_filename = "trained_policy_video.mp4"
 save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
 wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
