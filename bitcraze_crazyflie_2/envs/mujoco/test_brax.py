@@ -226,7 +226,7 @@ class MultiQuadEnv(PipelineEnv):
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 if collision else 0.0
     out_of_bounds_penalty = 10.0 if out_of_bounds else 0.0
-    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust) / 10.0
+    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
     thrust_reward = jp.sum(action) * 10.0
 
     # Combine components to form the final reward.
@@ -404,6 +404,8 @@ for i in range(n_steps):
     images.append(renderer.render())
 
 # Log the final trained policy video to wandb.
+dt = eval_env.time_per_action / eval_env.sim_steps_per_action
+fps = 1.0 / dt / render_every
 final_video_path = "trained_policy_video.mp4"
-save_video(images, final_video_path, fps=float(1.0 / eval_env.dt / render_every))
+save_video(images, final_video_path, fps=float(fps))
 wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
