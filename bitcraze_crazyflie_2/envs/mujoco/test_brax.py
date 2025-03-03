@@ -35,6 +35,8 @@ jax.config.update('jax_platform_name', 'gpu')
 
 jit_inference_fn = None
 eval_env = None
+current_policy_params = None  # Store the latest policy parameters
+training_has_started = False  # Flag to track if training has begun
 
 # ----------------------------------------
 # Helper functions in JAX (converted from numpy/numba)
@@ -298,7 +300,8 @@ train_fn = functools.partial(
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=1024,               # Use a batch size that balances throughput with memory usage.
-    seed=1                        # A fixed seed for reproducibility.
+    seed=1,                        # A fixed seed for reproducibility.
+    callback=policy_params_callback  # Add the callback to get parameters during training
 )
 
 x_data, y_data, ydataerr = [], [], []
@@ -352,22 +355,16 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
 
 
 def progress(num_steps, metrics):
-    global jit_inference_fn, eval_env
+    global jit_inference_fn, eval_env, current_policy_params, training_has_started
     times.append(datetime.now())
-    x_data.append(num_steps)
-    y_data.append(metrics['eval/episode_reward'])
-    ydataerr.append(metrics['eval/episode_reward_std'])
-    plt.xlim([train_fn.keywords['num_timesteps'] * -0.1, train_fn.keywords['num_timesteps'] * 1.25])
-    plt.xlabel('# environment steps')
-    plt.ylabel('reward per episode')
-    plt.title(f'y={y_data[-1]:.3f}')
-    plt.errorbar(x_data, y_data, yerr=ydataerr)
-    plt.savefig('mjx_brax_multiquad_policy.png')
     
+ 
+    # Calculate stats
     total_time = (times[-1] - times[0]).total_seconds()
     it_per_s = num_steps / total_time if total_time > 0 else 0
     avg_reward = float(np.mean(y_data))
     
+    # Process action metrics if available
     if 'actions' in metrics:
         actions = np.array(metrics['actions'])
         avg_action = float(np.mean(actions))
@@ -377,34 +374,38 @@ def progress(num_steps, metrics):
         avg_action = None
         action_hist = None
 
-    print(f'it/s: {it_per_s}')
-    print(f'time: {times[-1] - times[0]}')
-    print(f'progress: {num_steps / train_fn.keywords["num_timesteps"] * 100:.2f}%, reward: {y_data[-1]}')
+    # Print progress information
+    print(f'Progress: {num_steps / train_fn.keywords["num_timesteps"] * 100:.1f}%')
+    print(f'Step: {num_steps}, Reward: {y_data[-1]:.3f} ± {ydataerr[-1]:.3f}')
+    print(f'Speed: {it_per_s:.1f} steps/sec, Time elapsed: {total_time:.1f} sec')
     
-    # Get policy parameters from the training state in Brax's PPO implementation
-    # In Brax's PPO, parameters are directly passed in the 'params' key during evaluation
-    current_params = None
-    if 'params' in metrics:
-        current_params = metrics['params']
-    elif 'training_params' in metrics:
-        current_params = metrics['training_params']
+    # Mark that training has started
+    training_has_started = True
     
-    # If we can't get parameters from metrics, try to access them from the current training state
-    if current_params is None and hasattr(ppo, 'get_params'):
+    # Skip video rendering for the first evaluation to avoid errors with policy not being ready
+    if num_steps == 0:
+        print("Skipping initial video rendering...")
+        log_dict = {
+            "progress/num_steps": num_steps,
+            "progress/eval_episode_reward": y_data[-1],
+            "progress/eval_episode_reward_std": ydataerr[-1],
+        }
+        # Log all metrics from the dictionary
+        for k, v in metrics.items():
+            log_dict[k] = v.item() if hasattr(v, "item") else v
+        wandb.log(log_dict)
+        return
+    
+    # Attempt video rendering if we have parameters
+    video_name = f'progress_rollout_{num_steps}.mp4'
+    
+    if current_policy_params is not None:
         try:
-            current_params = ppo.get_params()
-        except:
-            pass
-    
-    # Only attempt to create video if we have parameters
-    if current_params is not None:
-        video_name = f'progress_rollout_{num_steps}.mp4'
-        try:
-            # Create a new inference function with the current parameters
-            inference_fn = make_inference_fn(current_params)
+            # Create an inference function with the most recent parameters
+            inference_fn = make_inference_fn(current_policy_params)
             local_jit_inference_fn = jax.jit(inference_fn)
             
-            # Reset the environment and generate a rollout
+            # Generate rollout
             rng_rollout = jax.random.PRNGKey(0)
             state_rollout = jit_reset(rng_rollout)
             rollout = [state_rollout.pipeline_state]
@@ -428,12 +429,12 @@ def progress(num_steps, metrics):
             width, height = 640, 480
             renderer = mujoco.Renderer(mj_model, width=width, height=height)
             
-            # Render each frame in the rollout with proper camera
+            # Render each frame
             for i, pipeline_state in enumerate(rollout[::render_every]):
-                # Convert MJX state back to MuJoCo state for rendering
+                # Convert MJX state to MuJoCo state for rendering
                 mj_data = mujoco.MjData(mj_model)
                 
-                # Update mj_data with the state data from pipeline_state
+                # Update mj_data with the state data
                 mj_data.qpos = np.array(pipeline_state.q)
                 mj_data.qvel = np.array(pipeline_state.qd)
                 mj_data.time = float(pipeline_state.time)
@@ -443,13 +444,13 @@ def progress(num_steps, metrics):
                 frame = renderer.render()
                 frames.append(frame)
             
-            # Calculate FPS from environment dt and render frequency
+            # Calculate FPS from environment dt
             fps = 1.0 / eval_env.dt / render_every
             
             # Save the video
             save_video(frames, video_name, fps=fps)
             
-            # Log to wandb
+            # Log to wandb with video
             log_dict = {
                 "progress_rollout_video": wandb.Video(video_name, format="mp4"),
                 "progress/num_steps": num_steps,
@@ -457,37 +458,50 @@ def progress(num_steps, metrics):
                 "progress/eval_episode_reward_std": ydataerr[-1],
                 "progress/it_per_s": it_per_s,
                 "progress/avg_episode_reward": avg_reward,
-                "progress/avg_action": avg_action,
-                "progress/action_histogram": action_hist
             }
             
-            # Log selected metrics
-            for k in ['eval/episode_reward', 'eval/episode_reward_std', 'eval/episode_length']:
-                if k in metrics:
-                    log_dict[k] = metrics[k].item() if hasattr(metrics[k], "item") else metrics[k]
-                    
+            # Add all remaining metrics to log_dict
+            for k, v in metrics.items():
+                log_dict[k] = v.item() if hasattr(v, "item") else v
+                
             wandb.log(log_dict)
+            print(f"Video saved to {video_name} and uploaded to wandb")
+            
         except Exception as e:
             print(f"Video rendering failed: {e}")
             import traceback
             traceback.print_exc()
+            
+            # Log metrics even if video fails
+            log_dict = {
+                "progress/num_steps": num_steps,
+                "progress/eval_episode_reward": y_data[-1],
+                "progress/eval_episode_reward_std": ydataerr[-1],
+                "progress/it_per_s": it_per_s,
+            }
+            for k, v in metrics.items():
+                log_dict[k] = v.item() if hasattr(v, "item") else v
+            wandb.log(log_dict)
     else:
         print("Warning: No params available, can't create inference function")
-        print("Available metrics keys:", list(metrics.keys()))
+        
         # Log metrics without video
         log_dict = {
             "progress/num_steps": num_steps,
             "progress/eval_episode_reward": y_data[-1],
             "progress/eval_episode_reward_std": ydataerr[-1],
             "progress/it_per_s": it_per_s,
-            "progress/avg_episode_reward": avg_reward,
         }
-        # Log selected metrics
-        for k in ['eval/episode_reward', 'eval/episode_reward_std', 'eval/episode_length']:
-            if k in metrics:
-                log_dict[k] = metrics[k].item() if hasattr(metrics[k], "item") else metrics[k]
-                
+        for k, v in metrics.items():
+            log_dict[k] = v.item() if hasattr(v, "item") else v
         wandb.log(log_dict)
+
+# Create a function to capture policy parameters during training
+# This will be passed to the train function
+def policy_params_callback(state):
+    global current_policy_params
+    # Extract policy parameters from training state
+    current_policy_params = state.params
 
 # Before calling train_fn, make sure to initialize eval_env properly
 
@@ -511,6 +525,7 @@ except:
 
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
+current_policy_params = params  # Store the final parameters globally
 print(f'time to jit: {times[1] - times[0]}')
 print(f'time to train: {times[-1] - times[1]}')
 
