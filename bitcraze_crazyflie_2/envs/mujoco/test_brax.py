@@ -264,7 +264,7 @@ jit_step = jax.jit(env.step)
 state = jit_reset(jax.random.PRNGKey(0))
 rollout = [state.pipeline_state]
 for i in range(10):
-  ctrl = -0.1 * jp.ones(env.sys.nu)
+  ctrl = 0.1 * jp.ones(env.sys.nu)
   state = jit_step(state, ctrl)
   rollout.append(state.pipeline_state)
 
@@ -284,7 +284,7 @@ train_fn = functools.partial(
     discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
+    num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=1024,               # Use a batch size that balances throughput with memory usage.
     seed=1                        # A fixed seed for reproducibility.
 )
@@ -369,47 +369,34 @@ jit_step = jax.jit(eval_env.step)
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
 rollout = [state.pipeline_state]
+
+
+# --------------------
+# Video Rendering 
+# --------------------
 n_steps = 2000
 render_every = 2
+# Initialize evaluation state and set a command in state.info.
+rng = jax.random.PRNGKey(0)
+state = jit_reset(rng)
+state.info = {'command': "video_rendering"}  # Replace with your desired command if needed.
+rollout = [state.pipeline_state]
+
+
 for i in range(n_steps):
-  act_rng, rng = jax.random.split(rng)
-  ctrl, _ = jit_inference_fn(state.obs, act_rng)
-  state = jit_step(state, ctrl)
-  rollout.append(state.pipeline_state)
-  if state.done:
-    break
+    act_rng, rng = jax.random.split(rng)
+    ctrl, _ = jit_inference_fn(state.obs, act_rng)
 
-# media.show_video(
-#     eval_env.render(rollout[::render_every]),
-#     fps=1.0 / eval_env.dt / render_every
-# )
+    
+    state = jit_step(state, ctrl)
+    rollout.append(state.pipeline_state)
 
-# ----------------------------------------
-# Demonstrate MJX Policy in MuJoCo (Optional)
-# ----------------------------------------
-mj_model = eval_env.sys.mj_model
-mj_data = mujoco.MjData(mj_model)
+# cal average action
+avg_action = jp.mean(jp.array([s.action for s in rollout]), axis=0)
+print(f"Average action: {avg_action}")
 
-renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
-ctrl = jp.zeros(mj_model.nu)
 
-images = []
-for i in range(n_steps):
-  act_rng, rng = jax.random.split(rng)
-  # For rendering, extract last_action from state.obs.
-  obs = eval_env._get_obs(mjx.put_data(mj_model, mj_data),
-                          state.obs[-(eval_env.sys.nu+1):-1])
-  ctrl, _ = jit_inference_fn(obs, act_rng)
-  mj_data.ctrl = ctrl
-  for _ in range(eval_env._n_frames):
-    mujoco.mj_step(mj_model, mj_data)
-  if i % render_every == 0:
-    renderer.update_scene(mj_data, camera="track")
-    images.append(renderer.render())
-
-# Log the final trained policy video to wandb.
-dt = eval_env.time_per_action / eval_env.sim_steps_per_action
-fps = 1.0 / dt / render_every
-final_video_path = "trained_policy_video.mp4"
-save_video(images, final_video_path, fps=float(fps))
-wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
+frames = eval_env.render(rollout[::render_every], camera='track')
+video_filename = "trained_policy_video.mp4"
+save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
+wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
