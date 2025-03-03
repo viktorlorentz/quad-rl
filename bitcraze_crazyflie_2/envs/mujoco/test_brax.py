@@ -288,7 +288,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=300_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
@@ -315,7 +315,7 @@ wandb.init(project="single_quad_rl", name=f"quad_rl_{int(time.time())}")
 # Helper function to save videos.
 def save_video(frames, filename, fps=30):
   try:
-      imageio.mimsave(filename, frames, fps=fps)
+      imageio.mimsave(filename, frames, fps=float(fps))
       print(f"Video saved to {filename}")
   except ImportError:
       print("Could not save video. Install OpenCV or imageio.")
@@ -411,5 +411,5 @@ for i in range(n_steps):
 
 frames = eval_env.render(rollout[::render_every], camera='track')
 video_filename = "trained_policy_video.mp4"
-save_video(frames, video_filename, fps=float(1.0 / eval_env.dt / render_every))
+save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
 wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
