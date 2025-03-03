@@ -84,7 +84,6 @@ class MultiQuadEnv(PipelineEnv):
 
     # set sim timestep based on freq and steps per action and set timestep
     sim_dt = self.time_per_action / self.sim_steps_per_action
-    self.sys = self.sys.replace(dt=sim_dt)
     self.sys = self.sys.replace(timestep=sim_dt)
     
 
