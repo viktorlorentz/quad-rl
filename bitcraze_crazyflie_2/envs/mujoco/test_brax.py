@@ -148,7 +148,7 @@ class MultiQuadEnv(PipelineEnv):
     collision = False
     out_of_bounds = False
 
-    collision = jp.any(data.contact)
+    collision = jp.any(data.contact.geom)
 
 
     # Compute new observation using the previous last_action.
