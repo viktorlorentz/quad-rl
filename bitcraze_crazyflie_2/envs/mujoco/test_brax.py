@@ -405,5 +405,5 @@ for i in range(n_steps):
 
 # Log the final trained policy video to wandb.
 final_video_path = "trained_policy_video.mp4"
-save_video(images, final_video_path, fps=1.0 / eval_env.dt / render_every)
+save_video(images, final_video_path, fps=float(1.0 / eval_env.dt / render_every))
 wandb.log({"trained_policy_video": wandb.Video(final_video_path, format="mp4")})
