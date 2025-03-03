@@ -286,19 +286,19 @@ make_networks_factory = functools.partial(
 train_fn = functools.partial(
     ppo.train,
     num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=100,                  # Evaluate frequently to monitor performance.
+    num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
     normalize_observations=False,   # Normalize observations for stable training.
     action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
-    unroll_length=10,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
+    unroll_length=20,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
-    num_updates_per_batch=8,       # Apply 4 SGD updates per batch of data.
+    num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
     discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
-    batch_size=1024,               # Use a batch size that balances throughput with memory usage.
+    num_envs=8192,                 # Run 2048 parallel environment instances for efficient data collection.
+    batch_size=256,               # Use a batch size that balances throughput with memory usage.
     seed=1,                        # A fixed seed for reproducibility.
     network_factory=make_networks_factory
 )
