@@ -148,7 +148,7 @@ class MultiQuadEnv(PipelineEnv):
     collision = False
     out_of_bounds = False
 
-    collision = jp.any(data.contact.geom , axis=1)
+    collision = jp.any(data.contact.geom , axis=0)
 
     # out of bounds if angle is greater than 80 degrees
     out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
