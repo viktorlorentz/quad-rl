@@ -315,9 +315,9 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     mj_model = env.sys.mj_model  # replaced eval_env with env
     mj_data = mujoco.MjData(mj_model)
     # Set up a GL context and renderer.
-    # ctx = mujoco.GLContext(1920, 1080)
-    # ctx.make_current()
-    renderer = mujoco.Renderer(mj_model) # , width=1920, height=1080
+    ctx = mujoco.GLContext(1080, 720)
+    ctx.make_current() 
+    renderer = mujoco.Renderer(mj_model), width=1080, height=720)
     scene_option = mujoco.MjvOption()
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
     frames = []
