@@ -340,7 +340,7 @@ def progress(num_steps, metrics):
     progress = num_steps / train_fn.keywords['num_timesteps']
     reward = y_data[-1]
     time = times[-1] - times[0]
-    print(f'time: {time}, progress: {progress:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}\r', end='')
+    print(f'time: {time}, progress: {progress:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}')
 
     # Log all metrics to wandb.
     wandb.log({"num_steps": num_steps, **metrics})
