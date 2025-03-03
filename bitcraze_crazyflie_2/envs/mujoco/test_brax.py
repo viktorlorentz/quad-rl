@@ -166,7 +166,6 @@ class MultiQuadEnv(PipelineEnv):
 
     # Terminate if collision or out of bounds.
     done = out_of_bounds
-    done = jp.logical_or(done, collision)
 
   
 
