@@ -365,7 +365,7 @@ jit_step = jax.jit(eval_env.step)
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
 rollout = [state.pipeline_state]
-n_steps = 500
+n_steps = 4000
 render_every = 2
 for i in range(n_steps):
   act_rng, rng = jax.random.split(rng)
