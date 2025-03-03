@@ -215,29 +215,29 @@ class MultiQuadEnv(PipelineEnv):
 
     payload_error = team_obs[:3]
     payload_linvel = team_obs[3:6]
-    distance_penalty = jp.linalg.norm(10 * payload_error) * (1 + sim_time)
-    velocity_towards_target = 10 * (jp.dot(payload_error, payload_linvel) /
-                                    (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
-    safe_distance_penalty = jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
+    distance_reward = jp.exp(-jp.linalg.norm(payload_error))
+    # velocity_towards_target = 10 * (jp.dot(payload_error, payload_linvel) /
+    #                                 (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
+    safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 if collision else 0.0
     out_of_bounds_penalty = 10.0 if out_of_bounds else 0.0
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust) / 10.0
     thrust_reward = jp.sum(action) * 10.0
 
     # Combine components to form the final reward.
-    reward = 10.0
-    reward -= distance_penalty
-    reward += velocity_towards_target
-    reward -= safe_distance_penalty
+    reward = 0
+    reward += distance_reward
+    # reward += velocity_towards_target
+    reward += safe_distance_reward
+    reward += jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
+    reward -= payload_linvel
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
-    reward -= jp.abs(angle_q1) + jp.abs(angle_q2)
     reward -= smooth_action_penalty
-    reward += thrust_reward
+   
 
-    reward = reward / (self.time_per_action * 1000)
-    return reward, None, {"rotation_penalty": jp.abs(angle_q1) + jp.abs(angle_q2),
-                           "distance_to_target": distance_penalty}
+   
+    return reward, None, {}
 
 # Register the environment under the name 'multiquad'
 envs.register_environment('multiquad', MultiQuadEnv)
@@ -263,8 +263,8 @@ for i in range(10):
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=30_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=10,                  # Evaluate frequently to monitor performance.
+    num_timesteps=500_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=10,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=1000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
     normalize_observations=True,   # Normalize observations for stable training.
