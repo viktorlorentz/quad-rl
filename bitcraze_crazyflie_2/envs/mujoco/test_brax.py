@@ -326,7 +326,8 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
         mujoco.mj_step(mj_model, mj_data)
         # Capture a frame approximately at the desired framerate.
         if len(frames) < mj_data.time * framerate:
-            renderer.update_scene(mj_data, scene_option=scene_option)
+            # Use track camera by passing camera="track"
+            renderer.update_scene(mj_data, camera="track", scene_option=scene_option)
             frame = renderer.render()
             frames.append(frame)
     renderer.close()
@@ -418,7 +419,8 @@ for i in range(n_steps):
   for _ in range(eval_env._n_frames):
     mujoco.mj_step(mj_model, mj_data)
   if i % render_every == 0:
-    renderer.update_scene(mj_data)
+    # Use track camera by passing camera="track"
+    renderer.update_scene(mj_data, camera="track")
     images.append(renderer.render())
 
 # media.show_video(images, fps=1.0 / eval_env.dt / render_every)
