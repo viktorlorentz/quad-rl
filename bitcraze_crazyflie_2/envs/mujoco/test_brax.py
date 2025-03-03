@@ -317,7 +317,7 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     # Set up a GL context and renderer.
     ctx = mujoco.GLContext(1920, 1080)
     ctx.make_current()
-    renderer = mjcf.Renderer(mj_model, width=1920, height=1080)
+    renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
     scene_option = mujoco.MjvOption()
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
     frames = []
@@ -404,7 +404,7 @@ for i in range(n_steps):
 mj_model = eval_env.sys.mj_model
 mj_data = mujoco.MjData(mj_model)
 
-renderer = mjcf.Renderer(mj_model)
+renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
 ctrl = jp.zeros(mj_model.nu)
 
 images = []
@@ -416,7 +416,7 @@ for i in range(n_steps):
   ctrl, _ = jit_inference_fn(obs, act_rng)
   mj_data.ctrl = ctrl
   for _ in range(eval_env._n_frames):
-    mjcf.mj_step(mj_model, mj_data)
+    mujoco.mj_step(mj_model, mj_data)
   if i % render_every == 0:
     renderer.update_scene(mj_data)
     images.append(renderer.render())
