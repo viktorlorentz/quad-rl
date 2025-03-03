@@ -170,6 +170,9 @@ class MultiQuadEnv(PipelineEnv):
     # Terminate if time exceeds the maximum time.
     done = jp.logical_or(done, data.time > self.max_time)
 
+    # Convert done to float32.
+    done = jp.where(done, jp.ones_like(state.done, dtype=jp.float32), jp.zeros_like(state.done, dtype=jp.float32))
+
     new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
