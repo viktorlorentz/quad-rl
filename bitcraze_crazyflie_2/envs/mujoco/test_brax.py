@@ -223,28 +223,36 @@ class MultiQuadEnv(PipelineEnv):
 
     payload_error = team_obs[:3]
     payload_linvel = team_obs[3:6]
-    linvel_penalty = jp.linalg.norm(payload_linvel)**2
+    # linvel_penalty = jp.linalg.norm(payload_linvel)**2
     distance_reward = jp.exp(-jp.linalg.norm(payload_error))
-    # velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
-    #                                 (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
+    velocity_towards_target = (jp.dot(payload_error, payload_linvel) /
+                                    (jp.linalg.norm(payload_error) * jp.linalg.norm(payload_linvel) + 1e-6))
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 * collision
     out_of_bounds_penalty = 10.0 * out_of_bounds
-    #smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
+    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
     thrust_reward = jp.sum(action) * 10.0
+    
+    quad1_rel = quad1_obs[:3]
+    quad2_rel = quad2_obs[:3]
+    z_reward_q1 = quad1_rel[2] - payload_error[2]
+    z_reward_q2 = quad2_rel[2] - payload_error[2]
+    quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
 
     # Combine components to form the final reward.
     reward = 0
     reward += distance_reward
     reward += safe_distance_reward
     reward += jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
+    reward += velocity_towards_target
+    reward += quad_above_reward
 
-    reward -= linvel_penalty
+    # reward -= linvel_penalty
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
-    #reward -= smooth_action_penalty
+    reward -= smooth_action_penalty
    
-
+    reward /= 10.0
    
     return reward, None, {}
 
