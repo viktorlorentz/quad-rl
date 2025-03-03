@@ -230,7 +230,7 @@ class MultiQuadEnv(PipelineEnv):
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.1 ** 2))
     collision_penalty = 10.0 * collision
     out_of_bounds_penalty = 10.0 * out_of_bounds
-    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
+    #smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
     thrust_reward = jp.sum(action) * 10.0
 
     # Combine components to form the final reward.
@@ -242,7 +242,7 @@ class MultiQuadEnv(PipelineEnv):
     reward -= linvel_penalty
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
-    reward -= smooth_action_penalty
+    #reward -= smooth_action_penalty
    
 
    
@@ -276,16 +276,16 @@ train_fn = functools.partial(
     num_evals=100,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
-    normalize_observations=False,   # Normalize observations for stable training.
+    normalize_observations=True,   # Normalize observations for stable training.
     action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
     unroll_length=10,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
-    num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
-    num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
+    num_minibatches=64,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
+    num_updates_per_batch=8,       # Apply 4 SGD updates per batch of data.
     discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
-    batch_size=1024,               # Use a batch size that balances throughput with memory usage.
+    num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
+    batch_size=2048,               # Use a batch size that balances throughput with memory usage.
     seed=1                        # A fixed seed for reproducibility.
 )
 
