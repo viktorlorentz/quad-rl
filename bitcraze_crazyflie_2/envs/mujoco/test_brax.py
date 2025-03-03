@@ -315,9 +315,9 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     mj_model = env.sys.mj_model  # replaced eval_env with env
     mj_data = mujoco.MjData(mj_model)
     # Set up a GL context and renderer.
-    ctx = mujoco.GLContext(1920, 1080)
-    ctx.make_current()
-    renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
+    # ctx = mujoco.GLContext(1920, 1080)
+    # ctx.make_current()
+    renderer = mujoco.Renderer(mj_model) # , width=1920, height=1080
     scene_option = mujoco.MjvOption()
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
     frames = []
@@ -355,7 +355,7 @@ def progress(num_steps, metrics):
         render_video(video_name, env, duration=5.0, framerate=30)  # pass env to render_video
         # Log the rendered video with wandb.
         wandb.log({
-            "progress_rollout_video": wandb.Video(video_name, fps=30, format="mp4"),
+            "progress_rollout_video": wandb.Video(video_name, format="mp4"),
             "num_steps": num_steps,
             "eval/episode_reward": y_data[-1],
             "eval/episode_reward_std": ydataerr[-1]
