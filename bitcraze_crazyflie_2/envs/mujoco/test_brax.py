@@ -165,11 +165,11 @@ class MultiQuadEnv(PipelineEnv):
         obs, data.time, collision, out_of_bounds, action_scaled, angle_q1, angle_q2, prev_last_action)
 
     # Terminate if collision or out of bounds.
-    done = out_of_bounds
-    done = jp.logical_or(done, collision)
+    # done = out_of_bounds
+    # done = jp.logical_or(done, collision)
 
     # Terminate if time exceeds the maximum time.
-    done = jp.logical_or(done, data.time > self.max_time)
+    done =  data.time > self.max_time
 
     # Convert done to float32.
     done = jp.where(done, jp.ones_like(state.done, dtype=jp.float32), jp.zeros_like(state.done, dtype=jp.float32))
