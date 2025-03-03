@@ -33,6 +33,8 @@ import time
 
 jax.config.update('jax_platform_name', 'gpu')
 
+jit_inference_fn = None
+
 # ----------------------------------------
 # Helper functions in JAX (converted from numpy/numba)
 def jp_R_from_quat(q: jp.ndarray) -> jp.ndarray:
@@ -335,6 +337,7 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
 
 # Updated progress callback.
 def progress(num_steps, metrics):
+    global jit_inference_fn  # ensure we refer to the global variable
     times.append(datetime.now())
     x_data.append(num_steps)
     y_data.append(metrics['eval/episode_reward'])
