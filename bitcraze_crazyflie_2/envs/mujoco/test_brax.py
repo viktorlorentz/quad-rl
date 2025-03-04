@@ -259,11 +259,12 @@ class MultiQuadEnv(PipelineEnv):
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
     action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
     
+    # Reward for quad z position above the payload target.
     quad1_rel = quad1_obs[:3]
     quad2_rel = quad2_obs[:3]
     z_reward_q1 = quad1_rel[2] - payload_error[2]
     z_reward_q2 = quad2_rel[2] - payload_error[2]
-    #quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
+    quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
 
     #rotation_penalty = angle_q1**2 + angle_q2**2
 
@@ -274,7 +275,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += 5 * distance_reward
     reward += safe_distance_reward
     # reward += velocity_towards_target
-    #reward += quad_above_reward
+    reward += quad_above_reward
     reward += up_reward
 
 
@@ -282,7 +283,7 @@ class MultiQuadEnv(PipelineEnv):
     reward -= collision_penalty
     #reward -= rotation_penalty
     reward -= out_of_bounds_penalty
-    reward -= smooth_action_penalty
+    reward -= 2 * smooth_action_penalty
     reward -= action_energy_penalty
    
     reward /= 10.0
@@ -318,7 +319,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=750_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
