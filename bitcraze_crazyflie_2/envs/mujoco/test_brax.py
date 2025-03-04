@@ -252,6 +252,9 @@ class MultiQuadEnv(PipelineEnv):
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
     distance_reward = 1 - dis 
+    # scale distance with time 
+    distance_reward = distance_reward * (2 - sim_time / self.max_time)
+
     # Use clamped norms to avoid division by zero.
     # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
     # norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
@@ -288,7 +291,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += up_reward
 
 
-    reward -= 2 * linvel_penalty
+    reward -= linvel_penalty
     reward -= collision_penalty
     #reward -= rotation_penalty
     reward -= out_of_bounds_penalty
@@ -341,7 +344,7 @@ train_fn = functools.partial(
     discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
+    num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=256,               # Use a batch size that balances throughput with memory usage.
     seed=1,                        # A fixed seed for reproducibility.
     network_factory=make_networks_factory
