@@ -274,6 +274,9 @@ class MultiQuadEnv(PipelineEnv):
 
     up_reward = jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
 
+    # penalty for ang_vel around z axis
+    ang_vel_penalty = jp.abs(quad1_obs[11]) + jp.abs(quad2_obs[11])
+
     # Combine components to form the final reward.
     reward = 0
     reward += 5 * distance_reward
@@ -289,6 +292,7 @@ class MultiQuadEnv(PipelineEnv):
     reward -= out_of_bounds_penalty
     reward -= 2 * smooth_action_penalty
     reward -= action_energy_penalty
+    reward -= ang_vel_penalty
    
     reward /= 10.0
    
@@ -332,7 +336,7 @@ train_fn = functools.partial(
     unroll_length=20,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
-    discounting=0.97,              # Standard discount factor to balance immediate and future rewards.
+    discounting=0.98,              # Standard discount factor to balance immediate and future rewards.
     learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=1024,                 # Run 2048 parallel environment instances for efficient data collection.
