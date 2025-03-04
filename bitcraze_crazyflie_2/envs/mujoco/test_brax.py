@@ -281,6 +281,11 @@ class MultiQuadEnv(PipelineEnv):
     ang_vel_q2 = quad2_obs[15:18]
     ang_vel_penalty = 0.1 * (jp.linalg.norm(ang_vel_q1)**2 + jp.linalg.norm(ang_vel_q2)**2)
 
+    #penalty on linvel
+    linvel_q1 = quad1_obs[9:12]
+    linvel_q2 = quad2_obs[9:12]
+    linvel_quad_penalty = 0.1 * (jp.linalg.norm(linvel_q1)**2 + jp.linalg.norm(linvel_q2)**2)
+
     # goal bonus as gauss on target
     goal_bonus = 10 * (jp.exp(-0.5 * (dis ** 2) / (0.025 ** 2)) + jp.exp(-0.5 * (dis ** 2) / (0.25 ** 2))) 
 
@@ -301,6 +306,7 @@ class MultiQuadEnv(PipelineEnv):
     reward -= 2 * smooth_action_penalty
     reward -= action_energy_penalty
     reward -= ang_vel_penalty
+    reward -= linvel_quad_penalty
    
     reward /= 10.0
    
