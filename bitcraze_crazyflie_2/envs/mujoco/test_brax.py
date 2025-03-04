@@ -164,6 +164,10 @@ class MultiQuadEnv(PipelineEnv):
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
+    # Out of bounds if quad z pos is below 0.05
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
+
 
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
