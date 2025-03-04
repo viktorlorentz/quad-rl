@@ -211,7 +211,7 @@ class MultiQuadEnv(PipelineEnv):
     quad2_angular_acc = data.cacc[self.q2_body_id][:3]
 
     # Include last action and time progress.
-    time_progress = jp.array([(data.time - self.warmup_time) / self.max_time])
+    #time_progress = jp.array([(data.time - self.warmup_time) / self.max_time])
     obs = jp.concatenate([
         payload_error,        # (3,)
         payload_linvel,       # (3,)
@@ -228,7 +228,7 @@ class MultiQuadEnv(PipelineEnv):
         quad2_linear_acc,     # (3,)
         quad2_angular_acc,    # (3,)
         last_action,          # (nu,) — appended as the penultimate segment
-        time_progress         # (1,)
+        #time_progress         # (1,)
     ])
     return obs
 
@@ -245,7 +245,7 @@ class MultiQuadEnv(PipelineEnv):
 
     payload_error = team_obs[:3]
     payload_linvel = team_obs[3:6]
-    linvel_penalty = jp.linalg.norm(payload_linvel)**2
+    linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
     distance_reward = 1 - dis 
     # Use clamped norms to avoid division by zero.
@@ -256,13 +256,14 @@ class MultiQuadEnv(PipelineEnv):
     safe_distance_reward = 1 - jp.exp(-0.5 * ((quad_distance - 0.5) ** 2) / (0.12 ** 2))
     collision_penalty = 10.0 * collision
     out_of_bounds_penalty = 10.0 * out_of_bounds
-    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)**2
+    smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
+    action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
     
     quad1_rel = quad1_obs[:3]
     quad2_rel = quad2_obs[:3]
     z_reward_q1 = quad1_rel[2] - payload_error[2]
     z_reward_q2 = quad2_rel[2] - payload_error[2]
-    quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
+    #quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
 
     #rotation_penalty = angle_q1**2 + angle_q2**2
 
@@ -273,7 +274,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += 2 * distance_reward
     reward += 2 * safe_distance_reward
     # reward += velocity_towards_target
-    reward += quad_above_reward
+    #reward += quad_above_reward
     reward += up_reward
 
 
@@ -282,6 +283,7 @@ class MultiQuadEnv(PipelineEnv):
     #reward -= rotation_penalty
     reward -= out_of_bounds_penalty
     reward -= smooth_action_penalty
+    reward -= action_energy_penalty
    
     reward /= 10.0
    
