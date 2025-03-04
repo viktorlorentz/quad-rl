@@ -273,7 +273,7 @@ class MultiQuadEnv(PipelineEnv):
     quad2_rel = quad2_obs[:3]
     z_reward_q1 = quad1_rel[2] - payload_error[2]
     z_reward_q2 = quad2_rel[2] - payload_error[2]
-    quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
+    #quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
 
     #rotation_penalty = angle_q1**2 + angle_q2**2
 
@@ -290,14 +290,14 @@ class MultiQuadEnv(PipelineEnv):
     linvel_quad_penalty = 0.1 * (jp.linalg.norm(linvel_q1)**2 + jp.linalg.norm(linvel_q2)**2)
 
     # goal bonus as gauss on target
-    goal_bonus = 10 * (jp.exp(-0.5 * (dis ** 2) / (0.03 ** 2)) + jp.exp(-0.5 * (dis ** 2) / (0.3 ** 2))) 
+    goal_bonus = 10 * jp.exp(-0.5 * (dis ** 2) / (0.01 ** 2)) 
 
     # Combine components to form the final reward.
     reward = 0
     reward += 10 * distance_reward
     reward += safe_distance_reward
     # reward += velocity_towards_target
-    reward += quad_above_reward
+    #reward += quad_above_reward
     reward += up_reward
     reward += goal_bonus
 
