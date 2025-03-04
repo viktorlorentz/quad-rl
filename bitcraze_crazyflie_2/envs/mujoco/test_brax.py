@@ -168,6 +168,9 @@ class MultiQuadEnv(PipelineEnv):
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
 
+    # Shrinking bounds with time
+    max_payload_distance = 0.03 + 0.97 * (1 - data.time / self.max_time)
+    out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
 
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
