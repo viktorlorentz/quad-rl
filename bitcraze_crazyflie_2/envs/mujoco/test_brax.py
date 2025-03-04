@@ -154,7 +154,7 @@ class MultiQuadEnv(PipelineEnv):
     quad1_pos = data.xpos[self.q1_body_id]
     quad2_pos = data.xpos[self.q2_body_id]
     quad_distance = jp.linalg.norm(quad1_pos - quad2_pos)
-    collision = quad_distance < 0.13 # hacky collision detection
+    collision = quad_distance < 0.11 # hacky collision detection
 
     # out of bounds if angle is greater than 80 degrees
     out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
@@ -271,8 +271,8 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 2 * distance_reward
-    reward += 2 * safe_distance_reward
+    reward += 5 * distance_reward
+    reward += safe_distance_reward
     # reward += velocity_towards_target
     #reward += quad_above_reward
     reward += up_reward
