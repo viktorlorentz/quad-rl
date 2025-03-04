@@ -277,7 +277,7 @@ class MultiQuadEnv(PipelineEnv):
     # penalty for ang_vel 
     ang_vel_q1 = quad1_obs[15:18]
     ang_vel_q2 = quad2_obs[15:18]
-    ang_vel_penalty = 0.1 * (jp.linalg.norm(ang_vel_q1)**2 + jp.linalg.norm(ang_vel_q2)**2)
+    ang_vel_penalty = 0.1 * (jp.abs(ang_vel_q1[2])**2 + jp.abs(ang_vel_q2[2])**2)
 
     # Combine components to form the final reward.
     reward = 0
