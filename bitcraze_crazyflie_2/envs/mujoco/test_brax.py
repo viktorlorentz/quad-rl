@@ -248,7 +248,7 @@ class MultiQuadEnv(PipelineEnv):
     return obs
 
   def calc_reward(self, obs, sim_time, collision, out_of_bounds, action,
-                  angle_q1, angle_q2, prev_last_action, min_distance_so_far):
+                  angle_q1, angle_q2, last_action, min_distance_so_far):
     """
     Computes a reward similar to the original gym env by splitting the observation into team and quad parts.
     """
