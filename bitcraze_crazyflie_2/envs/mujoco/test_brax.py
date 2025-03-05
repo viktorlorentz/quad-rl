@@ -296,12 +296,13 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    #reward += 5 * distance_reward
+    #reward += distance_reward
     reward += 0.5 * safe_distance_reward
     # reward += velocity_towards_target
     #reward += quad_above_reward
     reward += up_reward
    # reward += goal_bonus
+    reward *= distance_reward
 
 
     reward -= linvel_penalty
@@ -313,7 +314,6 @@ class MultiQuadEnv(PipelineEnv):
     reward -= ang_vel_penalty
     reward -= linvel_quad_penalty
    
-    reward *= distance_reward
 
     reward /= 10.0
    
