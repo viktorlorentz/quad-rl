@@ -254,7 +254,8 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
-    distance_reward = jp.exp(-5 * dis) - 0.2 * dis - 0.5
+    time_progress = sim_time / self.max_time
+    distance_reward = jp.exp(-10 * dis) - dis + 1 - 1.8*time_progress
     #jp.exp(-4 * dis) + 1 - dis
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
