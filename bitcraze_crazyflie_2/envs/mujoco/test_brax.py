@@ -178,7 +178,7 @@ class MultiQuadEnv(PipelineEnv):
     payload_pos = data.xpos[self.payload_body_id]
     dist2target = jp.linalg.norm(payload_pos - self.target_position)
     prev_min_distance = state.metrics['min_distance']
-    new_min_distance = jp.minimum(prev_min_distance, dist2target)
+    new_min_distance = 0.99 * prev_min_distance + 0.01 * dist2target
 
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled,
@@ -309,7 +309,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 100 * distance_reward
+    reward += 10 * distance_reward
     reward += 0.5 * safe_distance_reward
     # reward += velocity_towards_target
     reward += quad_above_reward
