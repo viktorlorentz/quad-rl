@@ -168,9 +168,9 @@ class MultiQuadEnv(PipelineEnv):
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
 
-    # Shrinking bounds with time
-    max_payload_distance = 0.03 + 0.97 * (1 - data.time / self.max_time)
-    out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
+    # # Shrinking bounds with time
+    # max_payload_distance = 0.03 + 0.97 * (1 - data.time / self.max_time)
+    # out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
 
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
@@ -255,6 +255,8 @@ class MultiQuadEnv(PipelineEnv):
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
     distance_reward = 1 - dis 
+    # scale distance reward with time
+    distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
 
 
     # Use clamped norms to avoid division by zero.
@@ -269,10 +271,10 @@ class MultiQuadEnv(PipelineEnv):
     action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
     
     # Reward for quad z position above the payload target.
-    quad1_rel = quad1_obs[:3]
-    quad2_rel = quad2_obs[:3]
-    z_reward_q1 = quad1_rel[2] - payload_error[2]
-    z_reward_q2 = quad2_rel[2] - payload_error[2]
+    # quad1_rel = quad1_obs[:3]
+    # quad2_rel = quad2_obs[:3]
+    # z_reward_q1 = quad1_rel[2] - payload_error[2]
+    # z_reward_q2 = quad2_rel[2] - payload_error[2]
     #quad_above_reward = 0.5 * (z_reward_q1 + z_reward_q2)
 
     #rotation_penalty = angle_q1**2 + angle_q2**2
@@ -290,7 +292,7 @@ class MultiQuadEnv(PipelineEnv):
     linvel_quad_penalty = 0.1 * (jp.linalg.norm(linvel_q1)**2 + jp.linalg.norm(linvel_q2)**2)
 
     # goal bonus as gauss on target
-    goal_bonus = 10 * jp.exp(-0.5 * (dis ** 2) / (0.01 ** 2)) 
+    #goal_bonus = 10 * jp.exp(-0.5 * (dis ** 2) / (0.01 ** 2)) 
 
     # Combine components to form the final reward.
     reward = 0
@@ -299,7 +301,7 @@ class MultiQuadEnv(PipelineEnv):
     # reward += velocity_towards_target
     #reward += quad_above_reward
     reward += up_reward
-    reward += goal_bonus
+   # reward += goal_bonus
 
 
     reward -= linvel_penalty
