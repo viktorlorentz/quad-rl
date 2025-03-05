@@ -276,7 +276,7 @@ class MultiQuadEnv(PipelineEnv):
     # velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
   
     safe_distance_reward = jp.clip((quad_distance - 0.10) / (0.15 - 0.10), 0, 1) # 1 if distance is greater than 0.15, 0 if less than 0.10
-    collision_penalty = 10.0 * collision
+    collision_penalty = 5.0 * collision
     out_of_bounds_penalty = 50.0 * out_of_bounds
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
     action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
@@ -358,7 +358,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=50_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=500_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
@@ -368,7 +368,7 @@ train_fn = functools.partial(
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
     discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
-    learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
+    learning_rate=1e-4,            # A common starting learning rate that works well in many Brax tasks.
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=256,               # Use a batch size that balances throughput with memory usage.
