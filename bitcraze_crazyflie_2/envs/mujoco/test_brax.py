@@ -121,7 +121,7 @@ class MultiQuadEnv(PipelineEnv):
     done = jp.array(0.0)
     payload_pos = data.xpos[self.payload_body_id]
     dist2target = jp.linalg.norm(payload_pos - self.target_position)
-    metrics = {'time': data.time, 'reward': jp.array(0.0), 'min_distance': dist2target}
+    metrics = {'time': data.time, 'reward': jp.array(0.0)}
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
@@ -175,14 +175,12 @@ class MultiQuadEnv(PipelineEnv):
 
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action)
-    payload_pos = data.xpos[self.payload_body_id]
-    dist2target = jp.linalg.norm(payload_pos - self.target_position)
-    prev_min_distance = state.metrics['min_distance']
-    new_min_distance = 0.99 * prev_min_distance + 0.01 * dist2target
+
+   
 
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled,
-        angle_q1, angle_q2, prev_last_action, new_min_distance
+        angle_q1, angle_q2, prev_last_action
     )
 
     # Terminate if collision or out of bounds.
@@ -195,7 +193,7 @@ class MultiQuadEnv(PipelineEnv):
     # Convert done to float32.
     done *= 1.0
 
-    new_metrics = {'time': data.time, 'reward': reward, 'min_distance': new_min_distance}
+    new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
   def _get_obs(self, data, last_action: jp.ndarray) -> jp.ndarray:
@@ -248,7 +246,7 @@ class MultiQuadEnv(PipelineEnv):
     return obs
 
   def calc_reward(self, obs, sim_time, collision, out_of_bounds, action,
-                  angle_q1, angle_q2, last_action, min_distance_so_far):
+                  angle_q1, angle_q2, last_action):
     """
     Computes a reward similar to the original gym env by splitting the observation into team and quad parts.
     """
@@ -270,7 +268,7 @@ class MultiQuadEnv(PipelineEnv):
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
     #\exp\left(-100\cdot\left|x\right|\right)+1-\left|x\right|
-    distance_reward = jp.exp(-100 * dis) + min_distance_so_far - dis
+    distance_reward = 10*jp.exp(-50* dis) + 0.5 - dis
 
     # Use clamped norms to avoid division by zero.
     # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
