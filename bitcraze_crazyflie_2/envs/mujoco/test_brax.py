@@ -255,7 +255,7 @@ class MultiQuadEnv(PipelineEnv):
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
     #time_progress = sim_time / self.max_time
-    distance_reward = jp.exp(-8 * dis) + 1 - dis #jp.exp(-time_progress**4 * 20 * dis) - dis
+    distance_reward = jp.exp(-3 * dis) + 1 - dis #jp.exp(-time_progress**4 * 20 * dis) - dis
  
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
@@ -298,7 +298,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 10 * distance_reward
+    reward += 3 * distance_reward
     reward += 0.5 * safe_distance_reward
     # reward += velocity_towards_target
     reward += quad_above_reward
