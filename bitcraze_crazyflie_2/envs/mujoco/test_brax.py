@@ -277,7 +277,7 @@ class MultiQuadEnv(PipelineEnv):
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
     #\exp\left(-100\cdot\left|x\right|\right)+1-\left|x\right|
-    distance_reward =  1 - dis + 0.5 * jp.exp(-10 * dis)
+    distance_reward =  1 - dis + 0.3 * jp.exp(-20 * dis)
 
     # Use clamped norms to avoid division by zero.
     # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -367,7 +367,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=200_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
