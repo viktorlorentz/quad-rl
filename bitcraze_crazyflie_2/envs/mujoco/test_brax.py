@@ -255,7 +255,7 @@ class MultiQuadEnv(PipelineEnv):
         quad2_linear_acc,     # (3,)
         quad2_angular_acc,    # (3,)
         last_action,          # (nu,) — appended as the penultimate segment
-        time_progress         # (1,)
+        #time_progress         # (1,)
     ])
     return obs
 
@@ -322,7 +322,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 10 * distance_reward * (1 + sim_time / self.max_time)**2
+    reward += 10 * distance_reward 
     reward += 0.5 * safe_distance_reward
     reward += velocity_towards_target
     #reward += quad_above_reward
