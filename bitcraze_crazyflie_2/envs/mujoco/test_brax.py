@@ -381,7 +381,7 @@ train_fn = functools.partial(
     learning_rate= lambda step: lr_schedule(step, avg_ep_len),
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
-    batch_size=256,               # Use a batch size that balances throughput with memory usage.
+    batch_size=512,               # Use a batch size that balances throughput with memory usage.
     seed=1,                        # A fixed seed for reproducibility.
     network_factory=make_networks_factory
 )
