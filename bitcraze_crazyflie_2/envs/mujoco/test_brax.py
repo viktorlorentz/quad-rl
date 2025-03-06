@@ -134,7 +134,7 @@ class MultiQuadEnv(PipelineEnv):
     reward = jp.array(0.0)
     done = jp.array(0.0)
     payload_pos = data.xpos[self.payload_body_id]
-    metrics = {'time': data.time, 'reward': jp.array(0.0), 'target_position': new_target}
+    metrics = {'time': data.time, 'reward': jp.array(0.0)}
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
@@ -207,7 +207,7 @@ class MultiQuadEnv(PipelineEnv):
     # Convert done to float32.
     done *= 1.0
 
-    new_metrics = {'time': data.time, 'reward': reward, 'target_position': target}
+    new_metrics = {'time': data.time, 'reward': reward}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
   def _get_obs(self, data, last_action: jp.ndarray, target_position) -> jp.ndarray:
