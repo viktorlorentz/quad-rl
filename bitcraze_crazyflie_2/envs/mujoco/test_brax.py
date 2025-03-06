@@ -376,7 +376,7 @@ train_fn = functools.partial(
     unroll_length=40,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
     num_minibatches=8,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
-    discounting=0.98,              # Standard discount factor to balance immediate and future rewards.
+    discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
     # Replace fixed learning_rate with a lambda using our lr_schedule
     learning_rate= 3e-4,#lambda step: lr_schedule(step, avg_ep_len),
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
