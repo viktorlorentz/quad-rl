@@ -40,7 +40,7 @@ avg_ep_len = 0
 # Insert the learning rate schedule function.
 def lr_schedule(step, avg_episode_length, base_lr=3e-4):
     threshold = 1000  # target episode length in timesteps
-    factor = 0.1 if avg_episode_length > threshold else 1.0
+    factor = 0.01 if avg_episode_length > threshold else 1.0
     return base_lr * factor
 
 # ----------------------------------------
@@ -378,7 +378,7 @@ train_fn = functools.partial(
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
     discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
     # Replace fixed learning_rate with a lambda using our lr_schedule
-    learning_rate= 3e-6,#lambda step: lr_schedule(step, avg_ep_len),
+    learning_rate= lambda step: lr_schedule(step, avg_ep_len),
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=256,               # Use a batch size that balances throughput with memory usage.
