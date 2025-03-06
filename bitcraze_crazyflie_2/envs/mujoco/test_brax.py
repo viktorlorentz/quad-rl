@@ -277,7 +277,7 @@ class MultiQuadEnv(PipelineEnv):
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
     #\exp\left(-100\cdot\left|x\right|\right)+1-\left|x\right|
-    distance_reward = jp.exp(-8 * dis) + 1 - dis
+    distance_reward =  1 - dis #+jp.exp(-8 * dis)
 
     # Use clamped norms to avoid division by zero.
     # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -319,7 +319,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += 10 * distance_reward #* (1 + sim_time / self.max_time)**2
     #reward += 0.5 * safe_distance_reward
     # reward += velocity_towards_target
-    reward += quad_above_reward
+    #reward += quad_above_reward
     reward += up_reward
    # reward += goal_bonus
 
