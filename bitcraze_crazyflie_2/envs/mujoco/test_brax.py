@@ -233,7 +233,7 @@ class MultiQuadEnv(PipelineEnv):
     quad2_angular_acc = data.cacc[self.q2_body_id][:3]
 
     # Include last action and time progress.
-    #time_progress = jp.array([(data.time - self.warmup_time) / self.max_time])
+    time_progress = jp.array([(data.time - self.warmup_time) / self.max_time])
     obs = jp.concatenate([
         payload_error,        # (3,)
         payload_linvel,       # (3,)
@@ -250,7 +250,7 @@ class MultiQuadEnv(PipelineEnv):
         quad2_linear_acc,     # (3,)
         quad2_angular_acc,    # (3,)
         last_action,          # (nu,) — appended as the penultimate segment
-        #time_progress         # (1,)
+        time_progress         # (1,)
     ])
     return obs
 
@@ -316,7 +316,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # Combine components to form the final reward.
     reward = 0
-    reward += 10 * distance_reward #* (1 + sim_time / self.max_time)**2
+    reward += 10 * distance_reward * (1 + sim_time / self.max_time)**2
     reward += safe_distance_reward
     reward += velocity_towards_target
     #reward += quad_above_reward
