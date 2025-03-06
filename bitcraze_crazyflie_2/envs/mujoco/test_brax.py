@@ -374,7 +374,7 @@ train_fn = functools.partial(
     normalize_observations=False,   # Normalize observations for stable training.
     action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
     unroll_length=20,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
-    num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
+    num_minibatches=16,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
     discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
     # Replace fixed learning_rate with a lambda using our lr_schedule
