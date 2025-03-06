@@ -34,6 +34,15 @@ import imageio
 
 jax.config.update('jax_platform_name', 'gpu')
 
+# Add global variable to store average episode length.
+avg_ep_len = 0
+
+# Insert the learning rate schedule function.
+def lr_schedule(step, avg_episode_length, base_lr=3e-4):
+    threshold = 1000  # target episode length in timesteps
+    factor = 0.1 if avg_episode_length > threshold else 1.0
+    return base_lr * factor
+
 # ----------------------------------------
 # Helper functions in JAX (converted from numpy/numba)
 def jp_R_from_quat(q: jp.ndarray) -> jp.ndarray:
@@ -268,7 +277,7 @@ class MultiQuadEnv(PipelineEnv):
     # # scale distance reward with time
     # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
     #\exp\left(-100\cdot\left|x\right|\right)+1-\left|x\right|
-    distance_reward = jp.exp(-5 * dis) + 1 - dis
+    distance_reward = jp.exp(-8 * dis) + 1 - dis
 
     # Use clamped norms to avoid division by zero.
     # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -316,7 +325,7 @@ class MultiQuadEnv(PipelineEnv):
 
 
 
-    reward -= linvel_penalty
+    reward -= 2* linvel_penalty
     reward -= collision_penalty
     #reward -= rotation_penalty
     reward -= out_of_bounds_penalty
@@ -368,7 +377,8 @@ train_fn = functools.partial(
     num_minibatches=32,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
     num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
     discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
-    learning_rate=3e-4,            # A common starting learning rate that works well in many Brax tasks.
+    # Replace fixed learning_rate with a lambda using our lr_schedule
+    learning_rate=lambda step: lr_schedule(step, avg_ep_len),
     entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
     num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
     batch_size=256,               # Use a batch size that balances throughput with memory usage.
@@ -416,10 +426,12 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
 
 # Updated progress callback: remove per-progress video logging and log all metrics.
 def progress(num_steps, metrics):
+    global avg_ep_len
     times.append(datetime.now())
     x_data.append(num_steps)
     y_data.append(metrics['eval/episode_reward'])
     ydataerr.append(metrics['eval/episode_reward_std'])
+    avg_ep_len = metrics.get('eval/episode_length', 0)
     plt.xlim([train_fn.keywords['num_timesteps'] * -0.1, train_fn.keywords['num_timesteps'] * 1.25])
     plt.xlabel('# environment steps')
     plt.ylabel('reward per episode')
