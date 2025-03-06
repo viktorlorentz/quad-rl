@@ -122,23 +122,19 @@ class MultiQuadEnv(PipelineEnv):
     rng, rng_goal = jax.random.split(rng)
     offset = jax.random.normal(rng_goal, shape=(3,))
     offset = offset / jp.linalg.norm(offset) * (self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
-    self.target_position = self.goal_center + offset
-
+    new_target = jax.lax.stop_gradient(self.goal_center + offset)
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
         rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     qvel = jax.random.uniform(
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
-    # Initialize last_action as zeros.
     last_action = jp.zeros(self.sys.nu)
-    # Compute observation including last_action.
-    obs = self._get_obs(data, last_action)
+    obs = self._get_obs(data, last_action, new_target)
     reward = jp.array(0.0)
     done = jp.array(0.0)
     payload_pos = data.xpos[self.payload_body_id]
-    dist2target = jp.linalg.norm(payload_pos - self.target_position)
-    metrics = {'time': data.time, 'reward': jp.array(0.0)}
+    metrics = {'time': data.time, 'reward': jp.array(0.0), 'target_position': new_target}
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
@@ -191,13 +187,14 @@ class MultiQuadEnv(PipelineEnv):
     # out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
 
     # Compute new observation using the previous last_action.
-    obs = self._get_obs(data, prev_last_action)
+    target = state.metrics.get("target_position", self.target_position)
+    obs = self._get_obs(data, prev_last_action, target)
 
    
 
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled,
-        angle_q1, angle_q2, prev_last_action
+        angle_q1, angle_q2, prev_last_action, target
     )
 
     # Terminate if collision or out of bounds.
@@ -210,15 +207,15 @@ class MultiQuadEnv(PipelineEnv):
     # Convert done to float32.
     done *= 1.0
 
-    new_metrics = {'time': data.time, 'reward': reward}
+    new_metrics = {'time': data.time, 'reward': reward, 'target_position': target}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
-  def _get_obs(self, data, last_action: jp.ndarray) -> jp.ndarray:
+  def _get_obs(self, data, last_action: jp.ndarray, target_position) -> jp.ndarray:
     """Constructs the observation vector from simulation data."""
     # Payload state.
     payload_pos = data.xpos[self.payload_body_id]
     payload_linvel = data.cvel[self.payload_body_id][3:6]
-    payload_error = self.target_position - payload_pos
+    payload_error = target_position - payload_pos
 
     # Quad 1 state.
     quad1_pos = data.xpos[self.q1_body_id]
@@ -263,10 +260,11 @@ class MultiQuadEnv(PipelineEnv):
     return obs
 
   def calc_reward(self, obs, sim_time, collision, out_of_bounds, action,
-                  angle_q1, angle_q2, last_action):
+                  angle_q1, angle_q2, last_action, target_position):
     """
     Computes a reward similar to the original gym env by splitting the observation into team and quad parts.
     """
+    tp = target_position
     # Team observation: payload error (3) and payload linear velocity (3).
     team_obs = obs[:6]
     # Quad observations: next 24 elements for quad1 and following 24 for quad2.
@@ -277,7 +275,7 @@ class MultiQuadEnv(PipelineEnv):
     payload_error = team_obs[:3]
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
-    dis = jp.linalg.norm(payload_error)
+    dis = jp.linalg.norm(tp - data.xpos[self.payload_body_id])
     #time_progress = sim_time / self.max_time
     #distance_reward = jp.exp(-3 * dis) + 1 - dis #jp.exp(-time_progress**4 * 20 * dis) - dis
 
@@ -301,8 +299,8 @@ class MultiQuadEnv(PipelineEnv):
     # Reward for quad z position above the payload target.
     quad1_rel = quad1_obs[:3]
     quad2_rel = quad2_obs[:3]
-    z_reward_q1 = quad1_rel[2] - self.target_position[2]
-    z_reward_q2 = quad2_rel[2] - self.target_position[2]
+    z_reward_q1 = quad1_rel[2] - tp[2]
+    z_reward_q2 = quad2_rel[2] - tp[2]
     quad_above_reward = z_reward_q1 + z_reward_q2
 
     #rotation_penalty = angle_q1**2 + angle_q2**2
