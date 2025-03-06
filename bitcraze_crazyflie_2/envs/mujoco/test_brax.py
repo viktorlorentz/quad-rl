@@ -280,9 +280,9 @@ class MultiQuadEnv(PipelineEnv):
     distance_reward =  1 - dis + 0.3 * jp.exp(-20 * dis)
 
     # Use clamped norms to avoid division by zero.
-    # norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
-    # norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
-    # velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
+    norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
+    norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
+    velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
   
     safe_distance_reward = jp.clip((quad_distance - 0.11) / (0.15 - 0.11), 0, 1) # 1 if distance is greater than 0.15, 0 if less than 0.10
     collision_penalty = 5.0 * collision
@@ -318,7 +318,7 @@ class MultiQuadEnv(PipelineEnv):
     reward = 0
     reward += 10 * distance_reward #* (1 + sim_time / self.max_time)**2
     reward += safe_distance_reward
-    # reward += velocity_towards_target
+    reward += velocity_towards_target
     #reward += quad_above_reward
     reward += up_reward
    # reward += goal_bonus
