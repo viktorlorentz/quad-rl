@@ -40,7 +40,7 @@ avg_ep_len = 0
 # Insert the learning rate schedule function.
 def lr_schedule(step, avg_episode_length, base_lr=3e-4):
     threshold = 1000  # target episode length in timesteps
-    factor = 0.01 if avg_episode_length > threshold else 1.0
+    factor = 0.001 if avg_episode_length > threshold else 1.0
     return base_lr * factor
 
 # ----------------------------------------
@@ -319,7 +319,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += 10 * distance_reward #* (1 + sim_time / self.max_time)**2
     #reward += 0.5 * safe_distance_reward
     # reward += velocity_towards_target
-    #reward += quad_above_reward
+    reward += quad_above_reward
     reward += up_reward
    # reward += goal_bonus
 
