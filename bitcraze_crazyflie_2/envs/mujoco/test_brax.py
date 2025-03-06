@@ -101,8 +101,10 @@ class MultiQuadEnv(PipelineEnv):
 
     # Maximum thrust from original env.
     self.max_thrust = 0.11772
-    # Set the target payload position.
-    self.target_position = jp.array([0.0, 0.0, 1.5])
+    # Replace target_position with a fixed goal center and add a sphere radius.
+    self.goal_center = jp.array([0.0, 0.0, 1.5])
+    self.goal_radius = 0.8  # sphere radius for random goal position
+    self.target_position = self.goal_center
     
     # Cache body/geom IDs for faster lookup.
     self.payload_body_id = mujoco.mj_name2id(
@@ -116,6 +118,12 @@ class MultiQuadEnv(PipelineEnv):
   
   def reset(self, rng: jp.ndarray) -> State:
     """Resets the environment to an initial state."""
+    # Add random goal position in a sphere around the initial goal center.
+    rng, rng_goal = jax.random.split(rng)
+    offset = jax.random.normal(rng_goal, shape=(3,))
+    offset = offset / jp.linalg.norm(offset) * (self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
+    self.target_position = self.goal_center + offset
+
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
         rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
@@ -317,7 +325,7 @@ class MultiQuadEnv(PipelineEnv):
     # Combine components to form the final reward.
     reward = 0
     reward += 10 * distance_reward * (1 + sim_time / self.max_time)**2
-    reward += safe_distance_reward
+    reward += 0.5 * safe_distance_reward
     reward += velocity_towards_target
     #reward += quad_above_reward
     reward += up_reward
