@@ -151,8 +151,18 @@ class MultiQuadEnv(PipelineEnv):
 
     data0 = state.pipeline_state
     data = self.pipeline_step(data0, action_scaled)
-    # Update the goal marker position to reflect the current target.
+    # Update the target marker and occasionally change target position.
     target = state.metrics.get("target_position", self.target_position)
+    prob = 0.005  # 0.5% chance to change the target
+    def new_target_fn():
+        key2 = jax.random.PRNGKey(int(data.time * 1000) % (2**31-1) + 1)
+        offset = jax.random.normal(key2, (3,))
+        norm = jp.linalg.norm(offset) + 1e-6
+        offset = offset / norm * (self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
+        return self.goal_center + offset
+    key_temp = jax.random.PRNGKey(int(data.time * 1000) % (2**31-1))
+    rnd = jax.random.uniform(key_temp, ())
+    target = jax.lax.cond(rnd < prob, new_target_fn, lambda: target)
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
 
     # Compute the tilt (angle from vertical) for each quad.
