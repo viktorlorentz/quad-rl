@@ -113,8 +113,8 @@ class MultiQuadEnv(PipelineEnv):
         sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "q0_cf2")
     self.q2_body_id = mujoco.mj_name2id(
         sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "q1_cf2")
-    self.goal_geom_id = mujoco.mj_name2id(
-        sys.mj_model,  mujoco.mjtObj.mjOBJ_GEOM.value, "goal_marker")
+    self.goal_site_id = mujoco.mj_name2id(
+        sys.mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "goal_marker")
   
   def reset(self, rng: jp.ndarray) -> State:
     """Resets the environment to an initial state."""
@@ -130,12 +130,14 @@ class MultiQuadEnv(PipelineEnv):
     qvel = jax.random.uniform(
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
+    # Update the goal marker position in the simulation state.
+    data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(new_target))
     last_action = jp.zeros(self.sys.nu)
     obs = self._get_obs(data, last_action, new_target)
     reward = jp.array(0.0)
     done = jp.array(0.0)
     payload_pos = data.xpos[self.payload_body_id]
-    metrics = {'time': data.time, 'reward': jp.array(0.0)}
+    metrics = {'time': data.time, 'reward': jp.array(0.0), "target_position": new_target}
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
@@ -149,6 +151,9 @@ class MultiQuadEnv(PipelineEnv):
 
     data0 = state.pipeline_state
     data = self.pipeline_step(data0, action_scaled)
+    # Update the goal marker position to reflect the current target.
+    target = state.metrics.get("target_position", self.target_position)
+    data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
 
     # Compute the tilt (angle from vertical) for each quad.
     q1_orientation = data.xquat[self.q1_body_id]
@@ -188,7 +193,6 @@ class MultiQuadEnv(PipelineEnv):
     # out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
 
     # Compute new observation using the previous last_action.
-    target = state.metrics.get("target_position", self.target_position)
     obs = self._get_obs(data, prev_last_action, target)
 
    
@@ -208,7 +212,7 @@ class MultiQuadEnv(PipelineEnv):
     # Convert done to float32.
     done *= 1.0
 
-    new_metrics = {'time': data.time, 'reward': reward}
+    new_metrics = {'time': data.time, 'reward': reward, "target_position": target}
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
   def _get_obs(self, data, last_action: jp.ndarray, target_position) -> jp.ndarray:
