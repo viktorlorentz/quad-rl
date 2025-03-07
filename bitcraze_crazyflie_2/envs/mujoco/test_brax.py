@@ -160,7 +160,8 @@ class MultiQuadEnv(PipelineEnv):
     last_target_time = state.metrics.get("last_target_time", 0.0)
     target = state.metrics.get("target_position", self.target_position)
     def new_target_fn():
-        key2 = jax.random.PRNGKey(int(data.time * 1000) % (2**31-1) + 1)
+        seed = (((data.time * 1000).astype(jp.int32)) % (2**31-1)) + 1
+        key2 = jax.random.PRNGKey(seed)
         offset = jax.random.normal(key2, (3,))
         norm = jp.linalg.norm(offset) + 1e-6
         offset = offset / norm * (self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
