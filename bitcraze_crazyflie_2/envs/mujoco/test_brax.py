@@ -136,8 +136,13 @@ class MultiQuadEnv(PipelineEnv):
     obs = self._get_obs(data, last_action, new_target)
     reward = jp.array(0.0)
     done = jp.array(0.0)
-    payload_pos = data.xpos[self.payload_body_id]
-    metrics = {'time': data.time, 'reward': jp.array(0.0)}
+    # Save target and last_target_time in metrics.
+    metrics = {
+        'time': data.time,
+        'reward': jp.array(0.0),
+        'target_position': new_target,
+        'last_target_time': data.time
+    }
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
@@ -151,18 +156,19 @@ class MultiQuadEnv(PipelineEnv):
 
     data0 = state.pipeline_state
     data = self.pipeline_step(data0, action_scaled)
-    # Update the target marker and occasionally change target position.
+    # Instead of probabilistic target update, use fixed time interval update.
+    last_target_time = state.metrics.get("last_target_time", 0.0)
     target = state.metrics.get("target_position", self.target_position)
-    prob = 0.1 
     def new_target_fn():
-        key2 = jax.random.PRNGKey(((data.time * 1000).astype(jp.int32) % (2**31-1)) + 1)
+        key2 = jax.random.PRNGKey(int(data.time * 1000) % (2**31-1) + 1)
         offset = jax.random.normal(key2, (3,))
         norm = jp.linalg.norm(offset) + 1e-6
         offset = offset / norm * (self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
         return self.goal_center + offset
-    key_temp = jax.random.PRNGKey((data.time * 1000).astype(jp.int32) % (2**31-1))
-    rnd = jax.random.uniform(key_temp, ())
-    target = jax.lax.cond(rnd < prob, new_target_fn, lambda: target)
+    # Update target if 1s has elapsed.
+    update = (data.time - last_target_time) >= 1.0
+    target = jax.lax.cond(update, lambda: new_target_fn(), lambda: target)
+    new_last_target_time = jax.lax.select(update, data.time, last_target_time)
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
 
     # Compute the tilt (angle from vertical) for each quad.
@@ -222,7 +228,12 @@ class MultiQuadEnv(PipelineEnv):
     # Convert done to float32.
     done *= 1.0
 
-    new_metrics = {'time': data.time, 'reward': reward}
+    new_metrics = {
+        'time': data.time,
+        'reward': reward,
+        'target_position': target,
+        'last_target_time': new_last_target_time
+    }
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
   def _get_obs(self, data, last_action: jp.ndarray, target_position) -> jp.ndarray:
@@ -494,7 +505,7 @@ rollout = [state.pipeline_state]
 # --------------------
 # Video Rendering 
 # --------------------
-n_steps = 2000
+n_steps = 4000
 render_every = 2
 # Initialize evaluation state and set a command in state.info.
 rng = jax.random.PRNGKey(0)
