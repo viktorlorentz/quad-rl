@@ -153,7 +153,7 @@ class MultiQuadEnv(PipelineEnv):
     data = self.pipeline_step(data0, action_scaled)
     # Update the target marker and occasionally change target position.
     target = state.metrics.get("target_position", self.target_position)
-    prob = 0.005  # 0.5% chance to change the target
+    prob = 0.1 
     def new_target_fn():
         key2 = jax.random.PRNGKey(((data.time * 1000).astype(jp.int32) % (2**31-1)) + 1)
         offset = jax.random.normal(key2, (3,))
