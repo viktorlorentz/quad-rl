@@ -136,7 +136,7 @@ class MultiQuadEnv(PipelineEnv):
     obs = self._get_obs(data, last_action, new_target)
     reward = jp.array(0.0)
     done = jp.array(0.0)
-    # Remove non-scalar metric keys.
+    # Save only scalar metrics.
     metrics = {
         'time': data.time,
         'reward': jp.array(0.0)
@@ -146,7 +146,6 @@ class MultiQuadEnv(PipelineEnv):
   def step(self, state: State, action: jp.ndarray) -> State:
     """Advances the environment by one control step."""
     # Extract the previous last_action from the observation.
-    # Recall that _get_obs appends last_action as the penultimate segment.
     prev_last_action = state.obs[-(self.sys.nu+1):-1]
     # Convert actions from [-1, 1] to thrust commands in [0, max_thrust]
     thrust_cmds = 0.5 * (action + 1.0)
@@ -157,6 +156,7 @@ class MultiQuadEnv(PipelineEnv):
     # Instead of probabilistic target update, use fixed time interval update.
     last_target_time = state.metrics.get("last_target_time", 0.0)
     target = state.metrics.get("target_position", self.target_position)
+    
     def new_target_fn():
         seed = (((data.time * 1000).astype(jp.int32)) % (2**31-1)) + 1
         key2 = jax.random.PRNGKey(seed)
@@ -164,9 +164,10 @@ class MultiQuadEnv(PipelineEnv):
         norm = jp.linalg.norm(offset) + 1e-6
         offset = offset / norm * (self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
         return self.goal_center + offset
+    
     # Update target if 1s has elapsed.
     update = (data.time - last_target_time) >= 1.0
-    target = jax.lax.cond(update, lambda: new_target_fn(), lambda: target)
+    target = jax.lax.cond(update, new_target_fn, lambda: target)
     new_last_target_time = jax.lax.select(update, data.time, last_target_time)
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
 
@@ -185,7 +186,7 @@ class MultiQuadEnv(PipelineEnv):
 
     # collision = jp.any(data.contact.geom , axis=0) # Broken
 
-    # distacne between quads
+    # distance between quads
     quad1_pos = data.xpos[self.q1_body_id]
     quad2_pos = data.xpos[self.q2_body_id]
     quad_distance = jp.linalg.norm(quad1_pos - quad2_pos)
@@ -203,14 +204,8 @@ class MultiQuadEnv(PipelineEnv):
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
 
-    # # Shrinking bounds with time
-    # max_payload_distance = 0.03 + 0.97 * (1 - data.time / self.max_time)
-    # out_of_bounds = jp.logical_or(out_of_bounds, jp.linalg.norm(data.xpos[self.payload_body_id] - self.target_position) > max_payload_distance)
-
     # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action, target)
-
-   
 
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled,
@@ -222,14 +217,14 @@ class MultiQuadEnv(PipelineEnv):
     done = jp.logical_or(done, collision)
     done = jp.logical_or(done, data.time > self.max_time)
 
-  
-
     # Convert done to float32.
     done *= 1.0
 
     new_metrics = {
         'time': data.time,
-        'reward': reward
+        'reward': reward,
+        'last_target_time': new_last_target_time,
+        'target_position': target
     }
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
