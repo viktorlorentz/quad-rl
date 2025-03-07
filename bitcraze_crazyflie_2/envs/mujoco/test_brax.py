@@ -124,7 +124,7 @@ class MultiQuadEnv(PipelineEnv):
     offset = offset / jp.linalg.norm(offset) * (self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
     new_target = jax.lax.stop_gradient(self.goal_center + offset)
     # Update goal marker position
-    #self.sys.mj_model.geom_pos[self.goal_geom_id] = jax.device_get(new_target)
+    self.sys.mj_model.geom_pos[self.goal_geom_id] = jax.device_get(new_target)
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
         rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
@@ -375,7 +375,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=500_000_000,      # Give the agent enough interactions to learn complex dynamics.
+    num_timesteps=50_000_000,      # Give the agent enough interactions to learn complex dynamics.
     num_evals=50,                  # Evaluate frequently to monitor performance.
     reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
     episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
