@@ -136,10 +136,12 @@ class MultiQuadEnv(PipelineEnv):
     obs = self._get_obs(data, last_action, new_target)
     reward = jp.array(0.0)
     done = jp.array(0.0)
-    # Save only scalar metrics.
+    # Save scalar metrics with consistent structure.
     metrics = {
         'time': data.time,
-        'reward': jp.array(0.0)
+        'reward': jp.array(0.0),
+        'last_target_time': jp.array(0.0),
+        'target_position': self.target_position
     }
     return State(data, obs, reward, done, metrics)
 
