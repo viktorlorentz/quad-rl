@@ -347,7 +347,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=1_000_000,
+    num_timesteps=100_000_000,
     num_evals=10,
     reward_scaling=1,
     episode_length=2000,
@@ -464,19 +464,24 @@ wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
 import io
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from PIL import Image  # add this import
+import matplotlib.ticker as mticker
 
 # Extract payload positions from rollout
 # Note: rollout elements are pipeline_state objects with xpos attribute.
 payload_id = eval_env.payload_body_id
-payload_positions = [np.array(state.xpos[payload_id]) for state in rollout]
+payload_positions = [np.array(s.xpos[payload_id]) for s in rollout]
 payload_positions = np.stack(payload_positions)  # shape: (T, 3)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.plot(payload_positions[:,0], payload_positions[:,1], payload_positions[:,2], label='Payload Trajectory')
+ax.plot(payload_positions[:,0], payload_positions[:,1], payload_positions[:,2],
+        label='Payload Trajectory', lw=2)
 # Mark the goal position with a red dot
 goal = np.array(eval_env.target_position)
 ax.scatter(goal[0], goal[1], goal[2], color='red', s=50, label='Goal Position')
+# Mark the start position with a green dot
+start_pos = payload_positions[0]
+ax.scatter(start_pos[0], start_pos[1], start_pos[2], color='green', s=50, label='Start Position')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
@@ -484,9 +489,16 @@ ax.set_zlabel('Z')
 ax.legend()
 ax.set_title('Payload Trajectory')
 
-# Save the plot to a bytes buffer
+# Use fewer axis ticks
+ax.xaxis.set_major_locator(mticker.MaxNLocator(5))
+ax.yaxis.set_major_locator(mticker.MaxNLocator(5))
+ax.zaxis.set_major_locator(mticker.MaxNLocator(5))
+
+ax.set_zlim(0, 1.5)  
+
+# Save the plot to a bytes buffer with higher dpi
 buf = io.BytesIO()
-plt.savefig(buf, format='png')
+plt.savefig(buf, format='png', dpi=300)
 buf.seek(0)
 img = Image.open(buf)  # convert buffer to PIL image
 wandb.log({"payload_trajectory": wandb.Image(img)})
