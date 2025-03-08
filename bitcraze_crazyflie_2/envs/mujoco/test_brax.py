@@ -74,7 +74,7 @@ class MultiQuadEnv(PipelineEnv):
       policy_freq: float = 250,              # Policy frequency in Hz.
       sim_steps_per_action: int = 1,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
-      reset_noise_scale: float = 1e-2,
+      reset_noise_scale: float = 0.1,          # Noise scale for initial state reset.
       **kwargs,
   ):
     # Load the MJX model from the XML file.
@@ -122,13 +122,14 @@ class MultiQuadEnv(PipelineEnv):
     """Resets the environment to an initial state."""
     # Add random goal position in a sphere around the initial goal center.
     rng, rng_goal = jax.random.split(rng)
-    offset = jax.random.normal(rng_goal, shape=(3,))
-    offset = offset / jp.linalg.norm(offset) * (
-        self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
-    new_target = jax.lax.stop_gradient(self.goal_center + offset)
+    # offset = jax.random.normal(rng_goal, shape=(3,))
+    # offset = offset / jp.linalg.norm(offset) * (
+    #     self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
+    # new_target = jax.lax.stop_gradient(self.goal_center + offset)
 
-    # set site marker to target position
-    self.sys.mj_model.site_pos = self.sys.mj_model.site_pos.at[self.goal_site_id].set(new_target)
+    # set site marker to target position 
+
+ 
 
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
@@ -144,7 +145,7 @@ class MultiQuadEnv(PipelineEnv):
         'time': data.time,
         'reward': jp.array(0.0),
     }
-    obs = self._get_obs(data, last_action, new_target)
+    obs = self._get_obs(data, last_action, self.target_position)
     reward = jp.array(0.0)
     done = jp.array(0.0)
     return State(data, obs, reward, done, metrics)
@@ -165,7 +166,7 @@ class MultiQuadEnv(PipelineEnv):
 
 
    
-   
+    target = self.target_position
     
     # Compute the tilt (angle from vertical) for each quad.
     q1_orientation = data.xquat[self.q1_body_id]
