@@ -153,10 +153,7 @@ class MultiQuadEnv(PipelineEnv):
 
     data0 = state.pipeline_state
     data = self.pipeline_step(data0, action_scaled)
-    
-    # Retrieve previous target info from metrics.
-    last_target_time = state.metrics.get("last_target_time", 0.0)
-    target = state.metrics.get("target_position", self.target_position)
+    target =  data.site_xpos[self.goal_site_id]
     
     def new_target_fn():
         # Create a new random target position.
@@ -168,10 +165,9 @@ class MultiQuadEnv(PipelineEnv):
             self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
         return self.goal_center + offset
     
-    # Update target if at least 1 second has elapsed.
-    update = (data.time - last_target_time) >= 1.0
+    
+    update = jp.equal(jp.mod(data.time, 1.0), 0.0)
     target = jax.lax.cond(update, new_target_fn, lambda: target)
-    new_last_target_time = jax.lax.select(update, data.time, last_target_time)
     
     # Move the marker by updating the site_xpos for the goal marker.
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
