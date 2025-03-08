@@ -166,7 +166,7 @@ class MultiQuadEnv(PipelineEnv):
         return self.goal_center + offset
     
     
-    update = jp.equal(jp.mod(data.time, 1.0), 0.0)
+    update = jp.less(jp.mod(data.time, 1.0), self.time_per_action)
     target = jax.lax.cond(update, new_target_fn, lambda: target)
     
     # Move the marker by updating the site_xpos for the goal marker.
@@ -351,7 +351,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=500_000_000,
+    num_timesteps=50_000_000,
     num_evals=50,
     reward_scaling=1,
     episode_length=2000,
