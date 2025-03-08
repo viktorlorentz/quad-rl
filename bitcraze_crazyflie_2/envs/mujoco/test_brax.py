@@ -114,7 +114,9 @@ class MultiQuadEnv(PipelineEnv):
         sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "q1_cf2")
 
     # Register the new goal marker body
-    self.goal_body_id = mujoco.mj_name2id(sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "goal_marker_body")
+    self.goal_site_id = mujoco.mj_name2id(
+        sys.mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "goal_marker")
+
   
   def reset(self, rng: jp.ndarray) -> State:
     """Resets the environment to an initial state."""
@@ -126,8 +128,7 @@ class MultiQuadEnv(PipelineEnv):
     new_target = jax.lax.stop_gradient(self.goal_center + offset)
 
     #set site marker to target position
-  
-
+    self.sys.mj_model.site_pos[self.goal_site_id] = new_target
 
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
@@ -135,9 +136,8 @@ class MultiQuadEnv(PipelineEnv):
     qvel = jax.random.uniform(
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
-    # Update goal marker position in the state (first 3 values of the free joint)
-    xpos_new = data.xpos.at[self.goal_body_id].set(new_target)
-    data = data.replace(xpos=xpos_new)
+  
+
     last_action = jp.zeros(self.sys.nu)
 
     metrics = {
@@ -163,14 +163,8 @@ class MultiQuadEnv(PipelineEnv):
 
     data = self.pipeline_step(data0, action_scaled)
 
-    
-    target = jp.array([jp.sin(data0.time), jp.sin(2*data0.time), jp.sin(4*data0.time)]) + self.goal_center
-    # Update goal marker position in the state
-    xpos_new = data.xpos.at[self.goal_body_id].set(target)
-    data = data.replace(xpos=xpos_new)
-   
-    
 
+   
    
     
     # Compute the tilt (angle from vertical) for each quad.
