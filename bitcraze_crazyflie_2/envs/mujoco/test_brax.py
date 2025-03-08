@@ -472,7 +472,7 @@ payload_id = eval_env.payload_body_id
 payload_positions = [np.array(s.xpos[payload_id]) for s in rollout]
 payload_positions = np.stack(payload_positions)  # shape: (T, 3)
 
-fig = plt.figure()
+fig = plt.figure( figsize=(10, 10))
 ax = fig.add_subplot(111, projection='3d')
 ax.plot(payload_positions[:,0], payload_positions[:,1], payload_positions[:,2],
         label='Payload Trajectory', lw=2)
