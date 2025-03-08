@@ -151,9 +151,11 @@ class MultiQuadEnv(PipelineEnv):
     thrust_cmds = 0.5 * (action + 1.0)
     action_scaled = thrust_cmds * self.max_thrust
 
-    target = jp.array([jp.sin(data.time), jp.sin(2*data.time), jp.sin(4*data.time)]) + self.goal_center
-
     data0 = state.pipeline_state
+
+    target = jp.array([jp.sin(data0.time), jp.sin(2*data0.time), jp.sin(4*data0.time)]) + self.goal_center
+
+    
     # move marker to target
     data0 = data0.replace(site_xpos=data0.site_xpos.at[self.goal_site_id].set(target))
 
