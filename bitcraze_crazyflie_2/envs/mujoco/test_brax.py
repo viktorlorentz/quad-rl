@@ -349,7 +349,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=200_000_000,
+    num_timesteps=500_000_000,
     num_evals=10,
     reward_scaling=1,
     episode_length=2000,
@@ -492,10 +492,10 @@ quad1_positions = np.stack(quad1_positions)  # shape: (T, 3)
 quad2_positions = np.stack(quad2_positions)  # shape: (T, 3)
 
 # Plot dashed trajectories for quads in different colors
-# ax.plot(quad1_positions[:,0], quad1_positions[:,1], quad1_positions[:,2],
-#         ls='--', color='blue', lw=2, label='Quad1 Trajectory')
-# ax.plot(quad2_positions[:,0], quad2_positions[:,1], quad2_positions[:,2],
-#         ls='--', color='magenta', lw=2, label='Quad2 Trajectory')
+ax.plot(quad1_positions[:,0], quad1_positions[:,1], quad1_positions[:,2],
+  ls='--', color='blue', lw=2, alpha=0.5, label='Quad1 Trajectory')
+ax.plot(quad2_positions[:,0], quad2_positions[:,1], quad2_positions[:,2],
+  ls='--', color='magenta', lw=2, alpha=0.5, label='Quad2 Trajectory')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
