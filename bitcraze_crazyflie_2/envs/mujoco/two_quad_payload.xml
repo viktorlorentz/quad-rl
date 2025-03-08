@@ -70,7 +70,7 @@
             </body>
             
         <body name="goal_marker_body" pos="0 0 0.1">
-            <freejoint damping="0.0"/>
+            <freejoint/>
             <inertial mass="0" diaginertia="0 0 0"/>
             <geom name="goal_marker" type="sphere" size="0.01" rgba="1 0 0 0.8" contype="0" conaffinity="0" />
         </body>
