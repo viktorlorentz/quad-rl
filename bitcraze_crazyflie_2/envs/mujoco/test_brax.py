@@ -112,8 +112,9 @@ class MultiQuadEnv(PipelineEnv):
         sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "q0_cf2")
     self.q2_body_id = mujoco.mj_name2id(
         sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "q1_cf2")
-    self.goal_site_id = mujoco.mj_name2id(
-        sys.mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "goal_marker")
+
+    # Register the new goal marker body
+    self.goal_body_id = mujoco.mj_name2id(sys.mj_model, mujoco.mjtObj.mjOBJ_BODY.value, "goal_marker_body")
   
   def reset(self, rng: jp.ndarray) -> State:
     """Resets the environment to an initial state."""
@@ -134,8 +135,9 @@ class MultiQuadEnv(PipelineEnv):
     qvel = jax.random.uniform(
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
-    # Update the goal marker position in the simulation state.
-    
+    # Update goal marker position in the state (first 3 values of the free joint)
+    adr = self.sys.body_qposadr[self.goal_body_id]
+    data.qpos = data.qpos.at[adr:adr+3].set(new_target)
     last_action = jp.zeros(self.sys.nu)
 
     metrics = {
@@ -157,12 +159,15 @@ class MultiQuadEnv(PipelineEnv):
 
     data0 = state.pipeline_state
 
-    target = jp.array([jp.sin(data0.time), jp.sin(2*data0.time), jp.sin(4*data0.time)]) + self.goal_center
-
-    
-    # move marker to target
+ 
 
     data = self.pipeline_step(data0, action_scaled)
+
+    
+    target = jp.array([jp.sin(data0.time), jp.sin(2*data0.time), jp.sin(4*data0.time)]) + self.goal_center
+    # Update goal marker position in the state
+    adr = self.sys.body_qposadr[self.goal_body_id]
+    data.qpos = data.qpos.at[adr:adr+3].set(target)
    
     
 
