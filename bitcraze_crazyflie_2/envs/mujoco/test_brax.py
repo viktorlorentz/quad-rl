@@ -136,7 +136,8 @@ class MultiQuadEnv(PipelineEnv):
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
     # Update goal marker position in the state (first 3 values of the free joint)
-    data.xpos[self.goal_body_id] = new_target
+    xpos_new = data.xpos.at[self.goal_body_id].set(new_target)
+    data = data.replace(xpos=xpos_new)
     last_action = jp.zeros(self.sys.nu)
 
     metrics = {
@@ -165,7 +166,8 @@ class MultiQuadEnv(PipelineEnv):
     
     target = jp.array([jp.sin(data0.time), jp.sin(2*data0.time), jp.sin(4*data0.time)]) + self.goal_center
     # Update goal marker position in the state
-    data.xpos[self.goal_body_id] = target
+    xpos_new = data.xpos.at[self.goal_body_id].set(target)
+    data = data.replace(xpos=xpos_new)
    
     
 
