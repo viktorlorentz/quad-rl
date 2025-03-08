@@ -124,6 +124,10 @@ class MultiQuadEnv(PipelineEnv):
         self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
     new_target = jax.lax.stop_gradient(self.goal_center + offset)
 
+    #set site marker to target position
+  
+
+
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
         rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
@@ -131,9 +135,9 @@ class MultiQuadEnv(PipelineEnv):
         rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     data = self.pipeline_init(qpos, qvel)
     # Update the goal marker position in the simulation state.
-    data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(new_target))
+    
     last_action = jp.zeros(self.sys.nu)
-    # Save target in metrics.
+
     metrics = {
         'time': data.time,
         'reward': jp.array(0.0),
@@ -157,7 +161,6 @@ class MultiQuadEnv(PipelineEnv):
 
     
     # move marker to target
-    data0 = data0.replace(site_xpos=data0.site_xpos.at[self.goal_site_id].set(target))
 
     data = self.pipeline_step(data0, action_scaled)
    
