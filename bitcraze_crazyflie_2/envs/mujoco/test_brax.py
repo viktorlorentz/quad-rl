@@ -72,7 +72,7 @@ class MultiQuadEnv(PipelineEnv):
   def __init__(
       self,
       policy_freq: float = 250,              # Policy frequency in Hz.
-      sim_steps_per_action: int = 2,           # Physics steps between control actions.
+      sim_steps_per_action: int = 1,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
       reset_noise_scale: float = 1e-2,
       **kwargs,
@@ -151,26 +151,17 @@ class MultiQuadEnv(PipelineEnv):
     thrust_cmds = 0.5 * (action + 1.0)
     action_scaled = thrust_cmds * self.max_thrust
 
+    target = jp.array([jp.sin(data.time), jp.sin(2*data.time), jp.sin(4*data.time)]) + self.goal_center
+
     data0 = state.pipeline_state
+    # move marker to target
+    data0 = data0.replace(site_xpos=data0.site_xpos.at[self.goal_site_id].set(target))
+
     data = self.pipeline_step(data0, action_scaled)
-    target =  data.site_xpos[self.goal_site_id]
-    
-    def new_target_fn():
-        # Create a new random target position.
-        seed = (((data.time * 1000).astype(jp.int32)) % (2**31-1)) + 1
-        key2 = jax.random.PRNGKey(seed)
-        offset = jax.random.normal(key2, (3,))
-        norm = jp.linalg.norm(offset) + 1e-6
-        offset = offset / norm * (
-            self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
-        return self.goal_center + offset
+   
     
 
-    # make target sin of time acroos all different dims with different frequencies. Slowest is 1Hz.
-    target = jp.array([jp.sin(data.time), jp.sin(2*data.time), jp.sin(4*data.time)]) + self.goal_center
-  
-    # Move the marker by updating the site_xpos for the goal marker.
-    data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
+   
     
     # Compute the tilt (angle from vertical) for each quad.
     q1_orientation = data.xquat[self.q1_body_id]
@@ -352,7 +343,7 @@ make_networks_factory = functools.partial(
 train_fn = functools.partial(
     ppo.train,
     num_timesteps=50_000_000,
-    num_evals=50,
+    num_eval=10,
     reward_scaling=1,
     episode_length=2000,
     normalize_observations=False,
