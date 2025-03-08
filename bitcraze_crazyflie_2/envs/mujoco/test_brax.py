@@ -351,7 +351,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=100_000_000,
+    num_timesteps=500_000_000,
     num_evals=50,
     reward_scaling=1,
     episode_length=2000,
