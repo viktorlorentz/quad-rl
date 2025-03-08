@@ -101,7 +101,7 @@ class MultiQuadEnv(PipelineEnv):
     # Maximum thrust from original env.
     self.max_thrust = 0.11772
     # Replace target_position with a fixed goal center and add a sphere radius.
-    self.goal_center = jp.array([0.0, 0.0, 1.5])
+    self.goal_center = jp.array([0.0, 0.0, 1])
     self.goal_radius = 0.8  # sphere radius for random goal position
     self.target_position = self.goal_center
     
