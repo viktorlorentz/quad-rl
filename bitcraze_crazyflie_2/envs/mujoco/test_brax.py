@@ -515,3 +515,26 @@ buf.seek(0)
 img = Image.open(buf)  # convert buffer to PIL image
 wandb.log({"payload_trajectory": wandb.Image(img)})
 plt.close(fig)
+
+# --------------------
+# Payload Position Error Over Time Plot
+# --------------------
+
+times_sim = np.array([s.time for s in rollout])
+payload_errors = np.array([
+    np.linalg.norm(np.array(s.xpos[eval_env.payload_body_id]) - np.array(eval_env.target_position))
+    for s in rollout
+])
+fig2 = plt.figure()
+plt.plot(times_sim, payload_errors, marker='o', linestyle='-', color='orange', label='Payload Error')
+plt.xlabel('Simulation Time (s)')
+plt.ylabel('Payload Position Error')
+plt.title('Payload Position Error Over Time')
+plt.legend()
+buf2 = io.BytesIO()
+plt.savefig(buf2, format='png', dpi=300)
+buf2.seek(0)
+
+img2 = Image.open(buf2)
+wandb.log({"payload_error_over_time": wandb.Image(img2)})
+plt.close(fig2)
