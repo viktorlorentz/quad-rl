@@ -127,8 +127,8 @@ class MultiQuadEnv(PipelineEnv):
         self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
     new_target = jax.lax.stop_gradient(self.goal_center + offset)
 
-    #set site marker to target position
-    self.sys.mj_model.site_pos[self.goal_site_id] = new_target
+    # set site marker to target position
+    self.sys.mj_model.site_pos = self.sys.mj_model.site_pos.at[self.goal_site_id].set(new_target)
 
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
