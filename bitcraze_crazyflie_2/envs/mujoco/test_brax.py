@@ -463,6 +463,7 @@ wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
 # --------------------
 import io
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+from PIL import Image  # add this import
 
 # Extract payload positions from rollout
 # Note: rollout elements are pipeline_state objects with xpos attribute.
@@ -483,9 +484,10 @@ ax.set_zlabel('Z')
 ax.legend()
 ax.set_title('Payload Trajectory')
 
-# Save the plot to a bytes buffer and log it to wandb
+# Save the plot to a bytes buffer
 buf = io.BytesIO()
 plt.savefig(buf, format='png')
 buf.seek(0)
-wandb.log({"payload_trajectory": wandb.Image(buf)})
+img = Image.open(buf)  # convert buffer to PIL image
+wandb.log({"payload_trajectory": wandb.Image(img)})
 plt.close(fig)
