@@ -55,9 +55,9 @@
         <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
 
         <site name="goal_marker" pos="0 0 1" size="0.01" type="sphere" rgba="0 1 0 0.7"/>
-
+<!-- 
         <site name="q0_start" pos="0 -0.15 1.1" euler="0 0 0" />
-<site name="q1_start" pos="0 0.15 1.1" euler="0 0 0" />
+<site name="q1_start" pos="0 0.15 1.1" euler="0 0 0" /> -->
 
         <!-- Payload start site-->
         
