@@ -37,7 +37,6 @@ jax.config.update('jax_platform_name', 'gpu')
 # Add global variable to store average episode length.
 avg_ep_len = 0
 
-# Insert the learning rate schedule function.
 def lr_schedule(step, avg_episode_length, base_lr=3e-4):
     threshold = 1000  # target episode length in timesteps
     factor = 0.001 if avg_episode_length > threshold else 1.0
@@ -121,7 +120,8 @@ class MultiQuadEnv(PipelineEnv):
     # Add random goal position in a sphere around the initial goal center.
     rng, rng_goal = jax.random.split(rng)
     offset = jax.random.normal(rng_goal, shape=(3,))
-    offset = offset / jp.linalg.norm(offset) * (self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
+    offset = offset / jp.linalg.norm(offset) * (
+        self.goal_radius * jax.random.uniform(rng_goal, shape=(), minval=0.0, maxval=1.0))
     new_target = jax.lax.stop_gradient(self.goal_center + offset)
 
     rng, rng1, rng2 = jax.random.split(rng, 3)
@@ -133,45 +133,51 @@ class MultiQuadEnv(PipelineEnv):
     # Update the goal marker position in the simulation state.
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(new_target))
     last_action = jp.zeros(self.sys.nu)
-    obs = self._get_obs(data, last_action, new_target)
-    reward = jp.array(0.0)
-    done = jp.array(0.0)
-    # Save scalar metrics with consistent structure.
+    # Save target in metrics.
     metrics = {
         'time': data.time,
         'reward': jp.array(0.0),
-        'last_target_time': jp.array(0.0)
+        'last_target_time': data.time,  # initialize with current time
+        'target_position': new_target,
     }
+    obs = self._get_obs(data, last_action, new_target)
+    reward = jp.array(0.0)
+    done = jp.array(0.0)
     return State(data, obs, reward, done, metrics)
 
   def step(self, state: State, action: jp.ndarray) -> State:
     """Advances the environment by one control step."""
     # Extract the previous last_action from the observation.
     prev_last_action = state.obs[-(self.sys.nu+1):-1]
-    # Convert actions from [-1, 1] to thrust commands in [0, max_thrust]
+    # Convert actions from [-1, 1] to thrust commands in [0, max_thrust].
     thrust_cmds = 0.5 * (action + 1.0)
     action_scaled = thrust_cmds * self.max_thrust
 
     data0 = state.pipeline_state
     data = self.pipeline_step(data0, action_scaled)
-    # Instead of probabilistic target update, use fixed time interval update.
+    
+    # Retrieve previous target info from metrics.
     last_target_time = state.metrics.get("last_target_time", 0.0)
     target = state.metrics.get("target_position", self.target_position)
     
     def new_target_fn():
+        # Create a new random target position.
         seed = (((data.time * 1000).astype(jp.int32)) % (2**31-1)) + 1
         key2 = jax.random.PRNGKey(seed)
         offset = jax.random.normal(key2, (3,))
         norm = jp.linalg.norm(offset) + 1e-6
-        offset = offset / norm * (self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
+        offset = offset / norm * (
+            self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
         return self.goal_center + offset
     
-    # Update target if 1s has elapsed.
+    # Update target if at least 1 second has elapsed.
     update = (data.time - last_target_time) >= 1.0
     target = jax.lax.cond(update, new_target_fn, lambda: target)
     new_last_target_time = jax.lax.select(update, data.time, last_target_time)
+    
+    # Move the marker by updating the site_xpos for the goal marker.
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
-
+    
     # Compute the tilt (angle from vertical) for each quad.
     q1_orientation = data.xquat[self.q1_body_id]
     q2_orientation = data.xquat[self.q2_body_id]
@@ -181,31 +187,18 @@ class MultiQuadEnv(PipelineEnv):
     angle_q1 = jp_angle_between(q1_local_up, up)
     angle_q2 = jp_angle_between(q2_local_up, up)
 
-    # For this conversion we assume collision and out-of-bounds flags are False.
-    collision = False
-    out_of_bounds = False
-
-    # collision = jp.any(data.contact.geom , axis=0) # Broken
-
-    # distance between quads
+    # Simple collision/out-of-bounds checks.
     quad1_pos = data.xpos[self.q1_body_id]
     quad2_pos = data.xpos[self.q2_body_id]
     quad_distance = jp.linalg.norm(quad1_pos - quad2_pos)
-    collision = quad_distance < 0.11 # hacky collision detection
-
-    # out of bounds if angle is greater than 80 degrees
-    out_of_bounds = jp.absolute(angle_q1) > jp.radians(80)
-    out_of_bounds = jp.logical_or(out_of_bounds, jp.absolute(angle_q2) > jp.radians(80))
-
-    # Terminate if quad below the payload.
+    collision = quad_distance < 0.11
+    out_of_bounds = jp.logical_or(jp.absolute(angle_q1) > jp.radians(80),
+                                  jp.absolute(angle_q2) > jp.radians(80))
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
-    # Out of bounds if quad z pos is below 0.05
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
-
-    # Compute new observation using the previous last_action.
     obs = self._get_obs(data, prev_last_action, target)
 
     reward, _, _ = self.calc_reward(
@@ -213,18 +206,16 @@ class MultiQuadEnv(PipelineEnv):
         angle_q1, angle_q2, prev_last_action, target
     )
 
-    # Terminate if collision or out of bounds.
-    done = out_of_bounds
-    done = jp.logical_or(done, collision)
+    # Terminate if collision, out-of-bounds, or max time reached.
+    done = jp.logical_or(out_of_bounds, collision)
     done = jp.logical_or(done, data.time > self.max_time)
-
-    # Convert done to float32.
-    done *= 1.0
+    done = done * 1.0
 
     new_metrics = {
         'time': data.time,
         'reward': reward,
-        'last_target_time': new_last_target_time
+        'last_target_time': new_last_target_time,
+        'target_position': target,
     }
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
@@ -272,8 +263,7 @@ class MultiQuadEnv(PipelineEnv):
         quad2_angvel,         # (3,)
         quad2_linear_acc,     # (3,)
         quad2_angular_acc,    # (3,)
-        last_action,          # (nu,) — appended as the penultimate segment
-        #time_progress         # (1,)
+        last_action,          # (nu,)
     ])
     return obs
 
@@ -294,21 +284,14 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
-    #time_progress = sim_time / self.max_time
-    #distance_reward = jp.exp(-3 * dis) + 1 - dis #jp.exp(-time_progress**4 * 20 * dis) - dis
-
-   
-    # # scale distance reward with time
-    # distance_reward = distance_reward * (1 + sim_time / self.max_time)**2
-    #\exp\left(-100\cdot\left|x\right|\right)+1-\left|x\right|
     distance_reward =  1.5 - dis + 0.3 * jp.exp(-20 * dis)
 
-    # Use clamped norms to avoid division by zero.
+    # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
     norm_linvel = jp.maximum(jp.linalg.norm(payload_linvel), 1e-6)
     velocity_towards_target = jp.dot(payload_error, payload_linvel) / (norm_error * norm_linvel)
   
-    safe_distance_reward = jp.clip((quad_distance - 0.11) / (0.15 - 0.11), 0, 1) # 1 if distance is greater than 0.15, 0 if less than 0.10
+    safe_distance_reward = jp.clip((quad_distance - 0.11) / (0.15 - 0.11), 0, 1)
     collision_penalty = 5.0 * collision
     out_of_bounds_penalty = 50.0 * out_of_bounds
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
@@ -321,37 +304,23 @@ class MultiQuadEnv(PipelineEnv):
     z_reward_q2 = quad2_rel[2] - tp[2]
     quad_above_reward = z_reward_q1 + z_reward_q2
 
-    #rotation_penalty = angle_q1**2 + angle_q2**2
-
     up_reward = jp.exp(-jp.abs(angle_q1)) + jp.exp(-jp.abs(angle_q2))
 
-    # penalty for ang_vel 
+    # Penalties for angular and linear velocity of quads.
     ang_vel_q1 = quad1_obs[15:18]
     ang_vel_q2 = quad2_obs[15:18]
     ang_vel_penalty = 0.1 * (jp.linalg.norm(ang_vel_q1)**2 + jp.linalg.norm(ang_vel_q2)**2)
-
-    #penalty on linvel
     linvel_q1 = quad1_obs[9:12]
     linvel_q2 = quad2_obs[9:12]
     linvel_quad_penalty = 0.1 * (jp.linalg.norm(linvel_q1)**2 + jp.linalg.norm(linvel_q2)**2)
 
-    # goal bonus as gauss on target
-    #goal_bonus = 10 * jp.exp(-0.5 * (dis ** 2) / (0.01 ** 2)) 
-
-    # Combine components to form the final reward.
     reward = 0
     reward += 10 * distance_reward 
     reward += safe_distance_reward
     reward += velocity_towards_target
-    #reward += quad_above_reward
     reward += up_reward
-   # reward += goal_bonus
-
-
-
     reward -= 5 * linvel_penalty
     reward -= collision_penalty
-    #reward -= rotation_penalty
     reward -= out_of_bounds_penalty
     reward -= 2 * smooth_action_penalty
     reward -= action_energy_penalty
@@ -359,7 +328,6 @@ class MultiQuadEnv(PipelineEnv):
     reward -= 5 * linvel_quad_penalty
 
     reward /= 25.0
-   
     return reward, None, {}
 
 # Register the environment under the name 'multiquad'
@@ -391,32 +359,29 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=100_000_000,      # Give the agent enough interactions to learn complex dynamics.
-    num_evals=50,                  # Evaluate frequently to monitor performance.
-    reward_scaling=1,             # Scale rewards so that the gradients are well behaved; adjust if your rewards are very small or large.
-    episode_length=2000,           # Allow each episode a fixed duration to capture the complete payload maneuver.
-    normalize_observations=False,   # Normalize observations for stable training.
-    action_repeat=1,               # Use high-frequency control (one action per timestep) for agile quadrotor behavior.
-    unroll_length=40,              # Collect sequences of 10 timesteps per rollout to capture short-term dynamics.
-    num_minibatches=8,            # Split the full batch into 32 minibatches to help stabilize the gradient updates.
-    num_updates_per_batch=4,       # Apply 4 SGD updates per batch of data.
-    discounting=0.99,              # Standard discount factor to balance immediate and future rewards.
-    # Replace fixed learning_rate with a lambda using our lr_schedule
-    learning_rate= 3e-4,#lambda step: lr_schedule(step, avg_ep_len),
-    entropy_cost=1e-2,             # Encourage exploration with a modest entropy bonus.
-    num_envs=2048,                 # Run 2048 parallel environment instances for efficient data collection.
-    batch_size=1024,               # Use a batch size that balances throughput with memory usage.
-    seed=1,                        # A fixed seed for reproducibility.
+    num_timesteps=100_000_000,
+    num_evals=50,
+    reward_scaling=1,
+    episode_length=2000,
+    normalize_observations=False,
+    action_repeat=1,
+    unroll_length=40,
+    num_minibatches=8,
+    num_updates_per_batch=4,
+    discounting=0.99,
+    learning_rate=3e-4,
+    entropy_cost=1e-2,
+    num_envs=2048,
+    batch_size=1024,
+    seed=1,
     network_factory=make_networks_factory
 )
 
 x_data, y_data, ydataerr = [], [], []
 times = [datetime.now()]
 
-# Initialize wandb for logging.
 wandb.init(project="single_quad_rl", name=f"quad_rl_{int(time.time())}")
 
-# Helper function to save videos.
 def save_video(frames, filename, fps=30):
   try:
       imageio.mimsave(filename, frames, fps=float(fps))
@@ -424,14 +389,9 @@ def save_video(frames, filename, fps=30):
   except ImportError:
       print("Could not save video. Install OpenCV or imageio.")
 
-# Helper function to render a rollout video.
-def render_video(video_filename, env, duration=5.0, framerate=30):  # modified signature to include env
-    # Use the environment's mujoco model.
-    mj_model = env.sys.mj_model  # replaced eval_env with env
+def render_video(video_filename, env, duration=5.0, framerate=30):
+    mj_model = env.sys.mj_model
     mj_data = mujoco.MjData(mj_model)
-    # Set up a GL context and renderer.
-    # ctx = mujoco.GLContext(1920, 1080)
-    # ctx.make_current()
     renderer = mujoco.Renderer(mj_model, width=1920, height=1080)
     scene_option = mujoco.MjvOption()
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
@@ -439,16 +399,13 @@ def render_video(video_filename, env, duration=5.0, framerate=30):  # modified s
     mujoco.mj_resetData(mj_model, mj_data)
     while mj_data.time < duration:
         mujoco.mj_step(mj_model, mj_data)
-        # Capture a frame approximately at the desired framerate.
         if len(frames) < mj_data.time * framerate:
-            # Use track camera by passing camera="track"
             renderer.update_scene(mj_data, camera="track", scene_option=scene_option)
             frame = renderer.render()
             frames.append(frame)
     renderer.close()
     save_video(frames, video_filename, fps=framerate)
 
-# Updated progress callback: remove per-progress video logging and log all metrics.
 def progress(num_steps, metrics):
     global avg_ep_len
     times.append(datetime.now())
@@ -464,23 +421,19 @@ def progress(num_steps, metrics):
     plt.savefig('mjx_brax_multiquad_policy.png')
 
     it_per_sec = num_steps / (times[-1] - times[0]).total_seconds()
-    progress = num_steps / train_fn.keywords['num_timesteps']
+    progress_val = num_steps / train_fn.keywords['num_timesteps']
     reward = y_data[-1]
-    time = times[-1] - times[0]
-    print(f'time: {time}, step: {num_steps}, progress: {progress:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}')
-
-    # Log all metrics to wandb.
+    elapsed_time = times[-1] - times[0]
+    print(f'time: {elapsed_time}, step: {num_steps}, progress: {progress_val:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}')
     wandb.log({"num_steps": num_steps, **metrics})
 
 make_inference_fn, params, _ = train_fn(environment=env, progress_fn=progress)
 print(f'time to jit: {times[1] - times[0]}')
 print(f'time to train: {times[-1] - times[1]}')
 
-# Save the trained policy.
 model_path = '/tmp/mjx_brax_multiquad_policy'
 model.save_params(model_path, params)
 
-# Load parameters and define the inference function.
 params = model.load_params(model_path)
 inference_fn = make_inference_fn(params)
 jit_inference_fn = jax.jit(inference_fn)
@@ -499,21 +452,15 @@ rollout = [state.pipeline_state]
 # --------------------
 n_steps = 4000
 render_every = 2
-# Initialize evaluation state and set a command in state.info.
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
-
 rollout = [state.pipeline_state]
-
 
 for i in range(n_steps):
     act_rng, rng = jax.random.split(rng)
     ctrl, _ = jit_inference_fn(state.obs, act_rng)
-
-    
     state = jit_step(state, ctrl)
     rollout.append(state.pipeline_state)
-
 
 ctx = mujoco.GLContext(1920, 1080)
 ctx.make_current()
