@@ -69,7 +69,7 @@
             <site name="payload_s" pos="0 0 0.01" />
             </body>
             
-        <body name="goal_marker_body" pos="0 0 0.1" mocap="true">
+        <body name="goal_marker_body" pos="0 0 0.1">
             <freejoint/>
             <geom name="goal_marker" type="sphere" size="0.01" rgba="1 0 0 0.8" contype="0" conaffinity="0" />
         </body>
