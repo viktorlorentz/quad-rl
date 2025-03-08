@@ -165,10 +165,10 @@ class MultiQuadEnv(PipelineEnv):
             self.goal_radius * jax.random.uniform(key2, (), minval=0.0, maxval=1.0))
         return self.goal_center + offset
     
-    
-    update = jp.less(jp.mod(data.time, 1.0), self.time_per_action)
-    target = jax.lax.cond(update, new_target_fn, lambda: target)
-    
+
+    # make target sin of time acroos all different dims with different frequencies. Slowest is 1Hz.
+    target = jp.array([jp.sin(data.time), jp.sin(2*data.time), jp.sin(4*data.time)]) + self.goal_center
+  
     # Move the marker by updating the site_xpos for the goal marker.
     data = data.replace(site_xpos=data.site_xpos.at[self.goal_site_id].set(target))
     
