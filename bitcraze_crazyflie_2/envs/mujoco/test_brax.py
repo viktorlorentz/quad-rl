@@ -483,6 +483,18 @@ ax.scatter(goal[0], goal[1], goal[2], color='red', s=50, label='Goal Position')
 start_pos = payload_positions[0]
 ax.scatter(start_pos[0], start_pos[1], start_pos[2], color='green', s=50, label='Start Position')
 
+# Extract trajectories for Quads
+quad1_positions = [np.array(s.xpos[eval_env.q1_body_id]) for s in rollout]
+quad2_positions = [np.array(s.xpos[eval_env.q2_body_id]) for s in rollout]
+quad1_positions = np.stack(quad1_positions)  # shape: (T, 3)
+quad2_positions = np.stack(quad2_positions)  # shape: (T, 3)
+
+# Plot dashed trajectories for quads in different colors
+ax.plot(quad1_positions[:,0], quad1_positions[:,1], quad1_positions[:,2],
+        ls='--', color='blue', lw=2, label='Quad1 Trajectory')
+ax.plot(quad2_positions[:,0], quad2_positions[:,1], quad2_positions[:,2],
+        ls='--', color='magenta', lw=2, label='Quad2 Trajectory')
+
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
