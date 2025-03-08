@@ -272,7 +272,7 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
-    distance_reward =  1 - dis + 0.3 * jp.exp(-20 * dis)
+    distance_reward =  1 - dis +  jp.exp(-20 * dis)
 
     # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -281,7 +281,7 @@ class MultiQuadEnv(PipelineEnv):
   
     safe_distance_reward = jp.clip((quad_distance - 0.11) / (0.15 - 0.11), 0, 1)
     collision_penalty = 5.0 * collision
-    out_of_bounds_penalty = 100.0 * out_of_bounds
+    out_of_bounds_penalty = 50.0 * out_of_bounds
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
     action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
     
@@ -360,7 +360,7 @@ train_fn = functools.partial(
     learning_rate=3e-4,
     entropy_cost=1e-2,
     num_envs=2048,
-    batch_size=1024,
+    batch_size=256,
     seed=1,
     network_factory=make_networks_factory
 )
