@@ -272,7 +272,9 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
-    distance_reward =  1 - dis +  jp.exp(-20 * dis)
+    # Emphasize z_error 
+    z_error = jp.abs(payload_error[2])
+    distance_reward = (1 - dis + jp.exp(-10 * dis)) + jp.exp(-10 * z_error)
 
     # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
