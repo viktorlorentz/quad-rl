@@ -457,3 +457,35 @@ frames = eval_env.render(rollout[::render_every], camera='track', width=1920, he
 video_filename = "trained_policy_video.mp4"
 save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
 wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
+
+# --------------------
+# 3D Trajectory Plot for Payload
+# --------------------
+import io
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+# Extract payload positions from rollout
+# Note: rollout elements are pipeline_state objects with xpos attribute.
+payload_id = eval_env.payload_body_id
+payload_positions = [np.array(state.xpos[payload_id]) for state in rollout]
+payload_positions = np.stack(payload_positions)  # shape: (T, 3)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(payload_positions[:,0], payload_positions[:,1], payload_positions[:,2], label='Payload Trajectory')
+# Mark the goal position with a red dot
+goal = np.array(eval_env.target_position)
+ax.scatter(goal[0], goal[1], goal[2], color='red', s=50, label='Goal Position')
+
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_zlabel('Z')
+ax.legend()
+ax.set_title('Payload Trajectory')
+
+# Save the plot to a bytes buffer and log it to wandb
+buf = io.BytesIO()
+plt.savefig(buf, format='png')
+buf.seek(0)
+wandb.log({"payload_trajectory": wandb.Image(buf)})
+plt.close(fig)
