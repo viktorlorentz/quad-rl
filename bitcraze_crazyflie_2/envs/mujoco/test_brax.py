@@ -272,7 +272,7 @@ class MultiQuadEnv(PipelineEnv):
     payload_linvel = team_obs[3:6]
     linvel_penalty = jp.linalg.norm(payload_linvel)
     dis = jp.linalg.norm(payload_error)
-    distance_reward =  1.5 - dis + 0.3 * jp.exp(-20 * dis)
+    distance_reward =  1 - dis + 0.3 * jp.exp(-20 * dis)
 
     # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -281,7 +281,7 @@ class MultiQuadEnv(PipelineEnv):
   
     safe_distance_reward = jp.clip((quad_distance - 0.11) / (0.15 - 0.11), 0, 1)
     collision_penalty = 5.0 * collision
-    out_of_bounds_penalty = 50.0 * out_of_bounds
+    out_of_bounds_penalty = 100.0 * out_of_bounds
     smooth_action_penalty = jp.mean(jp.abs(action - last_action) / self.max_thrust)
     action_energy_penalty = jp.mean(jp.abs(action)) / self.max_thrust
     
@@ -438,7 +438,7 @@ rollout = [state.pipeline_state]
 # --------------------
 # Video Rendering 
 # --------------------
-n_steps = 4000
+n_steps = 2500
 render_every = 2
 rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
@@ -490,10 +490,10 @@ quad1_positions = np.stack(quad1_positions)  # shape: (T, 3)
 quad2_positions = np.stack(quad2_positions)  # shape: (T, 3)
 
 # Plot dashed trajectories for quads in different colors
-ax.plot(quad1_positions[:,0], quad1_positions[:,1], quad1_positions[:,2],
-        ls='--', color='blue', lw=2, label='Quad1 Trajectory')
-ax.plot(quad2_positions[:,0], quad2_positions[:,1], quad2_positions[:,2],
-        ls='--', color='magenta', lw=2, label='Quad2 Trajectory')
+# ax.plot(quad1_positions[:,0], quad1_positions[:,1], quad1_positions[:,2],
+#         ls='--', color='blue', lw=2, label='Quad1 Trajectory')
+# ax.plot(quad2_positions[:,0], quad2_positions[:,1], quad2_positions[:,2],
+#         ls='--', color='magenta', lw=2, label='Quad2 Trajectory')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
@@ -526,7 +526,7 @@ payload_errors = np.array([
     for s in rollout
 ])
 fig2 = plt.figure()
-plt.plot(times_sim, payload_errors, marker='o', linestyle='-', color='orange', label='Payload Error')
+plt.plot(times_sim, payload_errors, linestyle='-', color='orange', label='Payload Error')
 plt.xlabel('Simulation Time (s)')
 plt.ylabel('Payload Position Error')
 plt.title('Payload Position Error Over Time')
