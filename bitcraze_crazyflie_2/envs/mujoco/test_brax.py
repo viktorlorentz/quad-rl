@@ -140,8 +140,7 @@ class MultiQuadEnv(PipelineEnv):
     metrics = {
         'time': data.time,
         'reward': jp.array(0.0),
-        'last_target_time': jp.array(0.0),
-        'target_position': self.target_position
+        'last_target_time': jp.array(0.0)
     }
     return State(data, obs, reward, done, metrics)
 
@@ -225,8 +224,7 @@ class MultiQuadEnv(PipelineEnv):
     new_metrics = {
         'time': data.time,
         'reward': reward,
-        'last_target_time': new_last_target_time,
-        'target_position': target
+        'last_target_time': new_last_target_time
     }
     return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
 
