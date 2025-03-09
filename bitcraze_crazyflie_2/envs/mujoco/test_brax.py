@@ -558,3 +558,54 @@ buf2.seek(0)
 img2 = Image.open(buf2)
 wandb.log({"payload_error_over_time": wandb.Image(img2)})
 plt.close(fig2)
+
+# --------------------
+# New: Batch Rollout with 1000 Trajectories using JAX batching and Payload Position Error Plot
+
+
+n_rollouts = 1000
+n_steps_test = 2500
+
+def rollout_step(carry, _):
+    state, key = carry
+    key, subkey = jax.random.split(key)
+    ctrl, _ = jit_inference_fn(state.obs, subkey)
+    new_state = jit_step(state, ctrl)
+    error = jp.linalg.norm(new_state.pipeline_state.xpos[eval_env.payload_body_id] - eval_env.target_position)
+    return (new_state, key), error
+
+def single_rollout(key):
+    state = jit_reset(key)
+    init_error = jp.linalg.norm(state.pipeline_state.xpos[eval_env.payload_body_id] - eval_env.target_position)
+    (final_state, _), errors = jax.lax.scan(rollout_step, (state, key), None, length=n_steps_test)
+    errors = jp.concatenate([jp.array([init_error]), errors])
+    return errors
+
+batch_keys = jax.random.split(jax.random.PRNGKey(42), n_rollouts)
+# Vectorized rollout: shape (n_rollouts, n_steps_test+1)
+batch_rollouts = jax.vmap(single_rollout)(batch_keys)
+# Transpose to shape (n_steps_test+1, n_rollouts)
+batch_errors = batch_rollouts.T
+
+# Compute percentiles using numpy
+batch_errors_np = np.array(batch_errors)
+percentile_50 = np.percentile(batch_errors_np, 50, axis=1)  # median
+lower_percentile = np.percentile(batch_errors_np, 25, axis=1)
+upper_percentile = np.percentile(batch_errors_np, 75, axis=1)
+percentile_100 = np.percentile(batch_errors_np, 100, axis=1)  # max
+time_axis = np.linspace(0, n_steps_test * eval_env.dt, n_steps_test + 1)
+
+fig_batch = plt.figure(figsize=(8, 6))
+plt.plot(time_axis, percentile_50, label='50th Percentile (Median)', color='blue')
+plt.plot(time_axis, percentile_100, label='100th Percentile (Max)', color='red', linestyle='--')
+plt.fill_between(time_axis, lower_percentile, upper_percentile, color='blue', alpha=0.3, label='25th-75th Percentile')
+plt.xlabel('Simulation Time (s)')
+plt.ylabel('Payload Position Error')
+plt.title('Batch Rollout (1000) - Payload Error Over Time (JAX Batch)')
+plt.legend()
+buf_batch = io.BytesIO()
+plt.savefig(buf_batch, format='png', dpi=300)
+buf_batch.seek(0)
+img_batch = Image.open(buf_batch)
+wandb.log({"batch_payload_error": wandb.Image(img_batch)})
+plt.close(fig_batch)
