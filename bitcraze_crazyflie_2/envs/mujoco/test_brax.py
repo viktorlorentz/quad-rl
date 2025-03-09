@@ -188,6 +188,9 @@ class MultiQuadEnv(PipelineEnv):
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
     out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
+    # out of bounds for payload
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.payload_body_id][2] < 0.05)
+
     obs = self._get_obs(data, prev_last_action, target)
 
     reward, _, _ = self.calc_reward(
@@ -663,18 +666,33 @@ plt.close(fig)
 # Compute percentiles from recorded errors.
 timeline = np.array(timeline)               # shape: (n_steps,)
 batched_errors = np.array(batched_errors)     # shape: (n_steps, num_envs)
+min_errors = np.min(batched_errors, axis=1)
+max_errors = np.max(batched_errors, axis=1)
 median_errors = np.percentile(batched_errors, 50, axis=1)
-percentile25 = np.percentile(batched_errors, 25, axis=1)
-percentile100 = np.percentile(batched_errors, 100, axis=1)
 
 fig3 = plt.figure(figsize=(8, 5))
-plt.fill_between(timeline, percentile25, percentile100, color='skyblue', alpha=0.4, label='25th-100th Percentile')
-plt.plot(timeline, median_errors, color='blue', lw=2, label='Median Payload Error')
-plt.xlabel('Simulation Time (s)')
-plt.ylabel('Payload Position Error')
-plt.title('Batched Rollout Payload Position Error Over Time')
-plt.legend()
-plt.grid(True)
+ax3 = fig3.add_subplot(111)
+x = timeline
+cmap = plt.get_cmap("viridis")
+
+# Fill between min and max with a gradient color per time-segment.
+for i in range(len(x) - 1):
+    x_seg = [x[i], x[i+1]]
+    y1_seg = [min_errors[i], min_errors[i+1]]
+    y2_seg = [max_errors[i], max_errors[i+1]]
+    norm_val = (x[i] - x[0]) / (x[-1] - x[0])
+    ax3.fill_between(x_seg, y1_seg, y2_seg, color=cmap(norm_val))
+
+# Plot min, median, and max lines.
+ax3.plot(x, min_errors, color='black', lw=1, label='Min')
+ax3.plot(x, median_errors, color='blue', lw=2, label='Median')
+ax3.plot(x, max_errors, color='black', lw=1, label='Max')
+
+ax3.set_xlabel('Simulation Time (s)')
+ax3.set_ylabel('Payload Position Error')
+ax3.set_title('Batched Rollout Payload Position Error Over Time')
+ax3.legend()
+ax3.grid(True)
 plt.savefig('batched_payload_error_over_time.png', dpi=300)
 print("Plot saved: Batched Payload Error Over Time")
 wandb.log({"batched_payload_error_over_time": wandb.Image('batched_payload_error_over_time.png')})
