@@ -630,12 +630,18 @@ goal = np.array(eval_env.target_position)
 ax.scatter(goal[0], goal[1], color='red', s=70, marker='*', label='Goal Position')
 
 # --- Begin modifications ---
-# Remove heatmap and add contour plot:
+from matplotlib.colors import LinearSegmentedColormap
+hot = plt.cm.get_cmap('hot', 256)
+newcolors = hot(np.linspace(0, 1, 256))
+newcolors[0, :] = np.array([1, 1, 1, 0])  # Set lowest value to transparent white
+new_cmap = LinearSegmentedColormap.from_list('hot_modified', newcolors)
+
+# Remove heatmap and add contour plot with fixed limits.
 all_x = final_payload_positions[:, 0]
 all_y = final_payload_positions[:, 1]
-# Determine inlier bounds (ignoring outliers, e.g., use 5th and 95th percentiles)
-x_low, x_high = np.percentile(all_x, [5, 95])
-y_low, y_high = np.percentile(all_y, [5, 95])
+# Set axis limits to -0.3 and 0.3.
+x_low, x_high = -0.3, 0.3
+y_low, y_high = -0.3, 0.3
 # Create mask for inliers.
 inliers_mask = ((final_payload_positions[:, 0] >= x_low) &
                 (final_payload_positions[:, 0] <= x_high) &
@@ -651,11 +657,14 @@ H, xedges, yedges = np.histogram2d(inliers[:, 0], inliers[:, 1], bins=[xbins, yb
 Xc = (xedges[:-1] + xedges[1:]) / 2
 Yc = (yedges[:-1] + yedges[1:]) / 2
 X, Y = np.meshgrid(Xc, Yc)
-# Plot the contour.
-ax.contourf(X, Y, H.T, levels=10, cmap="hot", alpha=0.7)
+# Plot the contour using the new colormap and force 0 to be white/transparent.
+ax.contourf(X, Y, H.T, levels=10, cmap=new_cmap, alpha=0.7, vmin=0)
 # Plot outliers separately.
 if outliers.size > 0:
     ax.scatter(outliers[:, 0], outliers[:, 1], color='cyan', marker='x', s=20, label='Outliers')
+# Set axis limits.
+ax.set_xlim(x_low, x_high)
+ax.set_ylim(y_low, y_high)
 # --- End modifications ---
 
 # Mark final quad positions as small squares with low opacity.
