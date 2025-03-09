@@ -631,15 +631,13 @@ ax.scatter(goal[0], goal[1], color='red', s=70, marker='*', label='Goal Position
 
 # --- Begin modifications ---
 from matplotlib.colors import LinearSegmentedColormap
-hot = plt.cm.get_cmap('hot', 256)
-newcolors = hot(np.linspace(0, 1, 256))
-newcolors[0, :] = np.array([1, 1, 1, 0])  # Set lowest value to transparent white
-new_cmap = LinearSegmentedColormap.from_list('hot_modified', newcolors)
+# Create a custom colormap from transparent white to blue.
+new_cmap = LinearSegmentedColormap.from_list('custom_cmap', [(0, (1,1,1,0)), (1, (0,0,1,1))], N=256)
 
 # Remove heatmap and add contour plot with fixed limits.
 all_x = final_payload_positions[:, 0]
 all_y = final_payload_positions[:, 1]
-# Set axis limits to -0.3 and 0.3.
+# Set axis limits.
 x_low, x_high = -0.3, 0.3
 y_low, y_high = -0.3, 0.3
 # Create mask for inliers.
@@ -657,9 +655,12 @@ H, xedges, yedges = np.histogram2d(inliers[:, 0], inliers[:, 1], bins=[xbins, yb
 Xc = (xedges[:-1] + xedges[1:]) / 2
 Yc = (yedges[:-1] + yedges[1:]) / 2
 X, Y = np.meshgrid(Xc, Yc)
-# Plot the contour using the new colormap and force 0 to be white/transparent.
-ax.contourf(X, Y, H.T, levels=10, cmap=new_cmap, alpha=0.7, vmin=0)
-# Plot outliers separately.
+# Plot the contour using the new colormap.
+cont = ax.contourf(X, Y, H.T, levels=10, cmap=new_cmap, alpha=0.7, vmin=0)
+# Add a color bar indicator.
+cbar = fig.colorbar(cont, ax=ax)
+cbar.set_label('Density')
+# Plot outliers.
 if outliers.size > 0:
     ax.scatter(outliers[:, 0], outliers[:, 1], color='cyan', marker='x', s=20, label='Outliers')
 # Set axis limits.
@@ -695,7 +696,9 @@ p0 = np.percentile(batched_errors, 0, axis=1)
 p25 = np.percentile(batched_errors, 25, axis=1)
 p50 = np.percentile(batched_errors, 50, axis=1)
 p75 = np.percentile(batched_errors, 75, axis=1)
-p95 = np.percentile(batched_errors, 95, axis=1)
+p90 = np.percentile(batched_errors, 90, axis=1)
+p98 = np.percentile(batched_errors, 98, axis=1)
+p100 = np.percentile(batched_errors, 100, axis=1)
 
 fig3 = plt.figure(figsize=(8, 5))
 ax3 = fig3.add_subplot(111)
@@ -703,7 +706,9 @@ ax3.plot(timeline, p0, color='black', linestyle='--', label='0th Percentile')
 ax3.plot(timeline, p25, color='blue', linestyle='-.', label='25th Percentile')
 ax3.plot(timeline, p50, color='blue', linewidth=2, label='50th Percentile')
 ax3.plot(timeline, p75, color='blue', linestyle='-.', label='75th Percentile')
-ax3.plot(timeline, p95, color='black', linestyle='--', label='95th Percentile')
+ax3.plot(timeline, p90, color='black', linestyle='--', label='90th Percentile')
+ax3.plot(timeline, p98, color='red', linestyle='-', label='98th Percentile')
+ax3.plot(timeline, p100, color='red', linestyle='-', label='100th Percentile')
 
 ax3.set_xlabel('Simulation Time (s)')
 ax3.set_ylabel('Payload Position Error')
