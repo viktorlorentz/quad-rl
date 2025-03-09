@@ -580,3 +580,92 @@ img2 = Image.open(buf2)
 wandb.log({"payload_error_over_time": wandb.Image(img2)})
 plt.close(fig2)
 
+# --------------------
+# Batched Rollout over 100 Envs and Top-Down XY Plot for Final Positions 
+
+num_envs = 100
+n_steps = 2500
+
+# Create 100 independent environment instances.
+batched_rngs = jax.random.split(jax.random.PRNGKey(1234), num_envs)
+batched_states = jax.vmap(jit_reset)(batched_rngs)
+
+# Record starting payload positions (XY) from each environment.
+start_positions = jax.vmap(lambda s: s.xpos[eval_env.payload_body_id])(batched_states)
+start_positions = np.array(start_positions)  # shape: (num_envs, 3)
+
+# Roll out each environment for n_steps.
+rng_main = jax.random.PRNGKey(5678)
+for step in range(n_steps):
+    rng_main, rng_step = jax.random.split(rng_main)
+    # Split the RNG for each environment.
+    act_rngs = jax.random.split(rng_step, num_envs)
+    # Compute control actions for all environments.
+    ctrls, _ = jax.vmap(jit_inference_fn)(batched_states.obs, act_rngs)
+    # Step all environments in parallel.
+    batched_states = jax.vmap(jit_step)(batched_states, ctrls)
+
+# Extract final positions for payload, quad1, and quad2 (only XY coordinates).
+final_payload_positions = jax.vmap(lambda s: s.xpos[eval_env.payload_body_id])(batched_states)
+final_quad1_positions   = jax.vmap(lambda s: s.xpos[eval_env.q1_body_id])(batched_states)
+final_quad2_positions   = jax.vmap(lambda s: s.xpos[eval_env.q2_body_id])(batched_states)
+
+final_payload_positions = np.array(final_payload_positions)[:, :2]
+final_quad1_positions   = np.array(final_quad1_positions)[:, :2]
+final_quad2_positions   = np.array(final_quad2_positions)[:, :2]
+
+# Create a top-down XY plot.
+fig, ax = plt.subplots(figsize=(8, 8))
+# Plot the starting payload positions as tiny black dots.
+ax.scatter(start_positions[:, 0], start_positions[:, 1],
+           color='black', s=10, label='Start Payload')
+
+# Determine grid boundaries from all final positions.
+all_x = np.concatenate([
+    final_payload_positions[:, 0],
+    final_quad1_positions[:, 0],
+    final_quad2_positions[:, 0]
+])
+all_y = np.concatenate([
+    final_payload_positions[:, 1],
+    final_quad1_positions[:, 1],
+    final_quad2_positions[:, 1]
+])
+xmin, xmax = all_x.min() - 0.1, all_x.max() + 0.1
+ymin, ymax = all_y.min() - 0.1, all_y.max() + 0.1
+
+# Define grid bins.
+xbins = np.linspace(xmin, xmax, 100)
+ybins = np.linspace(ymin, ymax, 100)
+
+# Create a helper function to compute density from 2D histograms.
+def compute_density(data):
+    # data: shape (num_envs, 2)
+    # Compute a normalized 2D histogram.
+    H, xedges, yedges = np.histogram2d(data[:, 0], data[:, 1],
+                                       bins=[xbins, ybins], density=True)
+    # Compute centers of bins.
+    xcenters = (xedges[:-1] + xedges[1:]) / 2
+    ycenters = (yedges[:-1] + yedges[1:]) / 2
+    Xc, Yc = np.meshgrid(xcenters, ycenters)
+    return Xc, Yc, H.T  # transpose H so that dimensions match Xc, Yc
+
+# For each body (payload, quad1, quad2), compute and plot density as filled contours.
+for data, color, label in zip(
+    [final_payload_positions, final_quad1_positions, final_quad2_positions],
+    ['red', 'blue', 'magenta'],
+    ['Payload Final', 'Quad1 Final', 'Quad2 Final']
+):
+    Xc, Yc, Z = compute_density(data)
+    # Plot filled contours (with 10 levels) and contour lines.
+    ax.contourf(Xc, Yc, Z, levels=10, colors=[color], alpha=0.5)
+    ax.contour(Xc, Yc, Z, levels=10, colors=color, alpha=0.7)
+    # Dummy scatter for legend.
+    ax.scatter([], [], color=color, alpha=0.5, label=label)
+
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_title('Top-Down XY Plot for Final Positions (Batched Rollout)')
+ax.legend()
+plt.savefig('batched_topdown_xy_plot_no_new_imports.png', dpi=300)
+plt.show()
