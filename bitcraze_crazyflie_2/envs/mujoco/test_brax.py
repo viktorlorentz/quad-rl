@@ -403,7 +403,7 @@ def progress(num_steps, metrics):
 
     it_per_sec = num_steps / (times[-1] - times[0]).total_seconds()
     progress_val = num_steps / train_fn.keywords['num_timesteps']
-    reward =  metrics['eval/episode_reward'][-1]
+    reward =  metrics['eval/episode_reward']
     elapsed_time = times[-1] - times[0]
     print(f'time: {elapsed_time}, step: {num_steps}, progress: {progress_val:.1%}, reward: {reward:.3f}, it/s: {it_per_sec:.1f}')
     wandb.log({"num_steps": num_steps, **metrics})
