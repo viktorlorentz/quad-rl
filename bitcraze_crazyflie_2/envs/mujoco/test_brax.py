@@ -531,7 +531,8 @@ wandb.log({"payload_trajectory": wandb.Image(img)})
 plt.close(fig)
 
 # --------------------
-# New: Top-Down (XY) Trajectory Plot for Payload
+# Top-Down (XY) Trajectory Plot for Payload
+# --------------------
 fig_topdown = plt.figure(figsize=(5, 5))
 plt.plot(payload_positions[:,0], payload_positions[:,1],
          label='Payload XY Trajectory', lw=2)
@@ -620,7 +621,6 @@ final_payload_positions = np.array(final_payload_positions)[:, :2]
 final_quad1_positions   = np.array(final_quad1_positions)[:, :2]
 final_quad2_positions   = np.array(final_quad2_positions)[:, :2]
 
-# Create a top-down XY plot.
 fig, ax = plt.subplots(figsize=(8, 8))
 # Mark start payload positions.
 ax.scatter(start_positions[:, 0], start_positions[:, 1],
@@ -629,18 +629,34 @@ ax.scatter(start_positions[:, 0], start_positions[:, 1],
 goal = np.array(eval_env.target_position)
 ax.scatter(goal[0], goal[1], color='red', s=70, marker='*', label='Goal Position')
 
-# Compute density heatmap for final payload positions.
+# --- Begin modifications ---
+# Remove heatmap and add contour plot:
 all_x = final_payload_positions[:, 0]
 all_y = final_payload_positions[:, 1]
-xmin, xmax = all_x.min() - 0.1, all_x.max() + 0.1
-ymin, ymax = all_y.min() - 0.1, all_y.max() + 0.1
-xbins = np.linspace(xmin, xmax, 100)
-ybins = np.linspace(ymin, ymax, 100)
-H, xedges, yedges = np.histogram2d(final_payload_positions[:, 0],
-                                   final_payload_positions[:, 1],
-                                   bins=[xbins, ybins], density=True)
-# Plot the heatmap.
-ax.imshow(H.T, extent=[xmin, xmax, ymin, ymax], origin="lower", cmap="hot", alpha=0.7)
+# Determine inlier bounds (ignoring outliers, e.g., use 5th and 95th percentiles)
+x_low, x_high = np.percentile(all_x, [5, 95])
+y_low, y_high = np.percentile(all_y, [5, 95])
+# Create mask for inliers.
+inliers_mask = ((final_payload_positions[:, 0] >= x_low) &
+                (final_payload_positions[:, 0] <= x_high) &
+                (final_payload_positions[:, 1] >= y_low) &
+                (final_payload_positions[:, 1] <= y_high))
+inliers = final_payload_positions[inliers_mask]
+outliers = final_payload_positions[~inliers_mask]
+# Compute 2D histogram for inliers.
+xbins = np.linspace(x_low, x_high, 30)
+ybins = np.linspace(y_low, y_high, 30)
+H, xedges, yedges = np.histogram2d(inliers[:, 0], inliers[:, 1], bins=[xbins, ybins], density=True)
+# Compute grid for contour plot.
+Xc = (xedges[:-1] + xedges[1:]) / 2
+Yc = (yedges[:-1] + yedges[1:]) / 2
+X, Y = np.meshgrid(Xc, Yc)
+# Plot the contour.
+ax.contourf(X, Y, H.T, levels=10, cmap="hot", alpha=0.7)
+# Plot outliers separately.
+if outliers.size > 0:
+    ax.scatter(outliers[:, 0], outliers[:, 1], color='cyan', marker='x', s=20, label='Outliers')
+# --- End modifications ---
 
 # Mark final quad positions as small squares with low opacity.
 ax.scatter(final_quad1_positions[:, 0], final_quad1_positions[:, 1],
