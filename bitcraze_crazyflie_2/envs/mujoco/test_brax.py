@@ -34,8 +34,7 @@ import imageio
 
 jax.config.update('jax_platform_name', 'gpu')
 
-# Add global variable to store average episode length.
-avg_ep_len = 0
+
 
 def lr_schedule(step, avg_episode_length, base_lr=3e-4):
     threshold = 1000  # target episode length in timesteps
@@ -397,18 +396,10 @@ def render_video(video_filename, env, duration=5.0, framerate=30):
     save_video(frames, video_filename, fps=framerate)
 
 def progress(num_steps, metrics):
-    global avg_ep_len
+
     times.append(datetime.now())
-    x_data.append(num_steps)
-    y_data.append(metrics['eval/episode_reward'])
-    ydataerr.append(metrics['eval/episode_reward_std'])
-    avg_ep_len = metrics.get('eval/episode_length', 0)
-    plt.xlim([train_fn.keywords['num_timesteps'] * -0.1, train_fn.keywords['num_timesteps'] * 1.25])
-    plt.xlabel('# environment steps')
-    plt.ylabel('reward per episode')
-    plt.title(f'y={y_data[-1]:.3f}')
-    plt.errorbar(x_data, y_data, yerr=ydataerr)
-    plt.savefig('mjx_brax_multiquad_policy.png')
+
+  
 
     it_per_sec = num_steps / (times[-1] - times[0]).total_seconds()
     progress_val = num_steps / train_fn.keywords['num_timesteps']
@@ -473,6 +464,7 @@ plt.xlabel('Action Value')
 plt.ylabel('Frequency')
 plt.title('Histogram of Quad Actions')
 plt.savefig('quad_actions_histogram.png')
+print("Plot saved: quad_actions_histogram.png")
 wandb.log({"quad_actions_histogram": wandb.Image('quad_actions_histogram.png')})
 plt.close()
 
@@ -529,6 +521,7 @@ ax.set_zlim(0, 1.5)
 # Save the plot to a bytes buffer with higher dpi
 buf = io.BytesIO()
 plt.savefig(buf, format='png', dpi=300)
+print("Plot saved: 3D payload trajectory plot")
 buf.seek(0)
 img = Image.open(buf)  # convert buffer to PIL image
 wandb.log({"payload_trajectory": wandb.Image(img)})
@@ -552,6 +545,7 @@ plt.title('Payload Trajectory (Top Down)')
 plt.legend()
 buf_top = io.BytesIO()
 plt.savefig(buf_top, format='png', dpi=300)
+print("Plot saved: Top-down payload trajectory plot")
 buf_top.seek(0)
 img_top = Image.open(buf_top)
 wandb.log({"payload_trajectory_topdown": wandb.Image(img_top)})
@@ -574,6 +568,7 @@ plt.title('Payload Position Error Over Time')
 plt.legend()
 buf2 = io.BytesIO()
 plt.savefig(buf2, format='png', dpi=300)
+print("Plot saved: Payload error over time plot")
 buf2.seek(0)
 
 img2 = Image.open(buf2)
@@ -668,4 +663,5 @@ ax.set_ylabel('Y')
 ax.set_title('Top-Down XY Plot for Final Positions (Batched Rollout)')
 ax.legend()
 plt.savefig('batched_topdown_xy_plot_no_new_imports.png', dpi=300)
+print("Plot saved: batched_topdown_xy_plot_no_new_imports.png")
 plt.show()
