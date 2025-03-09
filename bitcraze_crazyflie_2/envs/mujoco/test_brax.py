@@ -619,41 +619,31 @@ final_quad2_positions   = np.array(final_quad2_positions)[:, :2]
 
 # Create a top-down XY plot.
 fig, ax = plt.subplots(figsize=(8, 8))
+# Mark start payload positions.
 ax.scatter(start_positions[:, 0], start_positions[:, 1],
            color='black', s=10, label='Start Payload')
+# Mark the goal position.
+goal = np.array(eval_env.target_position)
+ax.scatter(goal[0], goal[1], color='red', s=70, marker='*', label='Goal Position')
 
-all_x = np.concatenate([
-    final_payload_positions[:, 0],
-    final_quad1_positions[:, 0],
-    final_quad2_positions[:, 0]
-])
-all_y = np.concatenate([
-    final_payload_positions[:, 1],
-    final_quad1_positions[:, 1],
-    final_quad2_positions[:, 1]
-])
+# Compute density heatmap for final payload positions.
+all_x = final_payload_positions[:, 0]
+all_y = final_payload_positions[:, 1]
 xmin, xmax = all_x.min() - 0.1, all_x.max() + 0.1
 ymin, ymax = all_y.min() - 0.1, all_y.max() + 0.1
 xbins = np.linspace(xmin, xmax, 100)
 ybins = np.linspace(ymin, ymax, 100)
+H, xedges, yedges = np.histogram2d(final_payload_positions[:, 0],
+                                   final_payload_positions[:, 1],
+                                   bins=[xbins, ybins], density=True)
+# Plot the heatmap.
+ax.imshow(H.T, extent=[xmin, xmax, ymin, ymax], origin="lower", cmap="hot", alpha=0.7)
 
-def compute_density(data):
-    H, xedges, yedges = np.histogram2d(data[:, 0], data[:, 1],
-                                       bins=[xbins, ybins], density=True)
-    xcenters = (xedges[:-1] + xedges[1:]) / 2
-    ycenters = (yedges[:-1] + yedges[1:]) / 2
-    Xc, Yc = np.meshgrid(xcenters, ycenters)
-    return Xc, Yc, H.T
-
-for data, color, label in zip(
-    [final_payload_positions, final_quad1_positions, final_quad2_positions],
-    ['red', 'blue', 'magenta'],
-    ['Payload Final', 'Quad1 Final', 'Quad2 Final']
-):
-    Xc, Yc, Z = compute_density(data)
-    ax.contourf(Xc, Yc, Z, levels=10, colors=[color], alpha=0.5)
-    ax.contour(Xc, Yc, Z, levels=10, colors=color, alpha=0.7)
-    ax.scatter([], [], color=color, alpha=0.5, label=label)
+# Mark final quad positions as small squares with low opacity.
+ax.scatter(final_quad1_positions[:, 0], final_quad1_positions[:, 1],
+           color='blue', marker='s', s=15, alpha=0.3, label='Quad1 Final')
+ax.scatter(final_quad2_positions[:, 0], final_quad2_positions[:, 1],
+           color='magenta', marker='s', s=15, alpha=0.3, label='Quad2 Final')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
