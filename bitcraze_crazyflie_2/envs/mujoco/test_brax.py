@@ -73,7 +73,7 @@ class MultiQuadEnv(PipelineEnv):
       policy_freq: float = 250,              # Policy frequency in Hz.
       sim_steps_per_action: int = 1,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
-      reset_noise_scale: float = 0.15,          # Noise scale for initial state reset.
+      reset_noise_scale: float = 0.1,          # Noise scale for initial state reset.
       **kwargs,
   ):
     # Load the MJX model from the XML file.
@@ -351,7 +351,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=200_000_000,
+    num_timesteps=500_000_000,
     num_evals=10,
     reward_scaling=1,
     episode_length=2000,
@@ -680,12 +680,14 @@ hist_matrix = np.array([
     np.histogram(batched_errors[i], bins=bin_edges, density=True)[0]
     for i in range(batched_errors.shape[0])
 ])
+# Compute timeline edges for pcolormesh.
+timeline_edges = np.linspace(timeline[0], timeline[-1], len(timeline)+1)
 
 # Plot the histogram gradient using pcolormesh.
 fig3 = plt.figure(figsize=(8, 5))
 ax3 = fig3.add_subplot(111)
-# Use timeline as x and bin_edges as y; note hist_matrix.T shape: (num_bins, n_steps)
-c = ax3.pcolormesh(timeline, bin_edges, hist_matrix.T, shading='auto', cmap='viridis')
+# Use timeline_edges as x and bin_edges as y
+c = ax3.pcolormesh(timeline_edges, bin_edges, hist_matrix.T, shading='auto', cmap='viridis')
 plt.colorbar(c, ax=ax3, label='Density')
 
 # Overlay min, median, and max lines.
