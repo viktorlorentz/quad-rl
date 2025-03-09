@@ -586,7 +586,7 @@ batched_rngs = jax.random.split(jax.random.PRNGKey(1234), num_envs)
 batched_states = jax.vmap(jit_reset)(batched_rngs)
 
 # Record starting payload positions (XY) from each environment.
-start_positions = jax.vmap(lambda s: s.xpos[eval_env.payload_body_id])(batched_states)
+start_positions = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.payload_body_id])(batched_states)
 start_positions = np.array(start_positions)  # shape: (num_envs, 3)
 
 # Roll out each environment for n_steps.
@@ -601,9 +601,9 @@ for step in range(n_steps):
     batched_states = jax.vmap(jit_step)(batched_states, ctrls)
 
 # Extract final positions for payload, quad1, and quad2 (only XY coordinates).
-final_payload_positions = jax.vmap(lambda s: s.xpos[eval_env.payload_body_id])(batched_states)
-final_quad1_positions   = jax.vmap(lambda s: s.xpos[eval_env.q1_body_id])(batched_states)
-final_quad2_positions   = jax.vmap(lambda s: s.xpos[eval_env.q2_body_id])(batched_states)
+final_payload_positions = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.payload_body_id])(batched_states)
+final_quad1_positions   = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.q1_body_id])(batched_states)
+final_quad2_positions   = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.q2_body_id])(batched_states)
 
 final_payload_positions = np.array(final_payload_positions)[:, :2]
 final_quad1_positions   = np.array(final_quad1_positions)[:, :2]
@@ -633,7 +633,7 @@ ymin, ymax = all_y.min() - 0.1, all_y.max() + 0.1
 xbins = np.linspace(xmin, xmax, 100)
 ybins = np.linspace(ymin, ymax, 100)
 
-# Create a helper function to compute density from 2D histograms.
+# Helper function: compute density using a 2D histogram.
 def compute_density(data):
     # data: shape (num_envs, 2)
     # Compute a normalized 2D histogram.
@@ -643,7 +643,7 @@ def compute_density(data):
     xcenters = (xedges[:-1] + xedges[1:]) / 2
     ycenters = (yedges[:-1] + yedges[1:]) / 2
     Xc, Yc = np.meshgrid(xcenters, ycenters)
-    return Xc, Yc, H.T  # transpose H so that dimensions match Xc, Yc
+    return Xc, Yc, H.T  # Transpose H so dimensions match Xc, Yc.
 
 # For each body (payload, quad1, quad2), compute and plot density as filled contours.
 for data, color, label in zip(
@@ -655,7 +655,7 @@ for data, color, label in zip(
     # Plot filled contours (with 10 levels) and contour lines.
     ax.contourf(Xc, Yc, Z, levels=10, colors=[color], alpha=0.5)
     ax.contour(Xc, Yc, Z, levels=10, colors=color, alpha=0.7)
-    # Dummy scatter for legend.
+    # Dummy scatter for legend entry.
     ax.scatter([], [], color=color, alpha=0.5, label=label)
 
 ax.set_xlabel('X')
