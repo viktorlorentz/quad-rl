@@ -662,31 +662,36 @@ print("Plot saved and logged: batched_rollout_topdown")
 plt.close(fig)
 
 # --------------------
-# Batched Payload Error Over Time Plot
-# Compute percentiles from recorded errors.
+# Batched Payload Error Over Time Plot (with histogram gradient)
 timeline = np.array(timeline)               # shape: (n_steps,)
 batched_errors = np.array(batched_errors)     # shape: (n_steps, num_envs)
 min_errors = np.min(batched_errors, axis=1)
 max_errors = np.max(batched_errors, axis=1)
 median_errors = np.percentile(batched_errors, 50, axis=1)
 
+# Define histogram bins based on overall distribution.
+num_bins = 50
+global_min = np.min(batched_errors)
+global_max = np.max(batched_errors)
+bin_edges = np.linspace(global_min, global_max, num_bins+1)
+
+# Compute histogram density for each timestep.
+hist_matrix = np.array([
+    np.histogram(batched_errors[i], bins=bin_edges, density=True)[0]
+    for i in range(batched_errors.shape[0])
+])
+
+# Plot the histogram gradient using pcolormesh.
 fig3 = plt.figure(figsize=(8, 5))
 ax3 = fig3.add_subplot(111)
-x = timeline
-cmap = plt.get_cmap("viridis")
+# Use timeline as x and bin_edges as y; note hist_matrix.T shape: (num_bins, n_steps)
+c = ax3.pcolormesh(timeline, bin_edges, hist_matrix.T, shading='auto', cmap='viridis')
+plt.colorbar(c, ax=ax3, label='Density')
 
-# Fill between min and max with a gradient color per time-segment.
-for i in range(len(x) - 1):
-    x_seg = [x[i], x[i+1]]
-    y1_seg = [min_errors[i], min_errors[i+1]]
-    y2_seg = [max_errors[i], max_errors[i+1]]
-    norm_val = (x[i] - x[0]) / (x[-1] - x[0])
-    ax3.fill_between(x_seg, y1_seg, y2_seg, color=cmap(norm_val))
-
-# Plot min, median, and max lines.
-ax3.plot(x, min_errors, color='black', lw=1, label='Min')
-ax3.plot(x, median_errors, color='blue', lw=2, label='Median')
-ax3.plot(x, max_errors, color='black', lw=1, label='Max')
+# Overlay min, median, and max lines.
+ax3.plot(timeline, min_errors, color='black', lw=1, label='Min')
+ax3.plot(timeline, median_errors, color='blue', lw=2, label='Median')
+ax3.plot(timeline, max_errors, color='black', lw=1, label='Max')
 
 ax3.set_xlabel('Simulation Time (s)')
 ax3.set_ylabel('Payload Position Error')
