@@ -519,6 +519,24 @@ wandb.log({"payload_trajectory": wandb.Image(img)})
 plt.close(fig)
 
 # --------------------
+# New: Top-Down (XY) Trajectory Plot for Payload
+fig_topdown = plt.figure(figsize=(7, 7))
+plt.plot(payload_positions[:,0], payload_positions[:,1],
+         label='Payload XY Trajectory', lw=2)
+plt.scatter(goal[0], goal[1], color='red', s=50, label='Goal Position')
+plt.scatter(start_pos[0], start_pos[1], color='green', s=50, label='Start Position')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Payload Trajectory (Top Down)')
+plt.legend()
+buf_top = io.BytesIO()
+plt.savefig(buf_top, format='png', dpi=300)
+buf_top.seek(0)
+img_top = Image.open(buf_top)
+wandb.log({"payload_trajectory_topdown": wandb.Image(img_top)})
+plt.close(fig_topdown)
+
+# --------------------
 # Payload Position Error Over Time Plot
 # --------------------
 
