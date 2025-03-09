@@ -74,7 +74,7 @@ class MultiQuadEnv(PipelineEnv):
       policy_freq: float = 250,              # Policy frequency in Hz.
       sim_steps_per_action: int = 1,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
-      reset_noise_scale: float = 0.2,          # Noise scale for initial state reset.
+      reset_noise_scale: float = 0.15,          # Noise scale for initial state reset.
       **kwargs,
   ):
     # Load the MJX model from the XML file.
@@ -349,7 +349,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=500_000_000,
+    num_timesteps=200_000_000,
     num_evals=10,
     reward_scaling=1,
     episode_length=2000,
@@ -446,12 +446,17 @@ rng = jax.random.PRNGKey(0)
 state = jit_reset(rng)
 rollout = [state.pipeline_state]
 
+# Initialize list to record quad actions.
+quad_actions_list = []
+
 for i in range(n_steps):
     act_rng, rng = jax.random.split(rng)
     ctrl, _ = jit_inference_fn(state.obs, act_rng)
     state = jit_step(state, ctrl)
     rollout.append(state.pipeline_state)
-
+    # Record the actions.
+    quad_actions_list.append(np.array(ctrl))
+    
 ctx = mujoco.GLContext(1920, 1080)
 ctx.make_current()
 
@@ -459,6 +464,17 @@ frames = eval_env.render(rollout[::render_every], camera='track', width=1920, he
 video_filename = "trained_policy_video.mp4"
 save_video(frames, video_filename, fps=1.0 / eval_env.dt / render_every)
 wandb.log({"trained_policy_video": wandb.Video(video_filename, format="mp4")})
+
+# Histogram plot over quad actions.
+quad_actions_flat = np.concatenate(quad_actions_list).flatten()
+plt.figure()
+plt.hist(quad_actions_flat, bins=50)
+plt.xlabel('Action Value')
+plt.ylabel('Frequency')
+plt.title('Histogram of Quad Actions')
+plt.savefig('quad_actions_histogram.png')
+wandb.log({"quad_actions_histogram": wandb.Image('quad_actions_histogram.png')})
+plt.close()
 
 # --------------------
 # 3D Trajectory Plot for Payload
