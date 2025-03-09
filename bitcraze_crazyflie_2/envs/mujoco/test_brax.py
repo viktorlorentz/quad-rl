@@ -276,7 +276,7 @@ class MultiQuadEnv(PipelineEnv):
     dis = jp.linalg.norm(payload_error)
     # Emphasize z_error 
     z_error = jp.abs(payload_error[2])
-    distance_reward = (1 - dis + jp.exp(-10 * dis)) + jp.exp(-10 * z_error)
+    distance_reward = (1 - dis + jp.exp(-10 * dis)) + jp.exp(-10 * z_error) - z_error
 
     # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
