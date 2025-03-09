@@ -539,6 +539,11 @@ plt.close(fig)
 fig_topdown = plt.figure(figsize=(5, 5))
 plt.plot(payload_positions[:,0], payload_positions[:,1],
          label='Payload XY Trajectory', lw=2)
+# Add quad trajectories (XY)
+plt.plot(quad1_positions[:,0], quad1_positions[:,1],
+         ls='--', color='blue', lw=2, alpha=0.7, label='Quad1 XY Trajectory')
+plt.plot(quad2_positions[:,0], quad2_positions[:,1],
+         ls='--', color='magenta', lw=2, alpha=0.7, label='Quad2 XY Trajectory')
 plt.scatter(goal[0], goal[1], color='red', s=50, label='Goal Position')
 plt.scatter(start_pos[0], start_pos[1], color='green', s=50, label='Start Position')
 plt.xlabel('X')
