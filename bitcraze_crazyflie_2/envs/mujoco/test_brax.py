@@ -490,7 +490,7 @@ payload_id = eval_env.payload_body_id
 payload_positions = [np.array(s.xpos[payload_id]) for s in rollout]
 payload_positions = np.stack(payload_positions)  # shape: (T, 3)
 
-fig = plt.figure( figsize=(7, 7))
+fig = plt.figure( figsize=(5, 5))
 ax = fig.add_subplot(111, projection='3d')
 ax.plot(payload_positions[:,0], payload_positions[:,1], payload_positions[:,2],
         label='Payload Trajectory', lw=2)
@@ -536,7 +536,7 @@ plt.close(fig)
 
 # --------------------
 # New: Top-Down (XY) Trajectory Plot for Payload
-fig_topdown = plt.figure(figsize=(7, 7))
+fig_topdown = plt.figure(figsize=(5, 5))
 plt.plot(payload_positions[:,0], payload_positions[:,1],
          label='Payload XY Trajectory', lw=2)
 plt.scatter(goal[0], goal[1], color='red', s=50, label='Goal Position')
@@ -576,52 +576,87 @@ wandb.log({"payload_error_over_time": wandb.Image(img2)})
 plt.close(fig2)
 
 # --------------------
-# New: Batch Rollout with 1000 Trajectories using JAX batching and Payload Position Error Plot
+# Batch Rollout with 1000 Trajectories 
 
 
 n_rollouts = 1000
 n_steps_test = 2500
 
-def rollout_step(carry, _):
-    state, key = carry
-    key, subkey = jax.random.split(key)
-    ctrl, _ = jit_inference_fn(state.obs, subkey)
-    new_state = jit_step(state, ctrl)
-    error = jp.linalg.norm(new_state.pipeline_state.xpos[eval_env.payload_body_id] - eval_env.target_position)
-    return (new_state, key), error
+# --------------------
+# Batch Rollout and Median Payload Error Plot
 
-def single_rollout(key):
-    state = jit_reset(key)
-    init_error = jp.linalg.norm(state.pipeline_state.xpos[eval_env.payload_body_id] - eval_env.target_position)
-    (final_state, _), errors = jax.lax.scan(rollout_step, (state, key), None, length=n_steps_test)
-    errors = jp.concatenate([jp.array([init_error]), errors])
+n_rollouts = 1000
+n_steps_test = 2500
+
+all_payload_errors = []
+
+for r in range(n_rollouts):
+    rng = jax.random.PRNGKey(r)
+    state = jit_reset(rng)
+    rollout_payload_errors = []
+    for step in range(n_steps_test):
+        # Record payload error: norm(xpos[payload_id] - target_position)
+        pos = np.array(state.pipeline_state.xpos[eval_env.payload_body_id])
+        err = np.linalg.norm(pos - np.array(eval_env.target_position))
+        rollout_payload_errors.append(err)
+        act_rng, rng = jax.random.split(rng)
+        ctrl, _ = jit_inference_fn(state.obs, act_rng)
+        state = jit_step(state, ctrl)
+    all_payload_errors.append(rollout_payload_errors)
+
+all_payload_errors = np.array(all_payload_errors)  # shape: (n_rollouts, n_steps_test)
+median_errors = np.median(all_payload_errors, axis=0)
+times_sim = np.linspace(0, eval_env.max_time, n_steps_test)
+
+fig, ax = plt.subplots()
+ax.plot(times_sim, median_errors, color='blue', lw=2, label='Median Payload Error')
+ax.set_xlabel('Simulation Time (s)')
+ax.set_ylabel('Payload Position Error')
+ax.set_title('Median Payload Position Error Over Time (Batch Rollout)')
+ax.legend()
+plt.savefig('median_payload_error_over_time.png')
+wandb.log({"median_payload_error_over_time": wandb.Image('median_payload_error_over_time.png')})
+plt.close(fig)
+
+
+
+# --------------------
+# Batch Rollout and Median Payload Error Plot using JAX batch
+
+n_rollouts = 1000
+n_steps_test = 2500
+
+def rollout_one(rng):
+    state = jit_reset(rng)
+    def scan_step(carry, _):
+        state, rng = carry
+        pos = state.pipeline_state.xpos[eval_env.payload_body_id]
+        # Use jax.numpy for error computation.
+        err = jp.linalg.norm(pos - eval_env.target_position)
+        act_rng, rng = jax.random.split(rng)
+        ctrl, _ = jit_inference_fn(state.obs, act_rng)
+        state = jit_step(state, ctrl)
+        return (state, rng), err
+    (_, _), errors = jax.lax.scan(scan_step, (state, rng), None, length=n_steps_test)
     return errors
 
-batch_keys = jax.random.split(jax.random.PRNGKey(42), n_rollouts)
-# Vectorized rollout: shape (n_rollouts, n_steps_test+1)
-batch_rollouts = jax.vmap(single_rollout)(batch_keys)
-# Transpose to shape (n_steps_test+1, n_rollouts)
-batch_errors = batch_rollouts.T
+# Create a batch of random keys and run rollouts in parallel.
+rngs = jax.random.split(jax.random.PRNGKey(0), n_rollouts)
+all_payload_errors = jax.vmap(rollout_one)(rngs)  # shape: (n_rollouts, n_steps_test)
+median_errors = jp.median(all_payload_errors, axis=0)
+times_sim = jp.linspace(0, eval_env.max_time, n_steps_test)
 
-# Compute percentiles using numpy
-batch_errors_np = np.array(batch_errors)
-percentile_50 = np.percentile(batch_errors_np, 50, axis=1)  # median
-lower_percentile = np.percentile(batch_errors_np, 25, axis=1)
-upper_percentile = np.percentile(batch_errors_np, 75, axis=1)
-percentile_100 = np.percentile(batch_errors_np, 100, axis=1)  # max
-time_axis = np.linspace(0, n_steps_test * eval_env.dt, n_steps_test + 1)
+# Convert to numpy arrays for plotting.
+median_errors_np = np.array(median_errors)
+times_sim_np = np.array(times_sim)
 
-fig_batch = plt.figure(figsize=(8, 6))
-plt.plot(time_axis, percentile_50, label='50th Percentile (Median)', color='blue')
-plt.plot(time_axis, percentile_100, label='100th Percentile (Max)', color='red', linestyle='--')
-plt.fill_between(time_axis, lower_percentile, upper_percentile, color='blue', alpha=0.3, label='25th-75th Percentile')
-plt.xlabel('Simulation Time (s)')
-plt.ylabel('Payload Position Error')
-plt.title('Batch Rollout (1000) - Payload Error Over Time (JAX Batch)')
-plt.legend()
-buf_batch = io.BytesIO()
-plt.savefig(buf_batch, format='png', dpi=300)
-buf_batch.seek(0)
-img_batch = Image.open(buf_batch)
-wandb.log({"batch_payload_error": wandb.Image(img_batch)})
-plt.close(fig_batch)
+fig, ax = plt.subplots()
+ax.plot(times_sim_np, median_errors_np, color='blue', lw=2, label='Median Payload Error')
+ax.set_xlabel('Simulation Time (s)')
+ax.set_ylabel('Payload Position Error')
+ax.set_title('Median Payload Position Error Over Time (Batch Rollout)')
+ax.legend()
+plt.savefig('median_payload_error_over_time.png')
+wandb.log({"median_payload_error_over_time": wandb.Image('median_payload_error_over_time.png')})
+plt.close(fig)
+
