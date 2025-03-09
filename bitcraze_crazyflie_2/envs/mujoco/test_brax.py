@@ -589,16 +589,24 @@ batched_states = jax.vmap(jit_reset)(batched_rngs)
 start_positions = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.payload_body_id])(batched_states)
 start_positions = np.array(start_positions)  # shape: (num_envs, 3)
 
-# Roll out each environment for n_steps.
+# --- Begin batched rollout with error recording ---
+batched_errors = []  # Will store per-env payload errors for every timestep
+timeline = []        # Will store simulation time for each timestep
+
 rng_main = jax.random.PRNGKey(5678)
 for step in range(n_steps):
     rng_main, rng_step = jax.random.split(rng_main)
-    # Split the RNG for each environment.
     act_rngs = jax.random.split(rng_step, num_envs)
-    # Compute control actions for all environments.
     ctrls, _ = jax.vmap(jit_inference_fn)(batched_states.obs, act_rngs)
-    # Step all environments in parallel.
     batched_states = jax.vmap(jit_step)(batched_states, ctrls)
+
+    # Record payload error for each env.
+    errors = jax.vmap(lambda s: jax.numpy.linalg.norm(s.pipeline_state.xpos[eval_env.payload_body_id] - eval_env.target_position))(batched_states)
+    batched_errors.append(np.array(errors))
+    # Record simulation time (all envs have the same time).
+    times_env = jax.vmap(lambda s: s.pipeline_state.time)(batched_states)
+    timeline.append(np.array(times_env[0]))
+# --- End batched rollout with error recording ---
 
 # Extract final positions for payload, quad1, and quad2 (only XY coordinates).
 final_payload_positions = jax.vmap(lambda s: s.pipeline_state.xpos[eval_env.payload_body_id])(batched_states)
@@ -611,11 +619,9 @@ final_quad2_positions   = np.array(final_quad2_positions)[:, :2]
 
 # Create a top-down XY plot.
 fig, ax = plt.subplots(figsize=(8, 8))
-# Plot the starting payload positions as tiny black dots.
 ax.scatter(start_positions[:, 0], start_positions[:, 1],
            color='black', s=10, label='Start Payload')
 
-# Determine grid boundaries from all final positions.
 all_x = np.concatenate([
     final_payload_positions[:, 0],
     final_quad1_positions[:, 0],
@@ -628,34 +634,25 @@ all_y = np.concatenate([
 ])
 xmin, xmax = all_x.min() - 0.1, all_x.max() + 0.1
 ymin, ymax = all_y.min() - 0.1, all_y.max() + 0.1
-
-# Define grid bins.
 xbins = np.linspace(xmin, xmax, 100)
 ybins = np.linspace(ymin, ymax, 100)
 
-# Helper function: compute density using a 2D histogram.
 def compute_density(data):
-    # data: shape (num_envs, 2)
-    # Compute a normalized 2D histogram.
     H, xedges, yedges = np.histogram2d(data[:, 0], data[:, 1],
                                        bins=[xbins, ybins], density=True)
-    # Compute centers of bins.
     xcenters = (xedges[:-1] + xedges[1:]) / 2
     ycenters = (yedges[:-1] + yedges[1:]) / 2
     Xc, Yc = np.meshgrid(xcenters, ycenters)
-    return Xc, Yc, H.T  # Transpose H so dimensions match Xc, Yc.
+    return Xc, Yc, H.T
 
-# For each body (payload, quad1, quad2), compute and plot density as filled contours.
 for data, color, label in zip(
     [final_payload_positions, final_quad1_positions, final_quad2_positions],
     ['red', 'blue', 'magenta'],
     ['Payload Final', 'Quad1 Final', 'Quad2 Final']
 ):
     Xc, Yc, Z = compute_density(data)
-    # Plot filled contours (with 10 levels) and contour lines.
     ax.contourf(Xc, Yc, Z, levels=10, colors=[color], alpha=0.5)
     ax.contour(Xc, Yc, Z, levels=10, colors=color, alpha=0.7)
-    # Dummy scatter for legend entry.
     ax.scatter([], [], color=color, alpha=0.5, label=label)
 
 ax.set_xlabel('X')
@@ -670,3 +667,25 @@ img_final = Image.open(buf_final)
 wandb.log({"batched_rollout_topdown": wandb.Image(img_final)})
 print("Plot saved and logged: batched_rollout_topdown")
 plt.close(fig)
+
+# --------------------
+# Batched Payload Error Over Time Plot
+# Compute percentiles from recorded errors.
+timeline = np.array(timeline)               # shape: (n_steps,)
+batched_errors = np.array(batched_errors)     # shape: (n_steps, num_envs)
+median_errors = np.percentile(batched_errors, 50, axis=1)
+percentile25 = np.percentile(batched_errors, 25, axis=1)
+percentile100 = np.percentile(batched_errors, 100, axis=1)
+
+fig3 = plt.figure(figsize=(8, 5))
+plt.fill_between(timeline, percentile25, percentile100, color='skyblue', alpha=0.4, label='25th-100th Percentile')
+plt.plot(timeline, median_errors, color='blue', lw=2, label='Median Payload Error')
+plt.xlabel('Simulation Time (s)')
+plt.ylabel('Payload Position Error')
+plt.title('Batched Rollout Payload Position Error Over Time')
+plt.legend()
+plt.grid(True)
+plt.savefig('batched_payload_error_over_time.png', dpi=300)
+print("Plot saved: Batched Payload Error Over Time")
+wandb.log({"batched_payload_error_over_time": wandb.Image('batched_payload_error_over_time.png')})
+plt.close(fig3)
