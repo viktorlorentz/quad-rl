@@ -276,7 +276,7 @@ class MultiQuadEnv(PipelineEnv):
     dis = jp.linalg.norm(payload_error)
     # Emphasize z_error 
     z_error = jp.abs(payload_error[2])
-    distance_reward = (1 - dis + jp.exp(-10 * dis)) + jp.exp(-10 * z_error) - z_error
+    distance_reward = (1 - dis + jp.exp(-10 * dis)) + jp.exp(-10 * z_error)
 
     # Compute velocity alignment (dot product).
     norm_error = jp.maximum(jp.linalg.norm(payload_error), 1e-6)
@@ -351,7 +351,7 @@ make_networks_factory = functools.partial(
 
 train_fn = functools.partial(
     ppo.train,
-    num_timesteps=500_000_000,
+    num_timesteps=200_000_000,
     num_evals=10,
     reward_scaling=1,
     episode_length=2000,
@@ -662,38 +662,23 @@ print("Plot saved and logged: batched_rollout_topdown")
 plt.close(fig)
 
 # --------------------
-# Batched Payload Error Over Time Plot (with histogram gradient)
-timeline = np.array(timeline)               # shape: (n_steps,)
-batched_errors = np.array(batched_errors)     # shape: (n_steps, num_envs)
-min_errors = np.min(batched_errors, axis=1)
-max_errors = np.max(batched_errors, axis=1)
-median_errors = np.percentile(batched_errors, 50, axis=1)
+# Batched Payload Error Over Time Plot using percentiles
+timeline = np.array(timeline)  # shape: (n_steps,)
+batched_errors = np.array(batched_errors)  # shape: (n_steps, num_envs)
 
-# Define histogram bins based on overall distribution.
-num_bins = 50
-global_min = np.min(batched_errors)
-global_max = np.max(batched_errors)
-bin_edges = np.linspace(global_min, global_max, num_bins+1)
+p0 = np.percentile(batched_errors, 0, axis=1)
+p25 = np.percentile(batched_errors, 25, axis=1)
+p50 = np.percentile(batched_errors, 50, axis=1)
+p75 = np.percentile(batched_errors, 75, axis=1)
+p98 = np.percentile(batched_errors, 98, axis=1)
 
-# Compute histogram density for each timestep.
-hist_matrix = np.array([
-    np.histogram(batched_errors[i], bins=bin_edges, density=True)[0]
-    for i in range(batched_errors.shape[0])
-])
-# Compute timeline edges for pcolormesh.
-timeline_edges = np.linspace(timeline[0], timeline[-1], len(timeline)+1)
-
-# Plot the histogram gradient using pcolormesh.
 fig3 = plt.figure(figsize=(8, 5))
 ax3 = fig3.add_subplot(111)
-# Use timeline_edges as x and bin_edges as y
-c = ax3.pcolormesh(timeline_edges, bin_edges, hist_matrix.T, shading='auto', cmap='viridis')
-plt.colorbar(c, ax=ax3, label='Density')
-
-# Overlay min, median, and max lines.
-ax3.plot(timeline, min_errors, color='black', lw=1, label='Min')
-ax3.plot(timeline, median_errors, color='blue', lw=2, label='Median')
-ax3.plot(timeline, max_errors, color='black', lw=1, label='Max')
+ax3.plot(timeline, p0, color='black', linestyle='--', label='0th Percentile')
+ax3.plot(timeline, p25, color='blue', linestyle='-.', label='25th Percentile')
+ax3.plot(timeline, p50, color='blue', linewidth=2, label='50th Percentile')
+ax3.plot(timeline, p75, color='blue', linestyle='-.', label='75th Percentile')
+ax3.plot(timeline, p98, color='black', linestyle='--', label='98th Percentile')
 
 ax3.set_xlabel('Simulation Time (s)')
 ax3.set_ylabel('Payload Position Error')
