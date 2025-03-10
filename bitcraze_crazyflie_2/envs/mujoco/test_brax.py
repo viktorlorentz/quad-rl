@@ -315,7 +315,7 @@ class MultiQuadEnv(PipelineEnv):
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
     reward -= 2 * smooth_action_penalty
-    reward -= (2 * action_energy_penalty)**2
+    reward -= action_energy_penalty
     reward -= ang_vel_penalty
     reward -= 5 * linvel_quad_penalty
 
