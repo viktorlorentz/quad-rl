@@ -73,7 +73,7 @@ class MultiQuadEnv(PipelineEnv):
       policy_freq: float = 250,              # Policy frequency in Hz.
       sim_steps_per_action: int = 1,           # Physics steps between control actions.
       max_time: float = 10.0,                  # Maximum simulation time per episode.
-      reset_noise_scale: float = 0.2,          # Noise scale for initial state reset.
+      reset_noise_scale: float = 0.1,          # Noise scale for initial state reset.
       **kwargs,
   ):
     # Load the MJX model from the XML file.
