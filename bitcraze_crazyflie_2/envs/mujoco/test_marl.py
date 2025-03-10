@@ -324,7 +324,7 @@ train_config = {
     "num_updates_per_batch": 4,
 }
 
-wandb.init(project="multi_quad_rl", name=f"multi_quad_rl_{int(time.time())}")
+wandb.init(project="single_quad_rl", name=f"quad_marl_{int(time.time())}")
 
 def progress(num_steps, metrics):
     print(f"Time: {datetime.now()}, Step: {num_steps}, Metrics: {metrics}")
