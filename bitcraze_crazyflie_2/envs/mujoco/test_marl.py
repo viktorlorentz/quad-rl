@@ -34,7 +34,7 @@ from PIL import Image
 from matplotlib.colors import LinearSegmentedColormap
 
 # Import JAXMarl’s MAPPO algorithm
-from jaxmarl import mappo
+from jaxmarl.algorithms import mappo
 
 # Set JAX platform to GPU if available.
 jax.config.update('jax_platform_name', 'gpu')
