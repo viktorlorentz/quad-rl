@@ -324,8 +324,8 @@ def make_multiagent_env(config):
 
 def main():
     # Import Mava experiment runner and configuration helper.
-    from mava import run_experiment
-    from mava.systems.ppo.anakin.ff_mappo import main as run_experiment
+    from mava.systems.ppo.anakin.ff_ippo import main as run_experiment
+    from mava.utils.configurations import get_default_config
 
     # Get default configuration for decentralized MAPPO.
     config = get_default_config("mappo_decentralized")
