@@ -33,8 +33,8 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from PIL import Image
 from matplotlib.colors import LinearSegmentedColormap
 
-# Import JAXMarl’s MAPPO algorithm (assumed API – please adjust per your version)
-import jaxmarl.algorithms.mappo as mappo
+# Import JAXMarl’s MAPPO algorithm
+from jaxmarl.algorithms import mappo
 
 # Set JAX platform to GPU if available.
 jax.config.update('jax_platform_name', 'gpu')
