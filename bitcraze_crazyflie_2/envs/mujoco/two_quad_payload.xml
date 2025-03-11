@@ -63,7 +63,7 @@
         
 
         
-            <body name="payload" pos="0.0 0.0 1.0" >
+            <body name="payload" pos="0.0 0.0 0.01" >
             <camera name="track" pos="-1 0 0.5" quat="0.601501 0.371748 -0.371748 -0.601501"
                 mode="trackcom" />
             <joint type="free" actuatorfrclimited="false" damping="0.00001"/>
@@ -75,7 +75,7 @@
 
         <body
             name="q0_container"
-            pos="0 -0.15 1.1"
+            pos="0 -0.15 0.01"
             >        
             
             <joint type="free" actuatorfrclimited="false" />
@@ -142,7 +142,7 @@
 
         <body
             name="q1_container"
-            pos="0 0.15 1.1"
+            pos="0 0.15 0.01"
             >        
             
             <joint type="free" actuatorfrclimited="false" />
