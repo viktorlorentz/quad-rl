@@ -188,13 +188,13 @@ class MultiQuadEnv(PipelineEnv):
     collision = quad_distance < 0.11
     out_of_bounds = jp.logical_or(jp.absolute(angle_q1) > jp.radians(80),
                                   jp.absolute(angle_q2) > jp.radians(80))
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
+    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
+    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
+    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
+    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
     # out of bounds for payload
-    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.payload_body_id][2] < 0.05)
+    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.payload_body_id][2] < 0.05)
 
     obs = self._get_obs(data, prev_last_action, target)
 
