@@ -137,7 +137,7 @@ class MultiQuadEnv(PipelineEnv):
     #     rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     
     # limit qpos to xy and no z as we are on the ground
-    qpos = jax.ops.index_update(qpos, 2, 0.0)
+    qpos = qpos.at[2].set(0.0)
     qvel = jp.zeros(self.sys.nv)
 
     data = self.pipeline_init(qpos, qvel)
