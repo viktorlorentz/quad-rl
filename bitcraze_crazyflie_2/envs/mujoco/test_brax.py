@@ -326,9 +326,9 @@ class MultiQuadEnv(PipelineEnv):
 
     # from ground
 
-    on_ground = data.xpos[self.q1_body_id][2] < 0.02
-    on_ground += data.xpos[self.q2_body_id][2] < 0.02
-    on_ground += on_ground, data.xpos[self.payload_body_id][2] < 0.02
+    on_ground = 1.0 * (data.xpos[self.q1_body_id][2] < 0.02)
+    on_ground += 1.0 * (data.xpos[self.q2_body_id][2] < 0.02)
+    on_ground += 1.0 * (data.xpos[self.payload_body_id][2] < 0.02)
 
     reward -=  on_ground * 10
 
