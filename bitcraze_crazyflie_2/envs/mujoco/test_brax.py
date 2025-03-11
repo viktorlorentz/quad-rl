@@ -200,7 +200,7 @@ class MultiQuadEnv(PipelineEnv):
 
     reward, _, _ = self.calc_reward(
         obs, data.time, collision, out_of_bounds, action_scaled,
-        angle_q1, angle_q2, prev_last_action, target
+        angle_q1, angle_q2, prev_last_action, target, data
     )
 
     # Terminate if collision, out-of-bounds, or max time reached.
@@ -263,7 +263,7 @@ class MultiQuadEnv(PipelineEnv):
     return obs
 
   def calc_reward(self, obs, sim_time, collision, out_of_bounds, action,
-                  angle_q1, angle_q2, last_action, target_position):
+                  angle_q1, angle_q2, last_action, target_position, data):
     """
     Computes a reward similar to the original gym env by splitting the observation into team and quad parts.
     """
@@ -323,6 +323,14 @@ class MultiQuadEnv(PipelineEnv):
     reward -= action_energy_penalty
     reward -= ang_vel_penalty
     reward -= 5 * linvel_quad_penalty
+
+    # from ground
+
+    on_ground = data.xpos[self.q1_body_id][2] < 0.02
+    on_ground += data.xpos[self.q2_body_id][2] < 0.02
+    on_ground += on_ground, data.xpos[self.payload_body_id][2] < 0.02
+
+    reward -=  on_ground * 10
 
     reward /= 25.0
     return reward, None, {}
