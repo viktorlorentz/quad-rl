@@ -8,7 +8,7 @@ own agent. The privileged (centralized) critic network uses hidden layers [128, 
 agent policies use hidden layers [128, 64, 64].
 
 Before running, ensure that:
-  - You have the required dependencies installed (jax, brax, mujoco, ml_collections, wandb, etc.)
+  - You have the required dependencies installed (jax, brax, mujoco, Hydra, wandb, etc.)
   - The MuJoCo XML file "two_quad_payload.xml" is available at the specified path.
   - Mava (and its ecosystem libraries) is installed.
 
@@ -31,7 +31,6 @@ import mujoco
 from mujoco import mjx
 from brax import envs, math
 from brax.envs.base import PipelineEnv, State
-import ml_collections  # for configuration management
 
 # =============================================================================
 # Original MultiQuadEnv definition (adapted from your training script)
@@ -63,10 +62,8 @@ class MultiQuadEnv(PipelineEnv):
     """
     def __init__(self, policy_freq: float = 250, sim_steps_per_action: int = 1,
                  max_time: float = 10.0, reset_noise_scale: float = 0.2, **kwargs):
-        # Load the MJX model from the XML file.
         mj_model = mujoco.MjModel.from_xml_path("two_quad_payload.xml")
-        # Load the model using mjcf (assuming mjcf.load_model is available)
-        from brax import mjcf  # make sure mjcf is in your PYTHONPATH
+        from brax import mjcf  # ensure mjcf is in your PYTHONPATH
         sys = mjcf.load_model(mj_model)
         kwargs['n_frames'] = kwargs.get('n_frames', sim_steps_per_action)
         kwargs['backend'] = 'mjx'
@@ -97,7 +94,6 @@ class MultiQuadEnv(PipelineEnv):
             sys.mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "goal_marker")
     
     def reset(self, rng: jnp.ndarray) -> State:
-        # Reset the environment state with added noise.
         rng, rng1, rng2 = jax.random.split(rng, 3)
         qpos = self.sys.qpos0 + jax.random.uniform(
             rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
@@ -119,7 +115,6 @@ class MultiQuadEnv(PipelineEnv):
         data = self.pipeline_step(data0, action_scaled)
         target = self.target_position
 
-        # Compute the tilt for each quad
         q1_orientation = data.xquat[self.q1_body_id]
         q2_orientation = data.xquat[self.q2_body_id]
         up = jnp.array([0.0, 0.0, 1.0])
@@ -151,7 +146,6 @@ class MultiQuadEnv(PipelineEnv):
         return state.replace(pipeline_state=data, obs=obs, reward=reward, done=done, metrics=new_metrics)
     
     def _get_obs(self, data, last_action: jnp.ndarray, target_position) -> jnp.ndarray:
-        # Construct the observation vector.
         payload_pos = data.xpos[self.payload_body_id]
         payload_linvel = data.cvel[self.payload_body_id][3:6]
         payload_error = target_position - payload_pos
@@ -176,7 +170,6 @@ class MultiQuadEnv(PipelineEnv):
         quad2_linear_acc = data.cacc[self.q2_body_id][3:6]
         quad2_angular_acc = data.cacc[self.q2_body_id][:3]
 
-        time_progress = jnp.array([(data.time - self.warmup_time) / self.max_time])
         obs = jnp.concatenate([
             payload_error,        # 3 elements
             payload_linvel,       # 3 elements
@@ -198,7 +191,6 @@ class MultiQuadEnv(PipelineEnv):
 
     def calc_reward(self, obs, sim_time, collision, out_of_bounds, action,
                     angle_q1, angle_q2, last_action, target_position):
-        # Split observation into team and quad components.
         team_obs = obs[:6]
         quad1_obs = obs[6:30]
         quad2_obs = obs[30:54]
@@ -225,8 +217,6 @@ class MultiQuadEnv(PipelineEnv):
         quad2_rel = quad2_obs[:3]
         z_reward_q1 = quad1_rel[2] - target_position[2]
         z_reward_q2 = quad2_rel[2] - target_position[2]
-        quad_above_reward = z_reward_q1 + z_reward_q2
-        
         up_reward = jnp.exp(-jnp.abs(angle_q1)) + jnp.exp(-jnp.abs(angle_q2))
         
         ang_vel_q1 = quad1_obs[15:18]
@@ -322,32 +312,28 @@ def make_multiagent_env(config):
     env = envs.get_environment('multiquad')
     return MultiAgentQuadEnvWrapper(env)
 
-def main():
-    # Import Mava experiment runner and configuration helper.
-    from mava.systems.ppo.anakin.ff_mappo import run_experiment
-    from mava.configurations import get_default_config    
-    # Get default configuration for decentralized MAPPO.
-    config = get_default_config("mappo_decentralized")
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+@hydra.main(config_path="../../../configs/default", config_name="ff_mappo.yaml", version_base="1.2")
+def main(cfg: DictConfig) -> None:
+    # Print out the configuration for verification.
+    print(OmegaConf.to_yaml(cfg))
+    
+    from mava.systems.ppo.anakin.ff_mappo import run_experiment  # Ensure this import is correct.
     
     # Update network architectures:
-    #   - Agent policies: [128, 64, 64]
-    #   - Privileged critic: [128, 128, 128, 128]
-    config["network"] = {
+    cfg.network = {
         "policy_hidden_sizes": [128, 64, 64],
         "critic_hidden_sizes": [128, 128, 128, 128]
     }
+    # Define agent IDs.
+    cfg.agents = ["quad1", "quad2"]
+    # Set environment configuration.
+    cfg.environment = {"env_name": "multiquad"}
     
-    # Define agent IDs for the two quads.
-    config["agents"] = ["quad1", "quad2"]
-    
-    # Set environment configuration (optional).
-    config["environment"] = {"env_name": "multiquad"}
-    
-    # (Optional) Adjust other hyperparameters as needed.
-    # e.g., config["num_timesteps"] = 250_000_000
-
-    # Run the experiment.
-    run_experiment(config=config, env_creator=make_multiagent_env)
+    # Run the experiment using the loaded configuration and environment creator.
+    run_experiment(config=cfg, env_creator=make_multiagent_env)
 
 if __name__ == "__main__":
     main()
