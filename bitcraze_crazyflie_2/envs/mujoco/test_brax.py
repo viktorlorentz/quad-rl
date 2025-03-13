@@ -191,13 +191,13 @@ class MultiQuadEnv(PipelineEnv):
     collision = quad_distance < 0.11
     out_of_bounds = jp.logical_or(jp.absolute(angle_q1) > jp.radians(80),
                                   jp.absolute(angle_q2) > jp.radians(80))
-    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
-    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
-    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
-    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < 0.05)
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < 0.05)
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q1_body_id][2] < data.xpos[self.payload_body_id][2])
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.q2_body_id][2] < data.xpos[self.payload_body_id][2])
 
     # out of bounds for payload
-    # out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.payload_body_id][2] < 0.05)
+    out_of_bounds = jp.logical_or(out_of_bounds, data.xpos[self.payload_body_id][2] < 0.05)
 
     obs = self._get_obs(data, prev_last_action, target)
 
@@ -319,7 +319,7 @@ class MultiQuadEnv(PipelineEnv):
     reward += safe_distance_reward
     reward += velocity_towards_target
     reward += up_reward
-    reward += 10 * quad_above_reward
+    # reward += 10 * quad_above_reward
     reward -= 10 * linvel_penalty
     reward -= collision_penalty
     reward -= out_of_bounds_penalty
@@ -330,11 +330,11 @@ class MultiQuadEnv(PipelineEnv):
 
     # from ground
 
-    on_ground = 1.0 * (data.xpos[self.q1_body_id][2] < 0.02)
-    on_ground += 1.0 * (data.xpos[self.q2_body_id][2] < 0.02)
-    on_ground += 1.0 * (data.xpos[self.payload_body_id][2] < 0.02)
+    # on_ground = 1.0 * (data.xpos[self.q1_body_id][2] < 0.02)
+    # on_ground += 1.0 * (data.xpos[self.q2_body_id][2] < 0.02)
+    # on_ground += 1.0 * (data.xpos[self.payload_body_id][2] < 0.02)
 
-    reward -=  on_ground * 10
+    # reward -=  on_ground * 10
 
     reward /= 25.0
     return reward, None, {}
