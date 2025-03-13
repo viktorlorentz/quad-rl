@@ -133,12 +133,15 @@ class MultiQuadEnv(PipelineEnv):
     rng, rng1, rng2 = jax.random.split(rng, 3)
     qpos = self.sys.qpos0 + jax.random.uniform(
         rng1, (self.sys.nq,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
-    # qvel = jax.random.uniform(
-    #     rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
+    qvel = jax.random.uniform(
+        rng2, (self.sys.nv,), minval=-self._reset_noise_scale, maxval=self._reset_noise_scale)
     
-    # limit qpos to xy and no z as we are on the ground
-    qpos = qpos.at[2].set(0.0)
-    qvel = jp.zeros(self.sys.nv)
+    # clip position to be above the ground and in bounds
+    # qpos[2] = jp.clip(qpos[2], 0.01, 1.5)
+
+    # qpos[0] = jp.clip(qpos[0], -1.5, 1.5)
+    # qpos[1] = jp.clip(qpos[1], -1.5, 1.5)
+
 
     data = self.pipeline_init(qpos, qvel)
   
