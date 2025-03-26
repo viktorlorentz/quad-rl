@@ -18,6 +18,7 @@ After introducing the required background knowledge, the next chapter presents s
 The observation space is specified by a \texttt{CompositeSpec} containing the following items:
 \begin{itemize}
     \item \texttt{obs\_self} (1, *): The state of each UAV observed by itself, containing its kinematic information with the position relative to the payload. It also includes a one-hot vector indicating each drone’s identity.
+    
     \item \texttt{obs\_others} (k-1, *): The observed states of other agents.
     \item \texttt{obs\_payload} (1, *): The state of the frame, including position (relative to the reference), rotations (quaternions and direction vectors), and velocities.
 \end{itemize}
