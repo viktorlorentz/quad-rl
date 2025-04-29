@@ -1,23 +1,31 @@
 \chapter{CrazyMARL}
 Environment Of Multiple Quadrotors With Cable Suspended Payloads
 \section{Simulation Environment}
+- Use of MJX for E2E JAX speedup
+- Wrapped as Brax / JAXMARL Environment
 
 \subsection{Quadrotor}
+- Modeling of quadrotor with thrust based on work of https://github.com/google-deepmind/mujoco_menagerie/blob/main/bitcraze_crazyflie_2/cf2.xml
+
 \subsection{Cable Suspended Payload}
+- Description of cable suspended payload modeling with tendons or cables
 % \subsection{Obstacles}
 \subsection{Simulation Parameters}
+- Configuration of simulation with initial position wind etc
 
 \section{Observation Space}
-\subsection{Full State}
+- Description of the observation space for single quadrotor
+- Description of the team reward components
 % \subsection{Payload Representations}
 % \subsection{Obstacle Representations}
 \subsection{Observation Space Design}
+- Ideas used for observation space
 \subsection{Multi-Agent Observation Mapping}
+- How is the full state mapped to single agents in the JAXMARL env
 
 \section{Action Space}
+- Actions always the 4 thrusts mapped from -1 to 1
 
 \section{Domain Randomization}
-
 \subsection{Environment Reset}
-\subsection{Payload noise}
-\subsection{Action noise and delay}
+
