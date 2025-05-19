@@ -4,22 +4,28 @@ We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training mul
 \section{Simulation Environment}
 The simulation environment is built upon MuJoCo's XML specification and the GPU-accelerated MJX solver. We adopt a modular, extensible design in which each scenario is defined by auto-generated XML descriptors. These files specify vehicle geometries, inertial properties, cable parameters, payload characteristics, and any static or dynamic obstacles. A lightweight Python utility reads a user‐defined configuration (YAML or JSON) and generates the corresponding XML, allowing researchers to rapidly prototype new dynamics or collaborative tasks. \todo{more details on configuration and generation of the XML files.}
 \subsection{Environment Reset}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{reset_config.png}
+    \caption{Example of the random reset configuration.}
+    \label{fig:reset_config}
+\end{figure}
 At each reset, the payload center~$p$ is sampled uniformly in
 \[
 p_{xy}\sim\mathcal{U}([-L,L]^2),\quad p_z\sim\mathcal{U}([-Z,Z]),
 \]
-% with $L=1.5$, $Z=3.0$, and then clipped to $[z_{\min}^{(p)},z_{\max}]$ with $z_{\min}^{(p)}=0.0055$, $z_{\max}=3.0$.  For each quadrotor~$i=1,\dots,N$, we sample spherical offsets
-% \[
-% r_i = \mathrm{clip}\bigl(\mu_r+\sigma_r\varepsilon_i^{(r)},\,r_{\min},\,r_{\max}\bigr),\quad
-% \theta_i = \mu_\theta+\sigma_\theta\varepsilon_i^{(\theta)},\quad
-% \phi_i = \tfrac{2\pi(i-1)}{N} + \phi_{\mathrm{off}} + \sigma_\phi\varepsilon_i^{(\phi)},
-% \]
-% where $\varepsilon_i^{(\cdot)}\!\sim\mathcal{N}(0,1)$, $\phi_{\mathrm{off}}\!\sim\mathcal{U}(-\pi,\pi)$, and
-% \[
-% \mu_r=c,\;\sigma_r=\tfrac{c}{3},\;r_{\min}=0.05,\;r_{\max}=c,\;
-% \mu_\theta=\tfrac{\pi}{7},\;\sigma_\theta=\tfrac{\pi}{8},\;\sigma_\phi=\tfrac{\pi}{N+1}.
-% \]
-\todo{equations}
+Then we use the payload position $p$ as the center point and randomly sample $N$ quadrotors in a spherical shell around the payload. The radius $r_i$ of each quadrotor is sampled from a normal distribution with mean $\mu_r$ and standard deviation $\sigma_r$, and then clipped to cable length. The angles $\theta_i$ and $\phi_i$ are sampled from normal distributions with means $\mu_\theta$ and $\phi_{\mathrm{offset}}$ respectively, and standard deviations $\sigma_\theta$ and $\sigma_\phi$. The angles are then adjusted to ensure they are within the range $[0, 2\pi]$. The equations for sampling the quadrotor positions are as follows:
+\[
+r_i = \mathrm{clip}\bigl(\mu_r+\sigma_r\varepsilon_i^{(r)},\,r_{\min},\,r_{\max}\bigr),\quad
+\theta_i = \mu_\theta+\sigma_\theta\varepsilon_i^{(\theta)},\quad
+\phi_i = \tfrac{2\pi(i-1)}{N} + \phi_{\mathrm{offset}} + \sigma_\phi\varepsilon_i^{(\phi)},
+\]
+where $\varepsilon_i^{(\cdot)}\!\sim\mathcal{N}(0,1)$, $\phi_{\mathrm{offset}}\!\sim\mathcal{U}(-\pi,\pi)$, and
+\[
+\mu_r=c,\;\sigma_r=\tfrac{c}{3},\;r_{\min}=0.05,\;r_{\max}=c,\;
+\mu_\theta=\tfrac{\pi}{7},\;\sigma_\theta=\tfrac{\pi}{8},\;\sigma_\phi=\tfrac{\pi}{N+1}.
+\]
+
 These are converted to Cartesian positions
 \[
 q_i = p + r_i
@@ -29,21 +35,18 @@ q_i = p + r_i
 \cos\theta_i
 \end{bmatrix},
 \]
-with the $z$–coordinate clipped to $[z_{\min}^{(q)},z_{\max}]$, where $z_{\min}^{(q)}=0.008$. 
-This results in a even distribution of valid initial configurations, also including starting from the ground as shown in \autoref{fig:reset_config}.
+\todo{fix equations}
+with the $z$–coordinate clipped. 
+This results in a even distribution of valid initial configurations, also including starting from the ground as shown in \autoref{fig:reset_config}. 
 
-\begin{figure}
-    \label{fig:reset_config}
-    \centering
-    \includegraphics[width=0.5\textwidth]{reset_config.png}
-    \caption{Example of the random reset configuration.}
 
-\end{figure}
 
 
 
 \subsection{Quadrotor}
 % - Modeling of quadrotor with thrust based on work of https://github.com/google-deepmind/mujoco_menagerie/blob/main/bitcraze_crazyflie_2/cf2.xml
+- Describe thrust on quadrotor
+- Motor Model
 
 \subsection{Cable Suspended Payload}
 - Description of cable suspended payload modeling with tendons or cables
