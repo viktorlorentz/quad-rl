@@ -1,42 +1,46 @@
-% \begin{samepage}
+
 \chapter{Related Work}
-After introducing the required background knowledge, the next chapter presents some relevant related work.
-\section{Quadrotor With Payloads Control}
-\autocite{Wahba2024}: Khaleds paper.\\
+This chapter reviews prior work on the control of multi‐rotor unmanned aerial vehicles (UAVs) transporting cable‐suspended payloads, focusing on two main paradigms: traditional model‐based control strategies, and \gls{rl} approaches. The survey covers centralized vs.\ decentralized control architectures, scalability and modeling issues, and recent advances in applying \gls{rl} to both single‐ and multi‐UAV systems, with and without payload. 
 
-\autocite{Belkhale2021}:Finally RL for model-based RL with single payload 
-\section{Reinforcement Learning for Quadrotor Control}
-\subsection{Single Quadrotor Control}
-
-\subsection{Multi Quadrotor Control}
+\section{Traditional Model‐Based Control for Multi‐UAV Payload Transport}
+\autocite{Wahba2024}
 
 
-\paragraph{xu2023omnidrones}
-\autocite{xu2023omnidrones}: Isaac Lab implementation. -> 4096 parallel envs and 125mio steps. Have transport payload: 
-\href{https://omnidrones.readthedocs.io/en/latest/tasks/multi/TransportTrack.html#transporttrack}{link} \\
+\section{Reinforcement Learning Approaches for UAV Control}
+Given the challenges of model‐based control in uncertain, nonlinear scenarios, data‐driven methods like \gls{rl} have garnered interest for UAV control. \gls{rl} enables an agent to learn control policies through trial‐and‐error, potentially capturing dynamics and couplings that are difficult to model explicitly \cite{sutton_reinforcement_nodate}. Deep \gls{rl}, in principle, can optimize directly for task objectives from high‐dimensional sensory inputs, rather than relying on fixed heuristics \cite{song_reaching_2023}.....
 
-The observation space is specified by a \texttt{CompositeSpec} containing the following items:
-\begin{itemize}
-    \item \texttt{obs\_self} (1, *): The state of each UAV observed by itself, containing its kinematic information with the position relative to the payload. It also includes a one-hot vector indicating each drone’s identity.
-    
-    \item \texttt{obs\_others} (k-1, *): The observed states of other agents.
-    \item \texttt{obs\_payload} (1, *): The state of the frame, including position (relative to the reference), rotations (quaternions and direction vectors), and velocities.
-\end{itemize}
+\subsection{Sim‐to‐Real \gls{rl} for Micro UAV Control}
+The Crazyflie 2.1 quadrotor used in this work is a miniature quadrotor platform with strict size, weight, and onboard computation constraints. These limitations pose significant specific challenges for deploying reinforcement‐learned policies trained in simulation. In prior work, domain randomization of physical parameters (e.g., motor characteristics and sensor noise) has been shown to improve policy robustness under real‐world variability \autocite{molchanov_sim--multi-real_2019}. Abstracting actions as \gls{ctbr} has been found to transfer better than low level single rotor PWM or Thrust  \autocite{kaufmann_benchmark_2022}. Asymmetric actor–critic frameworks leverage privileged simulator information during training while enforcing realistic observation constraints at test time, yielding zero‐shot transfer to the Crazyflie hardware within seconds of simulated learning \autocite{eschmann_learning_2024}. Finally, carefully designed reward shaping and curriculum schedules have been used to stabilize training and ensure safe initial flights on the real quadrotor \autocite{chen_what_2024}. Table~\ref{tab:rl_comparison} summarizes several recent RL‐based approaches for control of the Crazyflie.
 
 
-The total reward is computed as:
-\begin{equation}
-    \begin{split}
-r = r_{\text{separation}} \cdot \left( r_{\text{pos}} + r_{\text{pos}} \cdot (r_{\text{up}} + r_{\text{swing}}) + r_{\text{joint\_limit}} \right)
-    \end{split}
-\end{equation}
-\\
-\textbf{Ideas:}
- PPO, 4096 parallel envs, 125mio steps, Stack full state as obs with one hot it, timeencoding, use poserror as coefficent\\
 
+\begin{table*}[hbt!]
+    \centering
+  \caption{In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. Subscript $_{err}$ indicates error relative to a target state. $\mathbf{a}$ is the action vector (e.g., motor commands), and $\Delta \mathbf{a}$ its successive difference. We denote $\phi_R$ as the orientation error angle. We group PWM and motor thrust commands as \gls{srt}.}
+  \label{tab:rl_comparison}
+\scriptsize
+\centering
+\begin{tabular}{p{2.0cm}<{\raggedright} p{2.5cm}<{\raggedright} p{2.0cm}<{\raggedright} p{3.0cm}<{\raggedright} p{2.8cm}<{\raggedright} p{2.7cm}<{\raggedright}}
+\hline
+\textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} & \textbf{Remarks} \\
+\hline
+Molchanov et al.\ (2019) \cite{molchanov_sim--multi-real_2019} & $e_p\in\mathbb{R}^3,\ e_v\in\mathbb{R}^3,\ e_\omega\in\mathbb{R}^3,\ R\in SO(3),\ \boldsymbol{\Omega}\in\mathbb{R}^4$ (rotor speeds) & \gls{srt} & { $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$} & { Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference.} & { First learned low-level controller; robust hover matching PID on Crazyflie 2.0.} \\[1ex]
 
-\section{Environment Representations in Reinforcement Learning}
-Idea here is to show more ideas how to represent env and payload in RL.
-\section{Sim-to-Real Transfer of Reinforcement Learning for Quadrotor Control} 
-Aggregate all sim to real strategies from previous papers.\\
-\section{Reinforcement Learning for Multi-Agent Payload Transport}
+Gronauer et al.\ (2022) \cite{gronauer_using_2022} & $\mathbf{x}$ (IMU attitude, alt.), $\mathbf{p}_{err}$, $\mathbf{a}_{t-1}$ & \gls{srt} (PWM commands) & { $-\bigl(|x_{err}|+|y_{err}|+|z_{err}|\bigr)$ per step; bonus on loop complete.} & { Randomized mass, inertia, thrust-to-weight, motor latencies; IMU/actuator noise; Bayesian sim tuning; onboard inference.} & { Compared low-level PWM vs. high-level rate policies; high-level more robust; zero-shot transfer onboard.} \\[1ex]
+
+Chen et al. (2024) \cite{chen_what_2024} & $\mathbf{p}_{err}, \mathbf{v}, R, \boldsymbol{\omega}$ & \gls{ctbr} & { $r_{track} - \lambda\,\|\Delta\mathbf{a}\|$} & { System ID calibration; randomized uncalibrated params; matched inner PID mixer; large-batch training.} & { PPO controller; >50\% lower error vs. prior RL; 70\% vs. MPC; tracks aggressive maneuvers.} \\[1ex]
+
+Ma et al.\ (2024) \cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v}\in\mathbb{R}^3,\ \mathbf{q}\in\mathbb{R}^4,\ \boldsymbol{\omega}\in\mathbb{R}^3,\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr}& { $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$} & { Latent skill learning in sim; real adaptation via limited real-data finetuning.} & { 30\% improvement in real tasks through sim-to-real skill adaptation.} \\[1ex]
+
+Eschmann et al.\ (2024) \cite{eschmann_learning_2024} & $\mathbf{p}\in\mathbb{R}^3,\,R\in SO(3),\,\mathbf{v},\,\boldsymbol{\omega}\in\mathbb{R}^3,\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & { $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term.\ on crash.} & { Mixer noise; observation delay; async MCU inference.} & { <20 s sim train; MCU deployment; competitive with MPC.} \\[1ex]
+
+Huang et al.\ (2023) \cite{huang_quadswarm_2023} & $e_p,e_v\in\mathbb{R}^3,\,\mathbf{q}\in\mathbb{R}^4,\,\boldsymbol{\omega}\in\mathbb{R}^3$ & \gls{ctbr}& { Position/yaw error $- \alpha\|\mathbf{v}\|^2$.} & { Disturbance observer; wind randomization; onboard inference.} & { 34–48\% lower error under wind vs. adaptive MPC.} \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsection{Single‐UAV RL for Payload Transport and Aerial Manipulation}
+Meta‐reinforcement learning has been applied to single‐UAV payload tasks to enable rapid adaptation. Belkhale et al. (2021) used a meta‐RL approach to “learn how to learn” payload dynamics online, adapting within seconds of data to sudden payload attachment and significantly reducing oscillations compared to non‐adaptive controllers \cite{belkhale_model-based_2021}. Hua et al. (2022) combined a Lyapunov‐stable nonlinear controller with an RL policy that parameterizes controller gains in real time, resulting in a provably stable hybrid controller that maintains accurate payload positioning even under disturbances and model drift \cite{hua_new_2022}. Similar deep RL methods have been explored for UAVs with onboard manipulators, leveraging rich state observations and carefully designed reward functions to outperform fixed‐gain controllers in disturbance rejection and tracking accuracy.\cite{d}
+\subsection{Multi‐UAV Swarm RL}
+\subsection{Multi‐UAV Collaborative Transport via RL}
+\gls{marl} for collaborative payload transport 
