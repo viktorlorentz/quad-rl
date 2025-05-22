@@ -1,25 +1,27 @@
 
+
 \chapter{Related Work}
-This chapter reviews prior work on the control of multi‐rotor unmanned aerial vehicles (UAVs) transporting cable‐suspended payloads, focusing on two main paradigms: traditional model‐based control strategies, and \gls{rl} approaches. The survey covers centralized vs.\ decentralized control architectures, scalability and modeling issues, and recent advances in applying \gls{rl} to both single‐ and multi‐UAV systems, with and without payload. 
+This chapter reviews prior work on the control of multirotor \gls{uav} transporting cable suspended payloads. We categorize existing methods into traditional model-based control strategies and reinforcement learning (\gls{rl}) approaches. \cite{estevez_review_2024} rececently reviewed a wide range of methods for aerial cable suspended transport of payloads with quadrotors. There is still limited work on \gls{marl} for multi UAV payload transport, but we highlight recent advances in \gls{rl} for single \gls{uav} control and payload transport and aerial manipulation, as well as multi UAV swarm coordination. We also discuss the challenges of transferring \gls{rl} policies from simulation to real hardware, particularly for micro UAVs like the Crazyflie.
 
-\section{Traditional Model‐Based Control for Multi‐UAV Payload Transport}
-\autocite{Wahba2024}
+\section{Traditional Model-Based Control for Multi-UAV Payload Transport}
+Early works on cooperative payload transport relied on physics-based models and carefully designed feedback controllers. \cite{sreenath_dynamics_2013} formulated the coupled dynamics of multiple quadrotors and their suspended payload, enabling coordinated planning and stabilization beyond quasi static assumptions. \cite{villa_cooperative_2021} proposed a virtual structure formation with adaptive dynamic compensators to achieve robust rod-shaped payload positiotning transport under modeling errors and wind disturbances, critically without inter UAV communication.
 
+\cite{lee_geometric_2018} derived full rigid body dynamics on nonlinear configuration spaces and designed controllers guaranteeing payload pose tracking with provable stability. \cite{tognon_aerial_2018} showed that internal cable tension enables decentralized stabilization of any payload orientation, whereas zero tension schemes render attitude uncontrollable. \cite{tagliabue_robust_2017} shaped each drone’s apparent dynamics to handle parametric uncertainties, demonstrating stable collaborative transport even under worst case conditions.
+
+\cite{sun_nonlinear_2023} developed an MPC that plans full six degree of freedom payload trajectories while respecting thrust, collision, and cable tension limits for teams of up to ten UAVs. \cite{li_nonlinear_2023} optimized payload trajectory and inter drone spacing within an MPC framework, validating performance through simulation and experiments. \cite{jackson_scalable_2020} introduced distributed trajectory optimization, parallelizing computation across agents to enable real time re planning in cluttered environments.
+
+\cite{gabellieri_equilibria_2023} analyzed equilibrium and stability of two UAV beam transport without communication, showing that internal forces induced by cable angles enhance attitude robustness under uncertain parameters. \cite{wahba_kinodynamic_2024} integrated sampling based kinodynamic planning with a dynamics aware optimizer to navigate UAV teams through confined spaces, achieving lower tracking errors and reduced energy consumption compared to payload only planners.
 
 \section{Reinforcement Learning Approaches for UAV Control}
-Given the challenges of model‐based control in uncertain, nonlinear scenarios, data‐driven methods like \gls{rl} have garnered interest for UAV control. \gls{rl} enables an agent to learn control policies through trial‐and‐error, potentially capturing dynamics and couplings that are difficult to model explicitly \cite{sutton_reinforcement_nodate}. Deep \gls{rl}, in principle, can optimize directly for task objectives from high‐dimensional sensory inputs, rather than relying on fixed heuristics \cite{song_reaching_2023}.....
+\gls{rl} methods are gaining traction for UAV control, offering adaptability to complex and uncertain dynamics while reducing dependence on explicit models. Recent RL approaches for UAV control are categorized into four areas: sim to real transfer for micro UAVs, single UAV payload transport and aerial manipulation, multi UAV swarm coordination, and multi UAV collaborative transport.
 
 \subsection{Sim‐to‐Real \gls{rl} for Micro UAV Control}
 The Crazyflie 2.1 quadrotor used in this work is a miniature quadrotor platform with strict size, weight, and onboard computation constraints. These limitations pose significant specific challenges for deploying reinforcement‐learned policies trained in simulation. In prior work, domain randomization of physical parameters (e.g., motor characteristics and sensor noise) has been shown to improve policy robustness under real‐world variability \autocite{molchanov_sim--multi-real_2019}. Abstracting actions as \gls{ctbr} has been found to transfer better than low level single rotor PWM or Thrust  \autocite{kaufmann_benchmark_2022}. Asymmetric actor–critic frameworks leverage privileged simulator information during training while enforcing realistic observation constraints at test time, yielding zero‐shot transfer to the Crazyflie hardware within seconds of simulated learning \autocite{eschmann_learning_2024}. Finally, carefully designed reward shaping and curriculum schedules have been used to stabilize training and ensure safe initial flights on the real quadrotor \autocite{chen_what_2024}. Table~\ref{tab:rl_comparison} summarizes several recent RL‐based approaches for control of the Crazyflie.
-
-
-
-\begin{table*}[hbt!]
-    \centering
+\begin{table*}[!b] 
+\centering
   \caption{In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. Subscript $_{err}$ indicates error relative to a target state. $\mathbf{a}$ is the action vector (e.g., motor commands), and $\Delta \mathbf{a}$ its successive difference. We denote $\phi_R$ as the orientation error angle. We group PWM and motor thrust commands as \gls{srt}.}
   \label{tab:rl_comparison}
 \scriptsize
-\centering
 \begin{tabular}{p{2.0cm}<{\raggedright} p{2.5cm}<{\raggedright} p{2.0cm}<{\raggedright} p{3.0cm}<{\raggedright} p{2.8cm}<{\raggedright} p{2.7cm}<{\raggedright}}
 \hline
 \textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} & \textbf{Remarks} \\
@@ -39,8 +41,13 @@ Huang et al.\ (2023) \cite{huang_quadswarm_2023} & $e_p,e_v\in\mathbb{R}^3,\,\ma
 \end{tabular}
 \end{table*}
 
-\subsection{Single‐UAV RL for Payload Transport and Aerial Manipulation}
-Meta‐reinforcement learning has been applied to single‐UAV payload tasks to enable rapid adaptation. Belkhale et al. (2021) used a meta‐RL approach to “learn how to learn” payload dynamics online, adapting within seconds of data to sudden payload attachment and significantly reducing oscillations compared to non‐adaptive controllers \cite{belkhale_model-based_2021}. Hua et al. (2022) combined a Lyapunov‐stable nonlinear controller with an RL policy that parameterizes controller gains in real time, resulting in a provably stable hybrid controller that maintains accurate payload positioning even under disturbances and model drift \cite{hua_new_2022}. Similar deep RL methods have been explored for UAVs with onboard manipulators, leveraging rich state observations and carefully designed reward functions to outperform fixed‐gain controllers in disturbance rejection and tracking accuracy.\cite{d}
-\subsection{Multi‐UAV Swarm RL}
-\subsection{Multi‐UAV Collaborative Transport via RL}
-\gls{marl} for collaborative payload transport 
+\subsection{Single UAV RL for Payload Transport and Aerial Manipulation}
+\cite{belkhale_model-based_2021} introduced meta reinforcement learning that adapts quickly to unknown payload dynamics, updating its model mid flight to maintain stability. \cite{hua_new_2022} combined a Lyapunov based nonlinear controller with RL, resulting in a hybrid controller that rapidly converges and robustly manages payload disturbances. \cite{xing_multi-task_2024} developed a multitask RL framework enabling a single quadrotor to execute high speed stabilization, velocity tracking, and autonomous racing tasks using a unified policy, illustrating versatility and efficiency improvements.
+
+\subsection{Multi UAV Swarm RL}
+\cite{riviere_glas_2020} presented GLAS, using centralized demonstrations and a differentiable safety module to train decentralized swarm policies surpassing traditional collision avoidance algorithms. \cite{huang_collision_2024} introduced attention based neural networks enabling collision avoidance and navigation in UAV swarms, transferring policies trained with up to 32 agents directly to real hardware. \cite{xie_multi-uav_2024} addressed formation flight with obstacles through a two stage RL pipeline employing attention mechanisms, validating swarm performance through real world experiments.
+
+\cite{diao_efficient_2024} developed a lightweight LiDAR based multi agent navigation policy trained in dense simulation environments, demonstrating successful real time collision free flight on hardware with limited computation capabilities. \cite{zhao_deep_2024} applied deep RL to collaborative pursuit and evasion scenarios, enabling coordinated multi UAV target herding and obstacle avoidance.
+
+\subsection{Multi UAV Collaborative Transport via RL}
+Collaborative payload transport via multi UAV RL remains a relatively new area of study. Single UAV RL approaches like those by \cite{belkhale_model-based_2021} and \cite{hua_new_2022}, which provide rapid adaptability and robust payload handling, suggest promising extensions to multi UAV reinforcement learning (\gls{marl}). Such adaptations would allow decentralized, cooperative strategies capable of dynamically adjusting to uncertainties and disturbances inherent to cable suspended multi UAV payload transport scenarios.
