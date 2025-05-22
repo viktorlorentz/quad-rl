@@ -1,4 +1,5 @@
 \chapter{Background}
+\todo{back intro}
 
 \section{Multi-Agent Reinforcement Learning}
 
@@ -175,7 +176,7 @@ The overall procedure of \gls{ppo} in an actor-critic setting is summarized in A
 \end{algorithmic}
 \end{algorithm}
 
-Overall, \gls{ppo} strikes a favorable balance between simplicity and performance, making it one of the most widely adopted on-policy algorithms in modern reinforcement learning applications.
+Overall, \gls{ppo} strikes a favorable balance between simplicity and performance, making it one of the most widely adopted on-policy algorithms in modern reinforcement learning applications. The following sections will discuss the multi-agent extensions of \gls{ppo} that are used in this work.
 \subsection{IPPO}
 In single-agent reinforcement learning, the environment is modeled as a \gls{mdp} with the tuple \((\mathcal{S}, \mathcal{A}, P, r, \gamma)\). In \gls{marl}, multiple agents interact with the environment simultaneously, which naturally leads to an extended framework. A common formalism is the Markov game (or stochastic game), which generalizes the MDP to handle multiple decision-makers. In this setting, the environment is defined by the tuple
 \[
