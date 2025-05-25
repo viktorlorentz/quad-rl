@@ -1,33 +1,20 @@
 \chapter{Introduction}
-
 \section{Motivation}
-\begin{itemize}
-    \item UAVs: constuction, debris cleanup, rescue ops, nucular site work
-    
-    \item Current control methods:
-    \begin{itemize}
-        \item need exact models (too sensetive)
-        \item can't handel real-world dynamics well
-        \item scaling (more UAVs) = big problem
-    \end{itemize}
-    
-    \item RL advantges:
-    \begin{itemize}
-        \item flexible, data-driven
-        \item better at dealing w/ uncertanty
-        \item already good results in UAV stuff
-    \end{itemize}
-    
-    \item Thesis goal:
-    \begin{itemize}
-        \item use deep RL for multi-UAV payload moving
-        \item more robust, safer, more autoomy
-    \end{itemize}
-\end{itemize}
+\gls{uav} have seen rapid adoption across a variety of civil and industrial applications, including construction site surveying, debris cleanup after natural disasters, search and rescue operations in hazardous environments, and inspection or maintenance tasks at nuclear facilities. In these contexts, reliable and adaptive control of single and multiple \gls{uav}s is critical to ensure mission success and safety.
+
+Traditional model-based control methods for \gls{uav}s require highly accurate mathematical models of the vehicle dynamics and the task environment. Such methods are often overly sensitive to modeling errors and external disturbances (e.g., wind gusts, changing payload mass, collisions), which limits their robustness in real-world scenarios. Moreover, scaling these controllers to coordinate swarms of \gls{uav}s for cooperative tasks introduces significant complexity. Centralized approaches suffer from communication bottlenecks and single points of failure, while decentralized schemes often struggle to guarantee global performance.
+
+\gls{rl} offers a promising alternative by leveraging data-driven policy optimization to automatically adapt to uncertainty and complex dynamics. \gls{rl} agents can learn flexible control strategies directly from interaction with a simulator or the real world, showing increased resilience to disturbances and unmodeled effects. Recent studies have demonstrated the potential of both single-\gls{uav} and multi-\gls{uav} \gls{rl} in tasks such as target tracking, formation flight, and payload transport, achieving performance on par or exceeding classical controllers under challenging conditions.
+
+The goal of this thesis is to develop a deep \gls{rl} approach for coordinated multi-\gls{uav} payload transport, focusing on cable-suspended loads. By designing a efficient training pipeline that supports decentralized learning we aim to achieve a control policy that is more robust, safer, and more autonomous than existing methods.
+
 \section{Contribution}
+This thesis makes the following key contributions:
 \begin{itemize}
-    \item Decentralized RL for cable suspended payloads (harsh conditions)
-    \item High performance training pipeline for multi-UAV RL (especially for payload transport and aerial manipulation)
-    \item (Tracking vs. stability reward design)
+    \item \textbf{Decentralized \gls{rl} for Cable-Suspended Payloads.} We formulate the multi-\gls{uav} payload transport problem as a decentralized multi-agent \gls{rl} task, enabling each \gls{uav} to act based on local observations while still achieving coordinated global behavior under harsh environmental conditions.
+    \item \textbf{High-Performance GPU-Parallel Training Pipeline.} We develop a training framework implemented in JAX and MJX, fully parallelized on GPU and optimized for contact-rich scenarios such as payload transport and aerial manipulation, laying the groundwork for efficient training of complex multi-agent policies.
+    \item \textbf{Modular Reward Design.} We investigate the trade-off between tracking accuracy and system stability by decomposing the reward into distinct tracking and stability components, and we analyze how different reward weightings impact overall performance and safety.
 \end{itemize}
+
 \section{Thesis Overview}
+Chapter 2 reviews related work on traditional model-based control for multi-\gls{uav} payload transport and existing reinforcement learning approaches for \gls{uav} control, including sim-to-real methods, single-\gls{uav} payload tasks, swarm \gls{marl}, and cooperative transport via RL. Chapter 3 provides the necessary background on reinforcement learning fundamentals, multi-agent \gls{mdp}, \gls{ppo} in both independent and centralized settings, and quadrotor dynamics and control. In Chapter 4, we introduce \texttt{CrazyMARL}, the simulation environment and training pipeline built for this work, detailing the quadrotor and cable-suspended payload models, observation and action spaces, and domain randomization strategies.

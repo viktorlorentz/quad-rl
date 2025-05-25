@@ -1,13 +1,8 @@
 \chapter{Background}
 \todo{back intro}
-
-\section{Multi-Agent Reinforcement Learning}
-
-This section provides an overview of the theoretical background of \gls{marl} as applied in this work. Our work evaluates both centralized and decentralized training paradigms. In particular, we employ Proximal Policy Optimization (PPO) for centralized training, while also exploring decentralized approaches using Independent PPO (IPPO) and Multi-Agent PPO (MAPPO), which are detailed in subsequent sections.
-
-\subsection{Fundamentals of Reinforcement Learning}
+\section{Fundamentals of Reinforcement Learning}
 The term \gls{rl} is used for a wide range of algorithms and methods that learn to make decisions by interacting with an environment. The following will give a brief overview of the most important concepts and terms in \gls{rl}. In particular, this work focuses on model-free, on-policy, policy-optimization algorithms, where the policy used to collect data is the same one being updated. For a thorough treatment of the fundamentals see \cite{SuttonBarto2018}.
-\subsubsection{Markov Decision Processes}
+\subsection{Markov Decision Processes}
 \begin{figure}
 \centering
 \includegraphics[width=0.8\textwidth]{images/rl_diagram.png}
@@ -36,7 +31,7 @@ At each time step \(t\), the agent interacts with the environment as also shown 
   \item transitions to \(s_{t+1}\sim P(\cdot\mid s_t,a_t)\).
 \end{enumerate}
 In practice the agent often does not have access to the full state \(s_t\) but only to a partial observation \(o_t\).  We will use the notation interchangeably, i.e.\ \(o_t\) or \(s_t\) depending on the context, unless otherwise specified.
-\subsubsection{Policies}
+\subsection{Policies}
 As already mentioned, the agent's behavior is defined by a policy \(\pi_\theta\), which can be either deterministic or stochastic:
  
     \[
@@ -50,7 +45,7 @@ As already mentioned, the agent's behavior is defined by a policy \(\pi_\theta\)
     where \(\pi_{\theta}(a\mid s_t)\) is the probability of taking action \(a\) in state \(s_t\).
 We parameterize \(\pi_{\theta}\) with \(\theta\) and optimize it to maximize the expected return. Typically, the policy is represented by a neural network taking \(s_t\) as input.
 
-\subsubsection{Reward and Return}
+\subsection{Reward and Return}
 The agent's goal is to maximize the expected return, which is the total discounted reward over time. 
 The reward function \(r_t(s_t,a_t)\) provides immediate feedback to the agent and usually depends on the current state \(s\), action taken by the policy \(a\) and the next state \(s'\). The return \(R_t\) at time step \(t\) is defined as the sum of discounted rewards:
 \[
@@ -72,7 +67,7 @@ At every time step \(t\), the agent observes the current state \(s_t\), selects 
 \end{aligned}
 \end{equation}
 
-\subsubsection{Value and Action‐Value Functions}
+\subsection{Value and Action‐Value Functions}
 
 Given a fixed policy \(\pi_\theta\), we introduce two central quantities that measure the expected return from states and state–action pairs.
 
@@ -114,7 +109,7 @@ A^\pi(s,a)
 &= Q^\pi(s,a) - V^\pi(s)
 \end{align}
 
-\subsubsection{On‐Policy Policy‐Gradient Loop}  
+\subsection{On‐Policy Policy‐Gradient Loop}  
 On‐policy methods repeatedly collect fresh data under \(\pi_\theta\) to perform stochastic gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The gradient can be derived from the advantage function \(A^\pi\) as
 \begin{align}
 \label{eq:policy_gradient}
@@ -177,23 +172,62 @@ The overall procedure of \gls{ppo} in an actor-critic setting is summarized in A
 \end{algorithm}
 
 Overall, \gls{ppo} strikes a favorable balance between simplicity and performance, making it one of the most widely adopted on-policy algorithms in modern reinforcement learning applications. The following sections will discuss the multi-agent extensions of \gls{ppo} that are used in this work.
-\subsection{IPPO}
-In single-agent reinforcement learning, the environment is modeled as a \gls{mdp} with the tuple \((\mathcal{S}, \mathcal{A}, P, r, \gamma)\). In \gls{marl}, multiple agents interact with the environment simultaneously, which naturally leads to an extended framework. A common formalism is the Markov game (or stochastic game), which generalizes the MDP to handle multiple decision-makers. In this setting, the environment is defined by the tuple
+\section{Multi-Agent Reinforcement Learning}
+
+This section provides an overview of the theoretical background of \gls{marl} as applied in this work. Our work evaluates both centralized and decentralized training paradigms. In particular, we employ Proximal Policy Optimization (PPO) for centralized training, while also exploring decentralized approaches using Independent PPO (IPPO) and Multi-Agent PPO (MAPPO), which are detailed in subsequent sections.
+
+
+\section{Multi-Agent Markov Decision Process}
+A cooperative multi-agent reinforcement learning problem can be formalized as a \gls{dec-pomdp}\cite{oliehoek_concise_2016}, defined by the tuple
 \[
-(\mathcal{S}, \{\mathcal{A}_i\}_{i=1}^n, P, \{r_i\}_{i=1}^n, \gamma),
+  \bigl(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\gamma\bigr)
 \]
 where:
 \begin{itemize}
-    \item \(\mathcal{S}\) is the set of states,
-    \item \(\mathcal{A}_i\) is the set of actions available to agent \(i\), with the joint action space given by \(\mathcal{A} = \mathcal{A}_1 \times \cdots \times \mathcal{A}_n\),
-    \item \(P(s' \mid s, \mathbf{a})\) denotes the probability of transitioning from state \(s\) to state \(s'\) given the joint action \(\mathbf{a} = (a_1, \dots, a_n)\),
-    \item \(r_i(s, \mathbf{a})\) is the reward function for agent \(i\) (which can be different for each agent), and
-    \item \(\gamma \in [0,1)\) is the common discount factor.
+  \item $\mathcal{N} = \{1,\dots,N\}$ is the set of agents.
+  \item $\mathcal{S}$ is the set of global states; $s_0\sim\rho(s)$ is the initial state distribution.
+  \item $\mathcal{A}^i$ is the action space of agent $i$, and $\mathcal{A} = \prod_{i=1}^N\mathcal{A}^i$ the joint action space.
+  \item $P(s' \mid s, a)$ is the transition kernel, where $a=(a^1,\dots,a^N)\in\mathcal{A}$.
+  \item $r(s,a)\in\mathbb{R}$ is the common team reward received by all agents.
+  \item $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s)$ is the joint observation function.
+  \item $\gamma\in[0,1)$ is the discount factor.
 \end{itemize}
+At each time step $t$, each agent $i$ receives a private observation $o^i_t\in\Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action $a^i_t\sim\pi^i(a^i\mid\tau^i_t)$ conditioned on its action‐observation history $\tau^i_t$. The joint policy $\pi(a\mid \tau) = \prod_i \pi^i(a^i\mid \tau^i)$ induces an expected discounted return
+\[
+  J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t, a_t)\Bigr]\,. 
+\]
 
-% In this multi-agent setting, the optimal policy for each agent generally depends on the policies of the other agents, which makes the learning process inherently non-stationary from an individual agent's perspective. Depending on whether the agents have aligned or conflicting interests, problems can be classified as cooperative, competitive, or general-sum games. In cases where each agent has only partial observability of the environment, the model is further extended to decentralized partially observable Markov decision processes (Dec-POMDPs).
+\section{\gls{ppo} in Multi-Agent Settings}
+There is two main approaches to applying \gls{ppo} in multi-agent settings: \gls{ippo} and \gls{mappo}. Both approaches extend the single-agent \gls{ppo} algorithm to handle multiple agents, but they differ in how they address the challenges of non-stationarity and credit assignment in multi-agent environments. Their main difference is is wether the critics are centralized or decentralized. In \gls{ippo}, each agent has its own critic, while in \gls{mappo}, a shared critic is used across all agents. This section will provide a brief overview of both approaches.
 
-\subsection{MAPPO}
+\subsection{\gls{ippo}}
+\gls{ippo} \cite{witt_is_2020} extends the single agent \gls{ppo} (clipped surrogate objective, GAE, value‐loss and entropy bonus) for each agent in isolation, treating the other agents as part of the non‐stationary environment.  Concretely, for each agent \(i\) we optimize
+\[
+  L_i(\theta_i) \;=\; 
+  \mathbb{E}_t \Bigl[\,L^{\mathrm{CLIP}}_i(\theta_i) \;-\; c_1\,\bigl(V_{\phi_i}(o^i_t)-V^{\text{target},\,i}_t\bigr)^2
+    \;+\; c_2\,S\bigl[\pi_{\theta_i}\bigr](o^i_t)\Bigr],
+\]
+where
+\[
+  L^{\mathrm{CLIP}}_i(\theta_i)
+  = \mathbb{E}_t\!\Bigl[\min\bigl(r^i_t(\theta_i)\,\hat A^i_t,\;\mathrm{clip}(r^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat A^i_t\bigr)\Bigr],
+\]
+\(r^i_t(\theta_i)\!=\!\frac{\pi_{\theta_i}(a^i_t\mid o^i_t)}{\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)}\), and \(\hat A^i_t\) is computed with \gls{gae} using the local critic \(V_{\phi_i}\).  Each agent collects on‐policy rollouts of its own interaction trace \(\{(o^i_t,a^i_t,r_t)\}\) and applies \(K\) epochs of minibatch SGD exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
+
+\subsection{\gls{mappo}}
+\gls{mappo} \cite{yu_surprising_2022} retains the \gls{ppo} surrogate and mixed objective but moves to a \gls{ctde} paradigm.  A single policy network \(\pi_\theta(a^i\mid o^i)\) with shared parameters \(\theta\) is used by all agents at execution, while training leverages a centralized critic \(V_\phi(s)\) receiving full state (or joint observations).  The joint optimization target becomes
+\[
+  L(\theta,\phi) = \mathbb{E}_t\Bigl[\,L^{\mathrm{CLIP}}(\theta)
+   \;-\; c_1\bigl(V_\phi(s_t)-V^{\text{target}}_t\bigr)^2
+   \;+\; c_2\sum_{i=1}^N S\bigl[\pi_\theta(\cdot\mid o^i_t)\bigr]\Bigr],
+\]
+where
+\[
+  L^{\mathrm{CLIP}}(\theta)
+  = \mathbb{E}_t\!\Bigl[\min\bigl(r_t(\theta)\,\hat A_t,\;\mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat A_t\bigr)\Bigr],
+\]
+with the joint ratio \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\) or approximated per‐agent, and \(\hat A_t\) estimated via \gls{gae} using the centralized value \(V_\phi\).  By conditioning the critic on the true global state, \gls{mappo} yields lower‐variance advantage estimates and more accurate credit assignment, yet at test time each agent executes only on its local observation \(o^i\), preserving decentralization.  Shared policy parameters encourage coordination and parameter efficient scaling, while the \gls{ctde} split ensures stability through centralized learning.
+
 
 \section{Quadrotor Control}
 The following section provides a brief overview of quadrotor dynamics and control. We will first describe the quadrotor dynamics and how they are commonly modeled in simulation. Finally, we will discuss the classic control methods used for quadrotors with and without payloads.
@@ -203,5 +237,76 @@ The following section provides a brief overview of quadrotor dynamics and contro
 \subsection{Quadrotor With Payloads}
 
 \section{Problem Formulation}
+
+% \section{Quadrotor Control}
+% \label{sec:quadrotor_control}
+
+% This section introduces the mathematical model and control design principles for quadrotor UAVs. We begin by defining coordinate frames and state variables, then derive the full nonlinear equations of motion, discuss control allocation and hover linearization, and finally overview classical and learning-based low-level control strategies.
+
+% \subsection{Coordinate Frames and State Representation}
+% Let $\{\mathcal I\}$ denote the inertial (world) frame and $\{\mathcal B\}$ the body-fixed frame attached to the quadrotor. The state is
+% \[
+% \bm x = \bigl(\bm p,\,\bm v,\,R,\,\bm \omega\bigr),
+% \]
+% where $\bm p\in\mathbb R^3$ is the position of the center of mass in $\{\mathcal I\}$, $\bm v = \dot{\bm p}$ the linear velocity, $R\in \mathrm{SO}(3)$ the rotation matrix from $\{\mathcal B\}$ to $\{\mathcal I\}$, and $\bm\omega\in\mathbb R^3$ the angular velocity in $\{\mathcal B\}$ 
+% \todo{cite lee}
+% % \cite{lee2010geometric,turn1search11}.
+
+% \subsection{Nonlinear Equations of Motion}
+% Denote $m$ the total mass, $I\in\mathbb R^{3\times3}$ the inertia matrix in the body frame, and $g$ the gravitational constant. Each rotor $i$ produces an upward thrust $f_i$ (along $-\bm e_3$ in $\{\mathcal B\}$) and a reaction torque due to drag. Define the total thrust vector in body frame as
+% \[
+% \bm f = \begin{bmatrix}0\\0\\\sum_{i=1}^4 f_i\end{bmatrix},
+% \]
+% and the total moment vector
+% \[
+% \bm\tau
+% = \begin{bmatrix}
+% l(f_4 - f_2)\\
+% l(f_3 - f_1)\\
+% \kappa (f_1 - f_2 + f_3 - f_4)
+% \end{bmatrix},
+% \]
+% where $l$ is the arm length and $\kappa$ the drag-to-thrust ratio \cite{turn1search11}.
+
+% The full rigid-body dynamics in the inertial frame are then
+% \begin{align}
+% m\,\ddot{\bm p}
+% &= m\,g\,\bm e_3 + R\,\bm f, \\
+% I\,\dot{\bm \omega} + \bm \omega\times I\,\bm \omega
+% &= \bm \tau.
+% \end{align}
+
+% \subsection{Control Allocation}
+% The mapping from rotor inputs $[f_1,\dots,f_4]^\top$ to collective force and moment is linear:
+% \[
+% \begin{bmatrix}
+% F\\M_x\\M_y\\M_z
+% \end{bmatrix}
+% =
+% \begin{bmatrix}
+% 1 & 1 & 1 & 1 \\[4pt]
+% 0 & -l & 0 & l \\[4pt]
+% l & 0 & -l & 0 \\[4pt]
+% \kappa & -\kappa & \kappa & -\kappa
+% \end{bmatrix}
+% \begin{bmatrix}
+% f_1\\f_2\\f_3\\f_4
+% \end{bmatrix}.
+% \]
+% Inversion of this allocation matrix yields the required individual rotor thrusts for any desired $(F,M_x,M_y,M_z)$.
+
+% \subsection{Hover Linearization}
+% Around the hover equilibrium ($\bm \omega=0$, $R=I$, $f_i = m g/4$), we linearize the translational and rotational dynamics to obtain decoupled second-order systems in $x$, $y$, $z$ and Euler angles. This linear model underpins classical PID and LQR design \cite{mellinger2011minimum}.
+
+% \subsection{Low–Level Control Strategies}
+% \paragraph{Classical PID and LQR:}
+% Early work employs cascaded PID loops on position, velocity, attitude and angular rate, or LQR on the linearized model for improved performance \cite{mellinger2011minimum}.
+
+% \paragraph{Geometric Nonlinear Control:}
+% Geometric tracking controllers on $\mathrm{SE}(3)$ provide almost global stability without coordinate singularities \cite{lee2010geometric}.
+
+% \paragraph{Learned Robust Policies:}
+% Recent advances use reinforcement learning (RL) to directly map full state $\bm x$ to rotor commands, yielding low-level policies that transfer from simulation to multiple real quadrotors with domain randomization and noise modeling \cite{molchanov2019sim,turn0search0}. Such policies achieve robust stabilization and trajectory tracking without manual tuning of gains \cite{turn0search3}.
+
 
 

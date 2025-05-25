@@ -26,17 +26,17 @@ The Crazyflie 2.1 quadrotor used in this work is a miniature quadrotor platform 
 \hline
 \textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} & \textbf{Remarks} \\
 \hline
-Molchanov et al.\ (2019) \cite{molchanov_sim--multi-real_2019} & $e_p\in\mathbb{R}^3,\ e_v\in\mathbb{R}^3,\ e_\omega\in\mathbb{R}^3,\ R\in SO(3),\ \boldsymbol{\Omega}\in\mathbb{R}^4$ (rotor speeds) & \gls{srt} & { $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$} & { Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference.} & { First learned low-level controller; robust hover matching PID on Crazyflie 2.0.} \\[1ex]
+Molchanov et al.\ (2019) \cite{molchanov_sim--multi-real_2019} & $e_p,\ e_v,\ e_\omega,\ R,\ \boldsymbol{\Omega}$ (rotor speeds) & \gls{srt} & { $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$} & { Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference.} & { First learned low-level controller; robust hover matching PID on Crazyflie 2.0.} \\[1ex]
 
 Gronauer et al.\ (2022) \cite{gronauer_using_2022} & $\mathbf{x}$ (IMU attitude, alt.), $\mathbf{p}_{err}$, $\mathbf{a}_{t-1}$ & \gls{srt} (PWM commands) & { $-\bigl(|x_{err}|+|y_{err}|+|z_{err}|\bigr)$ per step; bonus on loop complete.} & { Randomized mass, inertia, thrust-to-weight, motor latencies; IMU/actuator noise; Bayesian sim tuning; onboard inference.} & { Compared low-level PWM vs. high-level rate policies; high-level more robust; zero-shot transfer onboard.} \\[1ex]
 
 Chen et al. (2024) \cite{chen_what_2024} & $\mathbf{p}_{err}, \mathbf{v}, R, \boldsymbol{\omega}$ & \gls{ctbr} & { $r_{track} - \lambda\,\|\Delta\mathbf{a}\|$} & { System ID calibration; randomized uncalibrated params; matched inner PID mixer; large-batch training.} & { PPO controller; >50\% lower error vs. prior RL; 70\% vs. MPC; tracks aggressive maneuvers.} \\[1ex]
 
-Ma et al.\ (2024) \cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v}\in\mathbb{R}^3,\ \mathbf{q}\in\mathbb{R}^4,\ \boldsymbol{\omega}\in\mathbb{R}^3,\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr}& { $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$} & { Latent skill learning in sim; real adaptation via limited real-data finetuning.} & { 30\% improvement in real tasks through sim-to-real skill adaptation.} \\[1ex]
+Ma et al.\ (2024) \cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v},\ \mathbf{q},\ \boldsymbol{\omega},\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr}& { $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$} & { Latent skill learning in sim; real adaptation via limited real-data finetuning.} & { 30\% improvement in real tasks through sim-to-real skill adaptation.} \\[1ex]
 
-Eschmann et al.\ (2024) \cite{eschmann_learning_2024} & $\mathbf{p}\in\mathbb{R}^3,\,R\in SO(3),\,\mathbf{v},\,\boldsymbol{\omega}\in\mathbb{R}^3,\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & { $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term.\ on crash.} & { Mixer noise; observation delay; async MCU inference.} & { <20 s sim train; MCU deployment; competitive with MPC.} \\[1ex]
+Eschmann et al.\ (2024) \cite{eschmann_learning_2024} & $\mathbf{p},\,R,\,\mathbf{v},\,\boldsymbol{\omega},\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & { $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term.\ on crash.} & { Mixer noise; observation delay; async MCU inference.} & { <20 s sim train; MCU deployment; competitive with MPC.} \\[1ex]
 
-Huang et al.\ (2023) \cite{huang_quadswarm_2023} & $e_p,e_v\in\mathbb{R}^3,\,\mathbf{q}\in\mathbb{R}^4,\,\boldsymbol{\omega}\in\mathbb{R}^3$ & \gls{ctbr}& { Position/yaw error $- \alpha\|\mathbf{v}\|^2$.} & { Disturbance observer; wind randomization; onboard inference.} & { 34–48\% lower error under wind vs. adaptive MPC.} \\
+Huang et al.\ (2023) \cite{huang_quadswarm_2023} & $e_p,e_v,\,\mathbf{q},\,\boldsymbol{\omega}$ & \gls{ctbr}& { Position/yaw error $- \alpha\|\mathbf{v}\|^2$.} & { Disturbance observer; wind randomization; onboard inference.} & { 34–48\% lower error under wind vs. adaptive MPC.} \\
 \hline
 \end{tabular}
 \end{table*}
