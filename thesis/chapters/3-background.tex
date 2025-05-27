@@ -20,7 +20,7 @@ where
   \item \(\mathcal{A}\) is the set of all possible actions,
   \item \(P(s'\!\mid\!s,a)\) is the probability of transitioning to \(s'\) from \(s\) when taking \(a\),
   \item \(r(s,a)\) is the immediate reward for taking action \(a\) in state \(s\),
-  \item \(\gamma\in[0,1)\) is the discount factor, which down‐weights future rewards.
+  \item \(\gamma\in[0,1)\) is the discount factor, which down-weights future rewards.
 \end{itemize}
 
 At each time step \(t\), the agent interacts with the environment as also shown in Figure~\ref{fig:rl_diagram}. The agent:
@@ -67,12 +67,12 @@ At every time step \(t\), the agent observes the current state \(s_t\), selects 
 \end{aligned}
 \end{equation}
 
-\subsection{Value and Action‐Value Functions}
+\subsection{Value and Action-Value Functions}
 
 Given a fixed policy \(\pi_\theta\), we introduce two central quantities that measure the expected return from states and state–action pairs.
 
 \begin{description}
-  \item[State‐Value \(V^\pi\):]
+  \item[State-Value \(V^\pi\):]
     \[
       V^\pi(s)
       = \mathbb{E}\Bigl[\sum_{t=0}^{\infty}\gamma^t\,r_t
@@ -80,7 +80,7 @@ Given a fixed policy \(\pi_\theta\), we introduce two central quantities that me
     \]
     the expected total discounted reward when starting in state \(s\) and thereafter following \(\pi_\theta\).
   
-  \item[Action‐Value \(Q^\pi\):]
+  \item[Action-Value \(Q^\pi\):]
     \[
       Q^\pi(s,a)
       = \mathbb{E}\Bigl[\sum_{t=0}^{\infty}\gamma^t\,r_t
@@ -109,14 +109,14 @@ A^\pi(s,a)
 &= Q^\pi(s,a) - V^\pi(s)
 \end{align}
 
-\subsection{On‐Policy Policy‐Gradient Loop}  
-On‐policy methods repeatedly collect fresh data under \(\pi_\theta\) to perform stochastic gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The gradient can be derived from the advantage function \(A^\pi\) as
+\subsection{On-Policy Policy-Gradient Loop}  
+On-policy methods repeatedly collect fresh data under \(\pi_\theta\) to perform stochastic gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The gradient can be derived from the advantage function \(A^\pi\) as
 \begin{align}
 \label{eq:policy_gradient}
 \nabla_\theta J(\theta)
 &= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,\nabla_\theta \log \pi_\theta(a_t\mid s_t)\,A_t\Bigr],
 \end{align}
-In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on‐policy method, using a surrogate objective function to optimize the policy.
+In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
 
 \subsection{PPO}
 \gls{ppo} was introduced by Schulman et al. in \cite{schulman2017proximal}. \gls{ppo} is a family of policy gradient methods that strives for simplicity, efficiency, and robustness. Its central idea is to iteratively improve a stochastic policy by alternating between sampling data from the environment and performing several epochs of first-order optimization on a surrogate objective function. It is an on-policy algorithm.
@@ -192,7 +192,7 @@ where:
   \item $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s)$ is the joint observation function.
   \item $\gamma\in[0,1)$ is the discount factor.
 \end{itemize}
-At each time step $t$, each agent $i$ receives a private observation $o^i_t\in\Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action $a^i_t\sim\pi^i(a^i\mid\tau^i_t)$ conditioned on its action‐observation history $\tau^i_t$. The joint policy $\pi(a\mid \tau) = \prod_i \pi^i(a^i\mid \tau^i)$ induces an expected discounted return
+At each time step $t$, each agent $i$ receives a private observation $o^i_t\in\Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action $a^i_t\sim\pi^i(a^i\mid\tau^i_t)$ conditioned on its action-observation history $\tau^i_t$. The joint policy $\pi(a\mid \tau) = \prod_i \pi^i(a^i\mid \tau^i)$ induces an expected discounted return
 \[
   J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t, a_t)\Bigr]\,. 
 \]
@@ -201,7 +201,7 @@ At each time step $t$, each agent $i$ receives a private observation $o^i_t\in\O
 There is two main approaches to applying \gls{ppo} in multi-agent settings: \gls{ippo} and \gls{mappo}. Both approaches extend the single-agent \gls{ppo} algorithm to handle multiple agents, but they differ in how they address the challenges of non-stationarity and credit assignment in multi-agent environments. Their main difference is is wether the critics are centralized or decentralized. In \gls{ippo}, each agent has its own critic, while in \gls{mappo}, a shared critic is used across all agents. This section will provide a brief overview of both approaches.
 
 \subsection{\gls{ippo}}
-\gls{ippo} \cite{witt_is_2020} extends the single agent \gls{ppo} (clipped surrogate objective, GAE, value‐loss and entropy bonus) for each agent in isolation, treating the other agents as part of the non‐stationary environment.  Concretely, for each agent \(i\) we optimize
+\gls{ippo} \cite{witt_is_2020} extends the single agent \gls{ppo} (clipped surrogate objective, GAE, value-loss and entropy bonus) for each agent in isolation, treating the other agents as part of the non-stationary environment.  Concretely, for each agent \(i\) we optimize
 \[
   L_i(\theta_i) \;=\; 
   \mathbb{E}_t \Bigl[\,L^{\mathrm{CLIP}}_i(\theta_i) \;-\; c_1\,\bigl(V_{\phi_i}(o^i_t)-V^{\text{target},\,i}_t\bigr)^2
@@ -212,7 +212,7 @@ where
   L^{\mathrm{CLIP}}_i(\theta_i)
   = \mathbb{E}_t\!\Bigl[\min\bigl(r^i_t(\theta_i)\,\hat A^i_t,\;\mathrm{clip}(r^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat A^i_t\bigr)\Bigr],
 \]
-\(r^i_t(\theta_i)\!=\!\frac{\pi_{\theta_i}(a^i_t\mid o^i_t)}{\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)}\), and \(\hat A^i_t\) is computed with \gls{gae} using the local critic \(V_{\phi_i}\).  Each agent collects on‐policy rollouts of its own interaction trace \(\{(o^i_t,a^i_t,r_t)\}\) and applies \(K\) epochs of minibatch SGD exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
+\(r^i_t(\theta_i)\!=\!\frac{\pi_{\theta_i}(a^i_t\mid o^i_t)}{\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)}\), and \(\hat A^i_t\) is computed with \gls{gae} using the local critic \(V_{\phi_i}\).  Each agent collects on-policy rollouts of its own interaction trace \(\{(o^i_t,a^i_t,r_t)\}\) and applies \(K\) epochs of minibatch SGD exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
 
 \subsection{\gls{mappo}}
 \gls{mappo} \cite{yu_surprising_2022} retains the \gls{ppo} surrogate and mixed objective but moves to a \gls{ctde} paradigm.  A single policy network \(\pi_\theta(a^i\mid o^i)\) with shared parameters \(\theta\) is used by all agents at execution, while training leverages a centralized critic \(V_\phi(s)\) receiving full state (or joint observations).  The joint optimization target becomes
@@ -226,92 +226,66 @@ where
   L^{\mathrm{CLIP}}(\theta)
   = \mathbb{E}_t\!\Bigl[\min\bigl(r_t(\theta)\,\hat A_t,\;\mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat A_t\bigr)\Bigr],
 \]
-with the joint ratio \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\) or approximated per‐agent, and \(\hat A_t\) estimated via \gls{gae} using the centralized value \(V_\phi\).  By conditioning the critic on the true global state, \gls{mappo} yields lower‐variance advantage estimates and more accurate credit assignment, yet at test time each agent executes only on its local observation \(o^i\), preserving decentralization.  Shared policy parameters encourage coordination and parameter efficient scaling, while the \gls{ctde} split ensures stability through centralized learning.
+with the joint ratio \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\) or approximated per-agent, and \(\hat A_t\) estimated via \gls{gae} using the centralized value \(V_\phi\).  By conditioning the critic on the true global state, \gls{mappo} yields lower-variance advantage estimates and more accurate credit assignment, yet at test time each agent executes only on its local observation \(o^i\), preserving decentralization.  Shared policy parameters encourage coordination and parameter efficient scaling, while the \gls{ctde} split ensures stability through centralized learning.
 
 
-\section{Quadrotor Control}
-The following section provides a brief overview of quadrotor dynamics and control. We will first describe the quadrotor dynamics and how they are commonly modeled in simulation. Finally, we will discuss the classic control methods used for quadrotors with and without payloads.
-\begin{figure}
-\centering
-\includegraphics[width=0.8\textwidth]{quadrotor_dynamics.png}
-\caption{TODO Quadrotor dynamics and control. The quadrotor is modeled as a rigid body with thrust and torque generated by the rotors. The control inputs are the rotor speeds, which are used to compute the thrust and torques acting on the quadrotor.}
-\end{figure}
+\section{Quadrotor}
+\label{sec:quadrotor_control}
+Quadrotors are a type of \gls{uav} characterized by their four rotors, which provide thrust and control authority. They are widely used in various applications, including surveillance, delivery, and search-and-rescue missions.
+This section introduces  quadrotors state representation, dynamics, sensors and control fundamentalys. 
+
+\subsection{Coordinate Frames, Sensors and State Representation}
+Let $\{\mathcal I\}$ denote the inertial (world) frame and $\{\mathcal B\}$ the body-fixed frame attached to the quadrotor as shown in FIG \todo{fig}. The state is
+\[
+\bm x = \bigl(\bm p,\,\bm v,\,R,\,\bm \omega\bigr),
+\]
+where $\bm p\in\mathbb R^3$ is the position of the center of mass in $\{\mathcal I\}$, $\bm v = \dot{\bm p}$ the linear velocity, $R\in \mathrm{SO}(3)$ the rotation matrix from $\{\mathcal B\}$ to $\{\mathcal I\}$, and $\bm\omega\in\mathbb R^3$ the angular velocity in $\{\mathcal B\}$ \todo{cite lee}.
+
+To estimate the state $\bm x$, we use a combination of onboard sensors and external motion capture systems. In our setup, the following sensor modalities are available:
+
+\begin{itemize}
+  \item \textbf{\gls{imu}:} A 9-DOF \gls{imu} (3-axis accelerometer, 3-axis gyroscope, 3-axis magnetometer) mounted close to the vehicle's center of mass. The accelerometer measures the acceleration in the body frame
+    \(
+      \bm a_m = R^\top (\ddot{\bm p} - \bm g) + \bm \nu_a,
+    \)
+    and the gyroscope measures the body-rates
+    \(
+      \bm \omega_m = \bm \omega + \bm \nu_\omega,
+    \)
+    where $\bm \nu_a$ and $\bm \nu_\omega$ denote sensor noise terms.
+ 
+  \item \textbf{External \gls{mocap}:} In lab environments, a OptiTrack system provides high precision position and attitude updates,
+    \(
+      \bm p_{\text{mocap}} = \bm p + \bm \nu_p,\quad
+      R_{\mathrm{mocap}} = R \bigl(I + \widehat{\nu_R}\bigr),
+    \)
+    where $\bm \nu_p$ and $\bm \nu_R$ are small pose-estimation errors. The attitude information is only available with a multi-marker mocap setup and not used in all experiments.
+\end{itemize}
+
+Accordingly, we define the measurement vector
+\[
+  \bm y = \bigl[\,
+    \bm a_m^\top,\;
+    \bm \omega_m^\top,\;
+    \bm p_{\text{mocap}}^\top,\;
+    \mathrm{vec}(R_{\text{mocap}})^\top
+  \bigr]^\top
+  = h(\bm x) + \bm \nu,
+\]
+where $h(\bm x)$ is the sensor mapping and $\bm \nu$ aggregates all measurement noises.
+
+These measurements are fused in an onboard Extended Kalman Filter (EKF) to produce the estimated state
+\(
+  \hat{\bm x} = \bigl(\hat{\bm p},\,\hat{\bm v},\,\hat R,\,\hat{\bm \omega}\bigr)
+\),
+which is subsequently used by most low-level controllers.
+
+
+
+\subsection{Control Allocation}
+There is a wide range of control allocation methods for quadrotors, which can be broadly categorized into the classes shown in FIG \todo{fig}. 
+
 \subsection{Quadrotor Dynamics}
-\subsection{Quadrotor Simulation}
-\subsection{Quadrotor Classic Control}
-\subsection{Quadrotor With Payloads}
+\subsection{Quadrotors with Payloads}
 
 \section{Problem Formulation}
-
-% \section{Quadrotor Control}
-% \label{sec:quadrotor_control}
-
-% This section introduces the mathematical model and control design principles for quadrotor UAVs. We begin by defining coordinate frames and state variables, then derive the full nonlinear equations of motion, discuss control allocation and hover linearization, and finally overview classical and learning-based low-level control strategies.
-
-% \subsection{Coordinate Frames and State Representation}
-% Let $\{\mathcal I\}$ denote the inertial (world) frame and $\{\mathcal B\}$ the body-fixed frame attached to the quadrotor. The state is
-% \[
-% \bm x = \bigl(\bm p,\,\bm v,\,R,\,\bm \omega\bigr),
-% \]
-% where $\bm p\in\mathbb R^3$ is the position of the center of mass in $\{\mathcal I\}$, $\bm v = \dot{\bm p}$ the linear velocity, $R\in \mathrm{SO}(3)$ the rotation matrix from $\{\mathcal B\}$ to $\{\mathcal I\}$, and $\bm\omega\in\mathbb R^3$ the angular velocity in $\{\mathcal B\}$ 
-% \todo{cite lee}
-% % \cite{lee2010geometric,turn1search11}.
-
-% \subsection{Nonlinear Equations of Motion}
-% Denote $m$ the total mass, $I\in\mathbb R^{3\times3}$ the inertia matrix in the body frame, and $g$ the gravitational constant. Each rotor $i$ produces an upward thrust $f_i$ (along $-\bm e_3$ in $\{\mathcal B\}$) and a reaction torque due to drag. Define the total thrust vector in body frame as
-% \[
-% \bm f = \begin{bmatrix}0\\0\\\sum_{i=1}^4 f_i\end{bmatrix},
-% \]
-% and the total moment vector
-% \[
-% \bm\tau
-% = \begin{bmatrix}
-% l(f_4 - f_2)\\
-% l(f_3 - f_1)\\
-% \kappa (f_1 - f_2 + f_3 - f_4)
-% \end{bmatrix},
-% \]
-% where $l$ is the arm length and $\kappa$ the drag-to-thrust ratio \cite{turn1search11}.
-
-% The full rigid-body dynamics in the inertial frame are then
-% \begin{align}
-% m\,\ddot{\bm p}
-% &= m\,g\,\bm e_3 + R\,\bm f, \\
-% I\,\dot{\bm \omega} + \bm \omega\times I\,\bm \omega
-% &= \bm \tau.
-% \end{align}
-
-% \subsection{Control Allocation}
-% The mapping from rotor inputs $[f_1,\dots,f_4]^\top$ to collective force and moment is linear:
-% \[
-% \begin{bmatrix}
-% F\\M_x\\M_y\\M_z
-% \end{bmatrix}
-% =
-% \begin{bmatrix}
-% 1 & 1 & 1 & 1 \\[4pt]
-% 0 & -l & 0 & l \\[4pt]
-% l & 0 & -l & 0 \\[4pt]
-% \kappa & -\kappa & \kappa & -\kappa
-% \end{bmatrix}
-% \begin{bmatrix}
-% f_1\\f_2\\f_3\\f_4
-% \end{bmatrix}.
-% \]
-% Inversion of this allocation matrix yields the required individual rotor thrusts for any desired $(F,M_x,M_y,M_z)$.
-
-% \subsection{Hover Linearization}
-% Around the hover equilibrium ($\bm \omega=0$, $R=I$, $f_i = m g/4$), we linearize the translational and rotational dynamics to obtain decoupled second-order systems in $x$, $y$, $z$ and Euler angles. This linear model underpins classical PID and LQR design \cite{mellinger2011minimum}.
-
-% \subsection{Low–Level Control Strategies}
-% \paragraph{Classical PID and LQR:}
-% Early work employs cascaded PID loops on position, velocity, attitude and angular rate, or LQR on the linearized model for improved performance \cite{mellinger2011minimum}.
-
-% \paragraph{Geometric Nonlinear Control:}
-% Geometric tracking controllers on $\mathrm{SE}(3)$ provide almost global stability without coordinate singularities \cite{lee2010geometric}.
-
-% \paragraph{Learned Robust Policies:}
-% Recent advances use reinforcement learning (RL) to directly map full state $\bm x$ to rotor commands, yielding low-level policies that transfer from simulation to multiple real quadrotors with domain randomization and noise modeling \cite{molchanov2019sim,turn0search0}. Such policies achieve robust stabilization and trajectory tracking without manual tuning of gains \cite{turn0search3}.
-
-
-
