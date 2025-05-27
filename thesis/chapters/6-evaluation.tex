@@ -4,9 +4,9 @@
     \item Recover from harsh and track position
     \item Follow trajectory
     \item Follow trajectory with disturbance
-    \item Sim2Real
-    \item Plots: Recovery success rate for 10000 rollouts ofver time.
-    \item Plots: Trajectory following 3d, error over time for batch
+    \item Plots recovery: Recovery success rate for 10000 rollouts ofver time.
+    \item Plots Traj: Trajectory following 3d, error over time for batch
+    \item Plots Disturbance: Trajectory following with disturbance, error over time for batch
 
 \end{itemize}
 \begin{figure}
@@ -26,9 +26,28 @@
     \item Recover from harsh and track position
     \item Follow trajectory
     \item Follow trajectory with disturbance
-    \item Sim2Real
+    \item Plots recovery: Recovery success rate for 10000 rollouts ofver time.
+    \item Plots Traj: Trajectory following 3d, error over time for batch
+    \item Plots Disturbance: Trajectory following with disturbance, error over time for batch
 \end{itemize}
-\section{Policy with Limited Observations}
-optional
+% optional
 \section{Comparison with classic control}
 Compare with prev paper method \autocite{Wahba2024}
+\begin{itemize}
+    \item Plots Traj: Trajectory following 3d, error over time for batch
+    \item Plots Disturbance: Trajectory following with disturbance, error over time for batch
+    \item Plots ground start: Trajectory following with disturbance, error over time for batch
+\end{itemize} 
+\section{Sim-to-Real Transfer}
+\begin{itemize}
+    \item one and three quads
+    \item Plots Traj: Trajectory following 3d,  error over time 
+    \item Plots Disturbance: Position holding with disturbance
+\end{itemize}
+
+
+\section{Ablation Studies}
+\begin{itemize}
+    \item Ablation on reward design
+    \item Ablation on training parameters
+    \item Ablation on domain randomization
