@@ -94,25 +94,24 @@ On-policy methods repeatedly collect fresh data under \(\pi_\theta\) to perform 
 &= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,\nabla_\theta \log \pi_\theta(a_t\mid s_t)\,A_t\Bigr],
 \end{align}
 In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
-
 \subsection{PPO}
-\gls{ppo} was introduced by Schulman et al. in \cite{schulman2017proximal}. \gls{ppo} is a family of policy gradient methods that strives for simplicity, efficiency, and robustness. Its central idea is to iteratively improve a stochastic policy by alternating between sampling data from the environment and performing several epochs of first-order optimization on a surrogate objective function. It is an on-policy algorithm.
+\gls{ppo} was introduced in \cite{schulman2017proximal}. \gls{ppo} is a family of policy gradient methods that strives for simplicity, efficiency, and robustness. Its central idea is to iteratively improve a stochastic policy by alternating between sampling data from the environment and performing several epochs of first-order optimization on a surrogate objective function. It is an on-policy algorithm.
 
-In \gls{ppo}, actions are sampled from a parameterized probability distribution. For continuous control tasks, the actor typically outputs the parameters of a Gaussian distribution (usually the mean and standard deviation), and actions are sampled as
+In \gls{ppo}, actions are sampled from a parameterized probability distribution. For continuous control tasks, the \textbf{actor} network typically outputs the parameters of a Gaussian distribution (usually the mean and standard deviation), and actions are sampled as
 \[
 a_t \sim \mathcal{N}\big(\mu_\theta(s_t),\, \sigma_\theta(s_t)\big).
 \]
-This stochastic sampling is crucial as it enables the agent to explore a continuous range of actions, thereby promoting both exploration and robustness in learning.
+Here, the actor network (parameterized by \(\theta\)) maps a state \(s_t\) to a distribution over actions, thereby defining the policy \(\pi_\theta(a_t \mid s_t)\). This stochastic sampling is crucial as it enables the agent to explore a continuous range of actions, promoting both exploration and robustness in learning.
 
-\gls{ppo} builds on the actor-critic framework, where two components are optimized simultaneously. The actor represents the policy \(\pi_\theta\), which selects actions, while the critic estimates a value function \(V_\theta(s)\) that evaluates the quality of states under the current policy. The critic is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
+\gls{ppo} builds on the actor-critic framework, where two neural networks are optimized simultaneously. The actor and the critic. The critic network, often parameterized by \(\phi\), estimates a value function \(V_\phi(s)\) that evaluates the quality of states, or more precisely the expected return from \(s\) under the current policy. The critic's estimate is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
 \[
 \hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l},
 \]
 with the temporal difference error defined as
 \[
-\delta_t = r_t + \gamma V_\theta(s_{t+1}) - V_\theta(s_t).
+\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t).
 \]
-Here, \(r_t\) is the reward received at time \(t\), \(V_\theta(s_t)\) is the estimated value of state \(s_t\) under the current policy, \(\gamma \in [0,1]\) is the discount factor that weighs future rewards, and \(\lambda \in [0,1]\) is a parameter that adjusts the trade-off between bias and variance in the advantage estimates.
+Here, \(r_t\) is the reward received at time \(t\), \(V_\phi(s_t)\) is the estimated value of state \(s_t\) from the critic network under the current policy, \(\gamma \in [0,1]\) is the discount factor that weighs future rewards, and \(\lambda \in [0,1]\) is a parameter that adjusts the trade-off between bias and variance in the advantage estimates.
 
 A key contribution of \gls{ppo} is the use of a clipped surrogate objective designed to restrict the size of policy updates. Let
 \[
@@ -124,14 +123,13 @@ L^{CLIP}(\theta) = \mathbb{E}_t\!\left[\min\!\left(r_t(\theta)\hat{A}_t,\;\text{
 \]
 where \(\hat{A}_t\) is an estimator of the advantage function and \(\epsilon\) is a hyperparameter defining the clipping range. This objective penalizes overly large deviations from the previous policy, ensuring that updates remain conservative while still allowing for meaningful improvements.
 
-In practice, \gls{ppo} combines the policy surrogate loss with additional terms, such as a value function loss and an entropy bonus, yielding a composite objective:
+In practice, \gls{ppo} combines the policy surrogate loss with additional terms, such as a value function loss, which is computed by the critic network, and an entropy bonus, yielding a composite objective:
 \[
-L(\theta) = \mathbb{E}_t \left[ L^{CLIP}_t(\theta) - c_1\, \left(V_\theta(s_t) - V_t^{\text{target}}\right)^2 + c_2\, S\big[\pi_\theta\big](s_t) \right],
+L(\theta) = \mathbb{E}_t \left[ L^{CLIP}_t(\theta) - c_1\, \left(V_\phi(s_t) - V_t^{\text{target}}\right)^2 + c_2\, S\big[\pi_\theta\big](s_t) \right],
 \]
-where \(c_1\) and \(c_2\) are coefficients that weight the contributions of the value function error and the entropy bonus \(S\big[\pi_\theta\big](s_t)\), respectively. This final objective is optimized using stochastic gradient ascent over multiple epochs on the same batch of on-policy samples.
+where \(c_1\) and \(c_2\) are coefficients that weight the contributions of the value function error and the entropy bonus \(S\big[\pi_\theta\big](s_t)\), respectively. The term \(\left(V_\phi(s_t) - V_t^{\text{target}}\right)^2\) is the critic's squared error against the target value \(V_t^{\text{target}}\). This final objective is optimized using stochastic gradient ascent over multiple epochs on the same batch of on-policy samples, updating both actor parameters \(\theta\) and critic parameters \(\phi\).
 
-The overall procedure of \gls{ppo} in an actor-critic setting is summarized in Algorithm~\ref{alg:ppo}. In the algorithm, \(\theta\) denotes the current policy parameters, \(\theta_{\text{old}}\) are the parameters used for generating the on-policy data, \(N\) is the number of parallel actors, \(T\) is the number of timesteps per actor rollout (with \(NT\) total timesteps per batch), \(K\) is the number of epochs over the data, and \(M \le NT\) is the minibatch size.
-
+The overall procedure of \gls{ppo} in an actor-critic setting is summarized in Algorithm~\ref{alg:ppo}. In the algorithm, \(\theta\) denotes the current policy parameters, \(\theta_{\text{old}}\) are the parameters used for generating the on-policy data, \(N\) is the number of parallel actors, \(T\) is the number of timesteps per actor rollout (with \(NT\) total timesteps per batch), \(K\) is the number of epochs over the data, and \(M \le NT\) is the minibatch size. The critic network's parameters \(\phi\) are updated alongside \(\theta\) whenever the value loss term is backpropagated.
 
 \begin{algorithm}[H]
 \caption{\gls{ppo}, Actor-Critic Style}
@@ -139,10 +137,10 @@ The overall procedure of \gls{ppo} in an actor-critic setting is summarized in A
 \begin{algorithmic}[1]
 \For{iteration = 1, 2, \dots}
     \For{actor = 1, 2, \dots, N}
-        \State Run policy \(\pi_{\theta_{\text{old}}}\) in the environment for \(T\) timesteps.
-        \State Compute advantage estimates \(\hat{A}_1, \dots, \hat{A}_T\).
+        \State Run policy \(\pi_{\theta_{\text{old}}}\) (actor network) in the environment for \(T\) timesteps.
+        \State Compute advantage estimates \(\hat{A}_1, \dots, \hat{A}_T\) using the critic network's value estimates.
     \EndFor
-    \State Optimize the surrogate loss \(L(\theta)\) with respect to \(\theta\) using \(K\) epochs and minibatch size \(M \le NT\).
+    \State Optimize the composite loss \(L(\theta)\) with respect to \(\theta\) (for the actor) and update \(\phi\) (for the critic) using \(K\) epochs and minibatch size \(M \le NT\).
     \State Update \(\theta_{\text{old}} \leftarrow \theta\).
 \EndFor
 \end{algorithmic}
@@ -150,7 +148,6 @@ The overall procedure of \gls{ppo} in an actor-critic setting is summarized in A
 
 Overall, \gls{ppo} strikes a favorable balance between simplicity and performance, making it one of the most widely adopted on-policy algorithms in modern reinforcement learning applications. The following sections will discuss the multi-agent extensions of \gls{ppo} that are used in this work.
 \section{Multi-Agent Reinforcement Learning}
-
 This section provides an overview of the theoretical background of \gls{marl} as applied in this work. Our work evaluates both centralized and decentralized training paradigms. In particular, we employ Proximal Policy Optimization (PPO) for centralized training, while also exploring decentralized approaches using Independent PPO (IPPO) and Multi-Agent PPO (MAPPO), which are detailed in subsequent sections.
 
 
