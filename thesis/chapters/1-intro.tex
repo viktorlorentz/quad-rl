@@ -23,7 +23,7 @@ To address the challenges outlined above, this work is guided by the following r
 \section{Contribution}
 This thesis makes the following key contributions:
 \begin{itemize}
-    \item \textbf{Decentralized \gls{rl} for Cable-Suspended Payloads.} We formulate the multi-\gls{uav} payload transport problem as a decentralized multi-agent \gls{rl} task, enabling each \gls{uav} to act based on local observations while still achieving coordinated global behavior under harsh dynamic conditions.
+    \item \textbf{Decentralized \gls{marl} for Cable-Suspended Payloads.} We formulate the multi-\gls{uav} payload transport problem as a decentralized \gls{marl} task, enabling each \gls{uav} to act based on local observations while still achieving coordinated global behavior under harsh dynamic conditions.
     \item \textbf{High-Performance GPU-Parallel Training Pipeline.} We develop a GPU-parallelized framework in JAX and MJX that simulates cable-suspended payload transport, capturing the complex dynamic interactions among multiple \glspl{uav}. This pipeline is optimized for contact-rich scenarios, and future work could leverage the contact dynamics to learn aerial manipulation and other complex tasks.
     \item \textbf{Modular Reward Design.} We investigate the trade-off between tracking accuracy and system stability by decomposing the reward into distinct tracking and stability components, and we analyze how different reward weightings impact overall performance and safety.
 \end{itemize}
