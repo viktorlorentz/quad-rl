@@ -1,8 +1,54 @@
 \chapter{Training Multi-Agent Reinforcement Learning Policies for Crazyflie Quadrotors}
-
+This chapter describes our approach for training decentralized reinforcement learning policies that enable a team of Crazyflie quadrotors to cooperatively carry a cable-suspended payload. We first formulate the task as a \gls{dec-pomdp}, specifying states, actions, observations, and rewards. We then outline our high-performance simulation and training pipeline, and detail the choice of policy representation and learning algorithm that together minimize payload tracking error while ensuring stability under disturbances.
 
 \section{Problem Formulation}
 
+We model \(N\) Crazyflie quadrotors transporting a cable-suspended payload as the \gls{dec-pomdp}
+\[
+(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\gamma),
+\]
+with the following components:
+
+\begin{description}
+  \item[\(\mathcal{N}\)] The set of agents, \(\{1,\dots,N\}\).
+  \item[\(\mathcal{S}\)] The global state 
+  \[
+    s_t = ()\bigl\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\bigr\}_{i=1}^N,\;\mathbf{p}^P_t,\mathbf{v}^P_t),
+  \]
+  where each quadrotor \(i\) has position \(\mathbf{p}^i_t\in\mathbb{R}^3\), velocity \(\mathbf{v}^i_t\in\mathbb{R}^3\), attitude \(\mathbf{R}^i_t\in SO(3)\), and angular velocity \(\boldsymbol{\omega}^i_t\in\mathbb{R}^3\); the payload has position \(\mathbf{p}^P_t\in\mathbb{R}^3\) and velocity \(\mathbf{v}^P_t\in\mathbb{R}^3\).
+  \item[\(\mathcal{A}^i\)] Agent \(i\)’s action space: four rotor thrusts 
+  \[
+    a^i_t = (f^i_{1,t},f^i_{2,t},f^i_{3,t},f^i_{4,t}) \in \mathbb{R}^4,
+  \]
+  commanding each motor’s force output.
+  \item[\(P\)] The transition model arises from integrating the continuous quadrotor–payload dynamics (including cable tensions and disturbances) over a fixed timestep \(\Delta t\).
+  \item[\(r\)] A shared scalar reward that balances payload trajectory tracking and stability:  
+  \[
+    r(s_t,a_t) \;=\; -\|\mathbf{p}^P_t - \mathbf{p}^P_{\mathrm{des},t}\|^2 \;-\; \text{(stability penalties)},
+  \]
+  so that maximizing the return corresponds to minimizing tracking error while keeping the payload swing small and load forces balanced.
+  \item[\(\Omega^i\)] Agent \(i\)’s observation space: 
+  \[
+    o^i_t = \bigl(\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t,\mathbf{p}^P_t,\mathbf{v}^P_t\bigr),
+  \]
+  where \((\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t)\) are EKF estimates of the quadrotor’s state and \((\mathbf{p}^P_t,\mathbf{v}^P_t)\) are the payload’s true pose and velocity.
+  \item[\(O\)] The observation function mapping the global state \(s_t\) to each \(o^i_t\) via a deterministic sensor model plus noise.
+  \item[\(\gamma\)] The discount factor in \([0,1)\).
+\end{description}
+
+Each agent \(i\) maintains a policy \(\pi^i_{\theta_i}(a^i\mid \tau^i)\) conditioned on its action-observation history \(\tau^i_t=(o^i_0,a^i_0,\dots,o^i_t)\). During decentralized execution, the joint policy factorizes:
+\[
+\pi_\theta(a_t\mid \tau_t) \;=\; \prod_{i=1}^N \pi^i_{\theta_i}(a^i_t\mid \tau^i_t).
+\]
+Our reinforcement learning objective is to find parameters \(\theta=(\theta_1,\dots,\theta_N)\) that maximize the expected discounted return
+\[
+J(\theta) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t,a_t)\Bigr],
+\]
+subject to 
+\[
+s_{t+1}\sim P(\cdot\mid s_t,a_t),\quad a^i_t\sim \pi^i_{\theta_i}(\cdot\mid \tau^i_t),\quad o^i_t\sim O(\cdot\mid s_t).
+\]
+By maximizing \(J(\theta)\), agents learn to minimize payload tracking error while maintaining stability throughout the cooperative transport task.
 
 \section{CrazyMARL}
 We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training multi-agent reinforcement learning (MARL) policies on teams of Crazyflie quadrotors. Our framework seamlessly handles both single-vehicle and cooperative multi-agent tasks, including scenarios with cable-suspended payloads. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms.
