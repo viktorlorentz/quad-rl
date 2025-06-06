@@ -1,5 +1,6 @@
 \chapter{Background}
-\todo{back intro}
+The methods developed in this thesis build on foundational concepts from \gls{rl}, \gls{marl}, and quadrotors. We begin with an overview of model free, on policy policy optimization, introducing Markov decision processes, policy gradients, and \gls{ppo}. These ideas are then extended to cooperative multi agent tasks, comparing centralized critics with fully decentralized critics. Next, we present the mathematical model of a quadrotor \gls{uav}, including coordinate frames, state representation, sensor fusion, continuous time dynamics, and common action space formulations ranging from velocity commands to direct thrust control. Finally, we describe how the quadrotor state is augmented for cable suspended payloads—first via a simple pendulum model and then through multi link or tendon based approximations—and explain how these formulations generalize to cooperative transport by multiple \glspl{uav}. These foundations are essential for the development a deep \gls{rl} framework for decentralized multi-\gls{uav} cable-suspended payload transport.
+
 \section{Fundamentals of Reinforcement Learning}
 The term \gls{rl} is used for a wide range of algorithms and methods that learn to make decisions by interacting with an environment. The following will give a brief overview of the most important concepts and terms in \gls{rl}. In particular, this work focuses on model-free, on-policy, policy-optimization algorithms, where the policy used to collect data is the same one being updated. For a thorough treatment of the fundamentals see \cite{SuttonBarto2018}.
 \subsection{Markov Decision Processes}
@@ -14,23 +15,9 @@ The term \gls{rl} is used for a wide range of algorithms and methods that learn 
 \[
 (\mathcal{S}, \mathcal{A}, P, r, \gamma),
 \]
-where
-\begin{itemize}
-  \item \(\mathcal{S}\) is the set of all possible states,
-  \item \(\mathcal{A}\) is the set of all possible actions,
-  \item \(P(s'\!\mid\!s,a)\) is the probability of transitioning to \(s'\) from \(s\) when taking \(a\),
-  \item \(r(s,a)\) is the immediate reward for taking action \(a\) in state \(s\),
-  \item \(\gamma\in[0,1)\) is the discount factor, which down-weights future rewards.
-\end{itemize}
+where \(\mathcal{S}\) is the set of all possible states; \(\mathcal{A}\) is the set of all possible actions; \(P(s'\!\mid\!s,a)\) is the probability of transitioning to \(s'\) from \(s\) when taking \(a\); \(r(s,a)\) is the immediate reward for taking action \(a\) in state \(s\); and \(\gamma\in[0,1)\) is the discount factor, which down-weights future rewards.
 
-At each time step \(t\), the agent interacts with the environment as also shown in Figure~\ref{fig:rl_diagram}. The agent:
-\begin{enumerate}
-  \item observes \(s_t\),
-  \item samples \(a_t\sim\pi_\theta(\cdot\mid s_t)\),
-  \item receives \(r_t = r(s_t,a_t)\),
-  \item transitions to \(s_{t+1}\sim P(\cdot\mid s_t,a_t)\).
-\end{enumerate}
-In practice the agent often does not have access to the full state \(s_t\) but only to a partial observation \(o_t\).  We will use the notation interchangeably, i.e.\ \(o_t\) or \(s_t\) depending on the context, unless otherwise specified.
+At each time step \(t\), the agent interacts with the environment as also shown in Figure~\ref{fig:rl_diagram}. The agent observes \(s_t\); samples \(a_t\sim\pi_\theta(\cdot\mid s_t)\); receives \(r_t = r(s_t,a_t)\); and transitions to \(s_{t+1}\sim P(\cdot\mid s_t,a_t)\). In practice the agent often does not have access to the full state \(s_t\) but only to a partial observation \(o_t\).  We will use the notation interchangeably, i.e.\ \(o_t\) or \(s_t\) depending on the context, unless otherwise specified.
 \subsection{Policies}
 As already mentioned, the agent's behavior is defined by a policy \(\pi_\theta\), which can be either deterministic or stochastic:
  
@@ -69,25 +56,15 @@ At every time step \(t\), the agent observes the current state \(s_t\), selects 
 
 \subsection{Value and Action-Value Functions}
 
-Given a fixed policy \(\pi_\theta\), we introduce two central quantities that measure the expected return from states and state–action pairs.
+Given a fixed policy \(\pi_\theta\), we define two key quantities that measure expected return:
 
-\begin{description}
-  \item[State-Value \(V^\pi\):]
-    \[
-      V^\pi(s)
-      = \mathbb{E}\Bigl[\sum_{t=0}^{\infty}\gamma^t\,r_t
-      \;\Big|\;s_0 = s\Bigr],
-    \]
-    the expected total discounted reward when starting in state \(s\) and thereafter following \(\pi_\theta\).
-  
-  \item[Action-Value \(Q^\pi\):]
-    \[
-      Q^\pi(s,a)
-      = \mathbb{E}\Bigl[\sum_{t=0}^{\infty}\gamma^t\,r_t
-      \;\Big|\;s_0 = s,\;a_0 = a\Bigr],
-    \]
-    the expected total discounted reward when starting in \(s\), taking action \(a\), then following \(\pi_\theta\).
-\end{description}
+\[
+V^\pi(s) = \mathbb{E}\Bigl[\sum_{t=0}^{\infty} \gamma^t\,r_t \;\Big|\; s_0 = s\Bigr], 
+\qquad
+Q^\pi(s,a) = \mathbb{E}\Bigl[\sum_{t=0}^{\infty} \gamma^t\,r_t \;\Big|\; s_0 = s,\; a_0 = a\Bigr].
+\]
+
+Here, \(V^\pi(s)\) is the expected discounted return starting from state \(s\) under \(\pi_\theta\), and \(Q^\pi(s,a)\) is the expected discounted return starting from \(s\), taking action \(a\), then following \(\pi_\theta\). 
 
 The Bellman equations decompose each function into reward received until the current state and the discounted value of the next state and action:
 
@@ -182,17 +159,12 @@ A cooperative multi-agent reinforcement learning problem can be formalized as a 
 \[
   \bigl(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\gamma\bigr)
 \]
-where:
-\begin{itemize}
-  \item $\mathcal{N} = \{1,\dots,N\}$ is the set of agents.
-  \item $\mathcal{S}$ is the set of global states; $s_0\sim\rho(s)$ is the initial state distribution.
-  \item $\mathcal{A}^i$ is the action space of agent $i$, and $\mathcal{A} = \prod_{i=1}^N\mathcal{A}^i$ the joint action space.
-  \item $P(s' \mid s, a)$ is the transition kernel, where $a=(a^1,\dots,a^N)\in\mathcal{A}$.
-  \item $r(s,a)\in\mathbb{R}$ is the common team reward received by all agents.
-  \item $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s)$ is the joint observation function.
-  \item $\gamma\in[0,1)$ is the discount factor.
-\end{itemize}
-At each time step $t$, each agent $i$ receives a private observation $o^i_t\in\Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action $a^i_t\sim\pi^i(a^i\mid\tau^i_t)$ conditioned on its action-observation history $\tau^i_t$. The joint policy $\pi(a\mid \tau) = \prod_i \pi^i(a^i\mid \tau^i)$ induces an expected discounted return
+where $\mathcal{N}=\{1,\dots,N\}$ is the set of agents; $\mathcal{S}$ is the set of global states (with $s_0\sim\rho(s)$ denoting the initial state distribution); $\mathcal{A}^i$ is the action space of agent $i$, and the joint action space is $\mathcal{A} = \prod_{i=1}^N \mathcal{A}^i$; $P(s' \mid s, a)$ is the transition kernel, where $a=(a^1,\dots,a^N)\in\mathcal{A}$; $r(s,a)\in\mathbb{R}$ is the common team reward received by all agents; $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s)$ is the joint observation function; and $\gamma\in[0,1)$ is the discount factor.
+At each time step $t$, each agent $i$ receives a private observation $o^i_t \in \Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action 
+$a^i_t \sim \pi^i\bigl(a^i \mid \tau^i_t\bigr)$
+conditioned on its action-observation history $\tau^i_t$. The joint policy 
+$\pi(a\mid \tau) \;=\; \prod_{i=1}^N \pi^i\bigl(a^i\mid \tau^i\bigr)$
+induces an expected discounted return
 \[
   J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t, a_t)\Bigr]\,. 
 \]
@@ -230,67 +202,206 @@ with the joint ratio \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\p
 
 
 \section{Quadrotor}
-\begin{figure}
-\centering
-\includegraphics[width=0.8\textwidth]{quadrotor_dynamics.png}
-\caption{TODO}
-\end{figure}
 \label{sec:quadrotor_control}
-Quadrotors are a type of \gls{uav} characterized by their four rotors, which provide thrust and control authority. They are widely used in various applications, including surveillance, delivery, and search-and-rescue missions.
-This section introduces  quadrotors state representation, dynamics, sensors and control fundamentalys. 
 
-\subsection{Coordinate Frames, Sensors and State Representation}
-Let $\{\mathcal I\}$ denote the inertial (world) frame and $\{\mathcal B\}$ the body-fixed frame attached to the quadrotor as shown in FIG \todo{fig}. The state is
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{quadrotor_dynamics.png}
+  \caption{Diagram of the quadrotor showing the inertial frame \(\mathcal{I}\) and body frame \(\mathcal{B}\), as well as propeller numbering (1–4).}
+  \label{fig:quadrotor_frames}
+\end{figure}
+
+Quadrotors are a class of rotorcraft \gls{uav} equipped with four fixed-pitch propellers. Each propeller generates thrust and a reactive torque, enabling attitude and position control. Quadrotors are widely used in applications such as aerial surveillance, package delivery, and search-and-rescue due to their mechanical simplicity and agility. In this chapter, we introduce the coordinate frames, state representation, onboard sensors, and fundamental dynamics and control action parameterizations for a quadrotor platform.
+
+\subsection{Coordinate Frames and State Representation}
+\label{sec:quadrotor_state}
+
+We define two reference frames: the inertial (world) frame \(\mathcal{I}\) and the body-fixed frame \(\mathcal{B}\). The origin of \(\mathcal{B}\) is located at the quadrotor's center of mass, with its \(x\)-axis pointing forward, \(y\)-axis to the right, and \(z\)-axis upward (see Figure~\ref{fig:quadrotor_frames}). Let \(\mathbf{p}\in \mathbb{R}^{3}\) denote the position of the center of mass expressed in \(\mathcal{I}\), and let \(\mathbf{v} = \dot{\mathbf{p}}\in \mathbb{R}^{3}\) be the linear velocity in \(\mathcal{I}\). The attitude of the quadrotor is represented by a rotation matrix \(\mathbf{R} \in \mathrm{SO}(3)\) that maps vectors from \(\mathcal{B}\) to \(\mathcal{I}\). The angular velocity of the body, expressed in \(\mathcal{B}\), is denoted \(\boldsymbol{\omega} = [\omega_{x},\,\omega_{y},\,\omega_{z}]^{\mathsf{T}}\in \mathbb{R}^{3}\). We collect these variables into the state vector
 \[
-\bm x = \bigl(\bm p,\,\bm v,\,R,\,\bm \omega\bigr),
+x = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr)\,.
 \]
-where $\bm p\in\mathbb R^3$ is the position of the center of mass in $\{\mathcal I\}$, $\bm v = \dot{\bm p}$ the linear velocity, $R\in \mathrm{SO}(3)$ the rotation matrix from $\{\mathcal B\}$ to $\{\mathcal I\}$, and $\bm\omega\in\mathbb R^3$ the angular velocity in $\{\mathcal B\}$ \todo{cite lee}.
 
-To estimate the state $\bm x$, we use a combination of onboard sensors and external motion capture systems. In our setup, the following sensor modalities are available:
+\subsection{Sensors and State Estimation}
+\label{sec:quadrotor_estimation}
 
-\begin{itemize}
-  \item \textbf{\gls{imu}:} A 9-DOF \gls{imu} (3-axis accelerometer, 3-axis gyroscope, 3-axis magnetometer) mounted close to the vehicle's center of mass. The accelerometer measures the acceleration in the body frame
-    \(
-      \bm a_m = R^\top (\ddot{\bm p} - \bm g) + \bm \nu_a,
-    \)
-    and the gyroscope measures the body-rates
-    \(
-      \bm \omega_m = \bm \omega + \bm \nu_\omega,
-    \)
-    where $\bm \nu_a$ and $\bm \nu_\omega$ denote sensor noise terms.
- 
-  \item \textbf{External \gls{mocap}:} In lab environments, a OptiTrack system provides high precision position and attitude updates,
-    \(
-      \bm p_{\text{mocap}} = \bm p + \bm \nu_p,\quad
-      R_{\mathrm{mocap}} = R \bigl(I + \widehat{\nu_R}\bigr),
-    \)
-    where $\bm \nu_p$ and $\bm \nu_R$ are small pose-estimation errors. The attitude information is only available with a multi-marker mocap setup and not used in all experiments.
-\end{itemize}
-
-Accordingly, we define the measurement vector
+The quadrotor's onboard state estimator fuses measurements from an inertial measurement unit (IMU) and, when available, an external motion capture system. The IMU is a 9-DOF sensor package consisting of a three-axis accelerometer, a three-axis gyroscope, and a three-axis magnetometer. The accelerometer measurement \(\mathbf{a}_{m}\in \mathbb{R}^{3}\) relates to the true linear acceleration as
 \[
-  \bm y = \bigl[\,
-    \bm a_m^\top,\;
-    \bm \omega_m^\top,\;
-    \bm p_{\text{mocap}}^\top,\;
-    \mathrm{vec}(R_{\text{mocap}})^\top
-  \bigr]^\top
-  = h(\bm x) + \bm \nu,
+\mathbf{a}_{m} \;=\; \mathbf{R}^{\mathsf{T}}\bigl(\ddot{\mathbf{p}} - \mathbf{g}\bigr) \;+\; \boldsymbol{\nu}_{a},
 \]
-where $h(\bm x)$ is the sensor mapping and $\bm \nu$ aggregates all measurement noises.
+where \(\mathbf{g} = [0,\,0,\,9.81\,\mathrm{m/s^{2}}]^{\mathsf{T}}\), and \(\boldsymbol{\nu}_{a}\) is sensor noise. The gyroscope measurement \(\boldsymbol{\omega}_{m}\in \mathbb{R}^{3}\) satisfies
+\[
+\boldsymbol{\omega}_{m} \;=\; \boldsymbol{\omega} \;+\; \boldsymbol{\nu}_{\omega},
+\]
+where \(\boldsymbol{\nu}_{\omega}\) denotes gyroscope noise. 
 
-These measurements are fused in an onboard Extended Kalman Filter (EKF) to produce the estimated state
-\(
-  \hat{\bm x} = \bigl(\hat{\bm p},\,\hat{\bm v},\,\hat R,\,\hat{\bm \omega}\bigr)
-\),
-which is subsequently used by most low-level controllers.
-
-
-
-\subsection{Control Allocation}
-There is a wide range of control allocation methods for quadrotors, which can be broadly categorized into the classes shown in FIG \todo{fig}. 
+In laboratory environments equipped with motion capture, the external system provides high-rate position and (optionally) attitude measurements. Denote the motion capture position as
+\[
+\mathbf{p}_{\mathrm{mocap}} \;=\; \mathbf{p} + \boldsymbol{\nu}_{p}, 
+\]
+and the measured rotation matrix as
+\[
+\mathbf{R}_{\mathrm{mocap}} \;=\; \mathbf{R} \bigl(\mathbf{I} + \widehat{\boldsymbol{\nu}_{R}}\bigr),
+\]
+where \(\boldsymbol{\nu}_{p}\in \mathbb{R}^{3}\) and \(\boldsymbol{\nu}_{R}\in \mathbb{R}^{3}\) are small estimation errors, and \(\widehat{\cdot}\) is the hat operator that maps \(\mathbb{R}^{3}\) to \(SO(3)\). When attitude from motion capture is not available, only \(\mathbf{p}_{\mathrm{mocap}}\) is used. All sensor outputs are stacked into a measurement vector
+\[
+\mathbf{y} 
+= \begin{bmatrix}
+\mathbf{a}_{m}^{\mathsf{T}} & \boldsymbol{\omega}_{m}^{\mathsf{T}} & \mathbf{p}_{\mathrm{mocap}}^{\mathsf{T}} & \mathrm{vec}\bigl(\mathbf{R}_{\mathrm{mocap}}\bigr)^{\mathsf{T}}
+\end{bmatrix}^{\mathsf{T}} 
+= h\bigl(x\bigr) + \boldsymbol{\nu},
+\]
+where \(h(x)\) denotes the nonlinear measurement mapping and \(\boldsymbol{\nu}\) aggregates all measurement noise. An Extended Kalman Filter (EKF) fuses these readings to produce the estimated state 
+\[
+\hat x \;=\; \bigl(\hat{\mathbf{p}},\,\hat{\mathbf{v}},\,\hat{\mathbf{R}},\,\hat{\boldsymbol{\omega}}\bigr)\,,
+\]
+which is used by the low-level controllers described below.
 
 \subsection{Quadrotor Dynamics}
-\subsection{Quadrotors with Payloads}
+\label{sec:quadrotor_dynamics}
 
-\section{Problem Formulation}
+We augment the state \(x = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr)\) with the vector of propeller angular velocities \(\boldsymbol{\Omega} = [\Omega_{1},\,\Omega_{2},\,\Omega_{3},\,\Omega_{4}]^{\mathsf{T}}\). Denote the combined state as 
+\[
+x_{\mathrm{full}} = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega},\,\boldsymbol{\Omega}\bigr).
+\]
+Let \(m\) be the mass of the quadrotor, and let \(\mathbf{I} = \mathrm{diag}(J_{x},\,J_{y},\,J_{z})\) be its moment-of-inertia matrix expressed in \(\mathcal{B}\). Gravity in \(\mathcal{I}\) is \(g\,\mathbf{e}_{3}\) with \(\mathbf{e}_{3} = [0,\,0,\,1]^{\mathsf{T}}\). Each propeller \(i\) (numbered 1–4 as in Figure~\ref{fig:quadrotor_frames}) produces an upward thrust \(f_{i} \in \mathbb{R}\) along the body-fixed \(z\)-axis and a reactive torque \(\tau_{i}\in \mathbb{R}\) about that same axis. We assume the thrust and drag torque of each propeller scale quadratically with the motor speed:
+\[
+f_{i}(\Omega_{i}) \;=\; c_{\ell}\,\Omega_{i}^{2}, 
+\qquad 
+\tau_{i}(\Omega_{i}) \;=\; c_{d}\,\Omega_{i}^{2},
+\]
+where \(c_{\ell}\) and \(c_{d}\) are the experimentally identified thrust and drag coefficients.
+
+Let \(\mathbf{r}_{P,i}\in \mathbb{R}^{3}\) be the position vector from the body-frame origin to propeller \(i\). We define the total propulsive force in the body frame as
+\[
+\mathbf{f}_{\mathrm{prop}} \;=\; \sum_{i=1}^{4} f_{i}\,\mathbf{e}_{3}^{B},
+\]
+where \(\mathbf{e}_{3}^{B} = [0,\,0,\,1]^{\mathsf{T}}\) in \(\mathcal{B}\). The total propulsive torque about the center of mass is
+\[
+\boldsymbol{\tau}_{\mathrm{prop}} \;=\; \sum_{i=1}^{4} \Bigl(\tau_{i}\,\mathbf{e}_{3}^{B} \;+\; \mathbf{r}_{P,i} \times \bigl(f_{i}\,\mathbf{e}_{3}^{B}\bigr)\Bigr).
+\]
+
+In this work, we ignore aerodynamic drag (\(\mathbf{f}_{\mathrm{drag}} = \mathbf{0}\)) for simplicity. The implementation in MJX (MuJoCo-based simulation) uses a slightly different formulation (e.g., direct thrust-to-motor mapping and empirically tuned damping), but the notation here captures the essential dynamics.
+
+\medskip
+The continuous-time evolution of the state is:
+\[
+\dot{\mathbf{p}} \;=\; \mathbf{v}, 
+\qquad
+\dot{\mathbf{R}} \;=\; \mathbf{R}\,\widehat{\boldsymbol{\omega}},
+\]
+\[
+m\,\dot{\mathbf{v}} 
+\;=\; \mathbf{R}\,\mathbf{f}_{\mathrm{prop}} \;-\; m\,g\,\mathbf{e}_{3},
+\]
+\[
+\mathbf{I}\,\dot{\boldsymbol{\omega}} 
+\;=\; \boldsymbol{\tau}_{\mathrm{prop}} \;-\; \boldsymbol{\omega} \times \bigl(\mathbf{I}\,\boldsymbol{\omega}\bigr),
+\]
+\[
+\dot{\boldsymbol{\Omega}} 
+\;=\; \tfrac{1}{k_{\mathrm{mot}}}\bigl(\boldsymbol{\Omega}_{\mathrm{cmd}} - \boldsymbol{\Omega}\bigr).
+\]
+Here, \(\widehat{\boldsymbol{\omega}}\in SO(3)\) is the skew-symmetric matrix of \(\boldsymbol{\omega}\); \(k_{\mathrm{mot}}\) is the motor time constant; and \(\boldsymbol{\Omega}_{\mathrm{cmd}}\in \mathbb{R}^{4}\) is the commanded motor speed vector. The gravitational acceleration appears as \(-m\,g\,\mathbf{e}_{3}\) in the inertial frame.
+
+\subsection{Control Action Parameterizations}
+\label{sec:quadrotor_actions}
+
+We now describe three widely used action-space definitions for \gls{rl}-based quadrotor control, following \cite{kaufmann_benchmark_2022}.
+
+\paragraph{Linear Velocity \& Yaw Rate (LV).}  
+An LV-type policy outputs a desired body-frame velocity 
+\[
+\mathbf{v}_{\mathrm{des}} = [v_{x},\,v_{y},\,v_{z}]^{\mathsf{T}}
+\]
+and a yaw-rate command \(\omega_{z}\). Formally,
+\[
+u_{\mathrm{LV}} \;=\; \{\,v_{x},\,v_{y},\,v_{z},\,\omega_{z}\}.
+\]
+These high-level commands are provided to a cascaded low-level controller that computes the collective thrust 
+\[
+c \;=\; \bigl\lVert \mathbf{f}_{\mathrm{prop}}\bigr\rVert
+\]
+and the attitude setpoints needed to track \(\mathbf{v}_{\mathrm{des}}\). The attitude controller then allocates individual propeller thrusts \(f_{i}\) by inverting the mappings in Section~\ref{sec:quadrotor_dynamics} so as to achieve the commanded \(\omega_{z}\) about the body \(z\)-axis. By abstracting the thrust allocation, LV policies reduce sample complexity and improve sim-to-real transfer but cannot directly exploit the full force–torque dynamics for aggressive maneuvers.
+
+\paragraph{Collective Thrust \& Bodyrates (\gls{ctbr}).}  
+A \gls{ctbr}-type policy directly outputs the total upward thrust \(c\in \mathbb{R}\) and the three body-rate setpoints 
+\[
+\boldsymbol{\omega}_{\mathrm{des}} = [\,\omega_{x},\,\omega_{y},\,\omega_{z}]^{\mathsf{T}}.
+\]
+That is,
+\[
+u_{\mathrm{\gls{ctbr}}} \;=\; \{\,c,\,\omega_{x},\,\omega_{y},\,\omega_{z}\}.
+\]
+A fast inner-loop rate controller uses \(\boldsymbol{\omega}_{\mathrm{des}}\) to compute the moments 
+\[
+\mathbf{M} = [\,M_{x},\,M_{y},\,M_{z}]^{\mathsf{T}}
+\]
+required to track \(\boldsymbol{\omega}_{\mathrm{des}}\). Then the mixer solves
+\[
+\sum_{i=1}^{4} f_{i} \;=\; c, 
+\quad
+\ell\,\bigl(f_{2} - f_{4}\bigr) \;=\; M_{x}, 
+\quad
+\ell\,\bigl(f_{3} - f_{1}\bigr) \;=\; M_{y}, 
+\quad
+\tau_{1} - \tau_{2} + \tau_{3} - \tau_{4} \;=\; M_{z},
+\]
+for the individual thrusts \(f_{i}\). This retains direct control over body-rate dynamics while delegating motor mixing to the inner-loop controller. \gls{ctbr} policies therefore achieve higher agility than LV policies yet remain more robust than fully end-to-end approaches.
+
+\paragraph{Single-Rotor Thrust (SRT).}  
+An SRT-type policy outputs the four individual propeller thrusts:
+\[
+u_{\mathrm{SRT}} \;=\; \{\,f_{1},\,f_{2},\,f_{3},\,f_{4}\}.
+\]
+Since each \(f_{i} = c_{\ell}\,\Omega_{i}^{2}\) is commanded directly, the policy has full authority over both \(\mathbf{f}_{\mathrm{prop}}\) and \(\boldsymbol{\tau}_{\mathrm{prop}}\). This end-to-end parameterization can yield the most aggressive maneuvers by fully leveraging the nonlinear coupling between thrust and attitude. However, learning is typically more sample-inefficient, and sim-to-real transfer requires very accurate dynamics or extensive domain randomization.
+
+In summary, LV actions abstract away low-level thrust allocation at the cost of dynamic expressiveness; \gls{ctbr} retains medium-level control over thrust and attitude rates; and SRT provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
+\subsection{Quadrotors with Cable-Suspended Payloads}
+\label{sec:quadrotor_with_payloads}
+\begin{figure}
+
+  \centering
+  \includegraphics[width=0.6\textwidth]{cable_models.png}
+  \caption{TODO Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo}
+  \label{fig:cable_models}
+\end{figure}
+Figure~\ref{fig:cable_models} illustrates three common cable‐suspended payload models.
+When a quadrotor carries a cable-suspended payload, its state must be augmented to include cable and payload variables. A simple model treats the cable as a massless, inextensible rigid link of length \(\ell\), with a point-mass payload \(m_{L}\) at the end. The payload position \(\mathbf{p}_{L}\) relates to the quadrotor position \(\mathbf{p}_{Q}\) by
+\[
+\mathbf{p}_{L} \;=\; \mathbf{p}_{Q} \;-\; \ell\,\mathbf{q}, 
+\quad
+\|\mathbf{q}\| = 1,
+\]
+where \(\mathbf{q}\in S^{2}\) is the unit vector along the cable \cite{estevez_review_2024}. In this pendulum model, the augmented state is
+\[
+x_{\mathrm{aug}} 
+= \bigl(\mathbf{p}_{Q},\,\mathbf{v}_{Q},\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{q},\,\dot{\mathbf{q}}\bigr),
+\]
+with \(\mathbf{v}_{Q} = \dot{\mathbf{p}}_{Q}\) and \(\dot{\mathbf{q}}\) capturing payload swing \cite{Wahba2024}.
+
+A more detailed multi-link pendulum model represents the cable as \(N\) serial, massless links of lengths \(\{\ell_{i}\}\), each with orientation \(\mathbf{q}_{i}\in S^{2}\). The payload position becomes
+\[
+\mathbf{p}_{L} 
+= \mathbf{p}_{Q} \;-\; \sum_{i=1}^{N}\ell_{i}\,\mathbf{q}_{i},
+\]
+and the state is augmented by \(\{\mathbf{q}_{i},\,\dot{\mathbf{q}}_{i}\}_{i=1}^{N}\). This captures cable sag and higher-order swing modes but increases dimensionality from 8 (rigid link) to \(6 + 4N\), where 6 corresponds to \(\mathbf{p}_{Q},\,\mathbf{v}_{Q},\,\mathbf{R},\,\boldsymbol{\omega}\) \cite{goodarzi_dynamics_2015}.
+
+In MuJoCo, cables are approximated as tendon elements. Tendons are massless, inelastic, high stiffness springs enforcing \(\|\mathbf{p}_{Q}-\mathbf{p}_{L}\| = \ell\) when taut. Tendons have no effect when they are slack. The augmented state reduces to
+\[
+x_{\mathrm{aug}} 
+= \bigl(\mathbf{p}_{Q},\,\mathbf{v}_{Q},\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{p}_{L},\,\mathbf{v}_{L}\bigr),
+\]
+where \(\mathbf{v}_{L} = \dot{\mathbf{p}}_{L}\). The tendon tension \(\mathbf{T}\) is applied only when the cable is taut and acts as \(-\mathbf{T}\) on the quadrotor and \(+\mathbf{T}\) on the payload in their dynamics.
+
+For cooperative payload transport with \(M\) quadrotors, each quadrotor \(i\) has its own tendon to a common payload of mass \(m_{P}\). The payload dynamics are
+\[
+m_{P}\,\ddot{\mathbf{p}}_{P} 
+= -m_{P}\,\mathbf{g} 
++ \sum_{i=1}^{M}\mathbf{T}_{i},
+\]
+and each quadrotor's translational dynamics include \(-\mathbf{T}_{i}\) alongside its collective thrust. The augmented state is
+\[
+x_{\mathrm{aug}} 
+= \bigl(\{\mathbf{p}_{i},\,\mathbf{v}_{i},\,\mathbf{R}_{i},\,\boldsymbol{\omega}_{i}\}_{i=1}^{M},\,\mathbf{p}_{P},\,\mathbf{v}_{P}\bigr).
+\]
+This tendon approximation in MuJoCo captures essential characteristics of the hybrid dynamics, payload swing, tension variations, and multi-agent coordination, while remaining computationally efficient for simulation and control experiments.
