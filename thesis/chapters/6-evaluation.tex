@@ -1,42 +1,49 @@
-\chapter{Evaluation and experiments}
-\section{Single Quadrotor Control with Payload}
+\chapter{Evaluation and Experiments}
+
+This chapter describes the evaluation methodology and outlines the metrics and figures that will be used to quantify the performance of our learned policies on both single-quadrotor and multi-quadrotor cable-suspended payload transport tasks.
+
+\section{Experimental Setup}
+We first evaluate the performance of our learned policies in our simulation environment. We use only the actor network for evaluation, as the critic is not needed for inference. The policies are trained using the \gls{ippo} algorithm.
+All experiments were conducted in simulation using a policy frequency of 250 Hz with one physics step per control action. We set both observation and actuator noise to zero, randomized thrust within $0.2$, used a 0.4 m cable length, and fixed the payload mass at 0.01 kg. 
+
+Two primary tasks were evaluated: a real-time figure-eight trajectory tracking task and a recovery-from-harsh-conditions task. In the figure-eight tracking task, each episode ran for 5,000 steps, the payload followed a precomputed figure-eight path, and the quadrotor always initialized at the center, with performance aggregated over 100 rollouts. In the recovery task, episodes lasted 2,500 steps, the payload target remained fixed at $(0 0 1.5)$ m, and the agent began from random harsh initial states. metrics were gathered over 1,000 rollouts. For multi-quadrotor experiments, policies for teams of two, three, and five quadrotors were evaluated, with each quadrotor initialized at the target position and the payload suspended at the center of mass of the quadrotors as explained in seciton \todo{ref}. The payload was always initialized at $(0 0 1.5)$ m, and the quadrotors were positioned in a circle around it.
+
+\section{Single-Quadrotor Payload Control}
+We first evaluate the learned policy on the single-vehicle case, testing both disturbance recovery and trajectory tracking on a figure-eight path. See Figure \ref{fig:single_quad_payload_subfigs}.
+The experiments demonstrate the quadrotor's ability to recover from harsh conditions and disturbances in under 2 seconds. 
+
 \begin{figure}[ht]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{Error over time for a single quadrotor carrying a payload evaluated over 1000 rollouts. The quadrotor is able to recover from harsh disturbances and track a desired position.}
+        \caption{Positional error over time across 1,000 rollouts.}
         \label{fig:payload_error_over_time}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{Position over time for a single quadrotor carrying a payload tracking a figure eight trajectory.}
+        \caption{XY trajectory on a figure-eight path.}
         \label{fig:payload_position_xy}
     \end{subfigure}
-    \caption{Single quadrotor control with payload: (a) error over time, (b) position tracking on a figure-eight.}
+    \caption{Performance of a single quadrotor carrying a suspended payload: disturbance recovery and trajectory tracking.}
     \label{fig:single_quad_payload_subfigs}
 \end{figure}
-\begin{itemize}
-    \item Recover from harsh and track position
-    \item Follow trajectory
-    \item Follow trajectory with disturbance
 
+\section{Multi-Quadrotor Payload Transport}
+We extend the evaluation to cooperative transport tasks involving teams of two, three, and five quadrotors to demonstrate scalability. See Figure \ref{fig:multi_quad_payload}.
 
-\end{itemize}
-
-\section{Multi Quadrotor Control with Payload}
 \begin{figure}[ht]
     \centering
     % Two quadrotors
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{Error over time for 2 quadrotors with payload (1000 rollouts).}
+        \caption{2 agents: positional error over time (1,000 rollouts).}
         \label{fig:payload_error_2quads}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{Position tracking for 2 quadrotors on figure-eight.}
+        \caption{2 agents: figure-eight tracking.}
         \label{fig:payload_position_2quads}
     \end{subfigure}
 
@@ -45,13 +52,13 @@
     % Three quadrotors
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{Error over time for 3 quadrotors with payload (1000 rollouts).}
+        \caption{3 agents: positional error over time (1,000 rollouts).}
         \label{fig:payload_error_3quads}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{Position tracking for 3 quadrotors on figure-eight.}
+        \caption{3 agents: figure-eight tracking.}
         \label{fig:payload_position_3quads}
     \end{subfigure}
 
@@ -60,27 +67,20 @@
     % Five quadrotors
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{Error over time for 5 quadrotors with payload (1000 rollouts).}
+        \caption{5 agents: positional error over time (1,000 rollouts).}
         \label{fig:payload_error_5quads}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{Position tracking for 5 quadrotors on figure-eight.}
+        \caption{5 agents: figure-eight tracking.}
         \label{fig:payload_position_5quads}
     \end{subfigure}
 
-    \caption{Multi-quadrotor control with payload: rows correspond to 2, 3, and 5 quadrotors. (a),(c),(e) error over time; (b),(d),(f) position tracking.}
+    \caption{Cooperative payload transport with 2, 3, and 5 quadrotors: error attenuation (left) and trajectory fidelity (right).}
     \label{fig:multi_quad_payload}
 \end{figure}
-\begin{itemize}
-    \item Recover from harsh and track position
-    \item Follow trajectory
-    \item Follow trajectory with disturbance
-    \item Plots recovery: Recovery success rate for 10000 rollouts ofver time.
-    \item Plots Traj: Trajectory following 3d, error over time for batch
-    \item Plots Disturbance: Trajectory following with disturbance, error over time for batch
-\end{itemize}
+
 % optional
 \section{Comparison with classic control}
 Compare with prev paper method \autocite{Wahba2024}
@@ -96,6 +96,8 @@ Compare with prev paper method \autocite{Wahba2024}
     \item Plots Disturbance: Position holding with disturbance
 \end{itemize}
 
+\section{Generalization}
+Does it generalize to different payloads?
 
 \section{Ablation Studies}
 \begin{itemize}

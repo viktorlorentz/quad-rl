@@ -7,7 +7,7 @@ We model a team of $N$ Crazyflie quadrotors collaboratively carrying a cable-sus
 \[
 s_t = \bigl(\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\}_{i=1}^N,\; \mathbf{p}^P_t,\mathbf{v}^P_t\bigr)
 \]
-encapsulates each quadrotor’s position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload’s position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(s_{t+1}\mid s_t, a_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor–payload dynamics (including cable tensions and disturbances) over the fixed interval $\Delta t$.
+encapsulates each quadrotor's position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload's position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(s_{t+1}\mid s_t, a_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor–payload dynamics (including cable tensions and disturbances) over the fixed interval $\Delta t$.
 
 Each agent $i$ selects an action 
 \[
@@ -45,11 +45,58 @@ We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training mul
 \autocite{gymnax2022github} based on gymnax.
 \subsection{Simulation Environment}
 The simulation environment is built upon MuJoCo's XML specification and the GPU-accelerated MJX solver. We adopt a modular, extensible design in which each scenario is defined by auto-generated XML descriptors. These files specify vehicle geometries, inertial properties, cable parameters, payload characteristics, and any static or dynamic obstacles. A lightweight Python utility reads a user-defined configuration (YAML or JSON) and generates the corresponding XML, allowing researchers to rapidly prototype new dynamics or collaborative tasks. \todo{more details on configuration and generation of the XML files.}
+
+
+
+
+\subsubsection{Quadrotor}
+% - Modeling of quadrotor with thrust based on work of https://github.com/google-deepmind/mujoco_menagerie/blob/main/bitcraze_crazyflie_2/cf2.xml
+- Describe thrust on quadrotor
+- Motor Model
+
+\subsubsection{Cable Suspended Payload}
+- Description of cable suspended payload modeling with tendons or cables
+% \subsubsection{Obstacles}
+\subsubsection{Simulation Parameters}
+- Configuration of simulation with initial position wind etc
+
+\subsection{Observation Space}
+
+At each control step \(t\), the simulation environment produces a high-dimensional state vector. We map this to a global observation vector 
+\[
+\mathbf{o}_t \;=\; \bigl[\;\underbrace{\mathbf{e}^P_t}_{3},\;\underbrace{\mathbf{v}^P_t}_{3},\;\underbrace{\{\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t,\;\boldsymbol{\alpha}^i_t\}_{i=1}^N}_{24N},\;\underbrace{\mathbf{a}_{t-1}}_{4}\bigr] \;\in\;\mathbb{R}^{6 + 24N + 4}
+\]
+Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error, and \(\mathbf{v}^P_t\) its velocity.  For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(R^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) and \(\boldsymbol{\omega}^i_t\) its body-frame linear and angular velocities, \(\mathbf{a}^i_t\) and \(\boldsymbol{\alpha}^i_t\) its body-frame linear and angular accelerations and \(\mathbf{a}_{t-1}\) the concatenation of all agents previous thrust commands.  By construction, this global observation vector contains all information required to compute rewards and termination conditions.
+
+During decentralized execution, each agent \(i\) receives only the subset of entries corresponding to the payload terms, its own dynamic state block, and its most recent command.  Concretely, agent \(i\) observes
+\[
+\mathbf{o}^i_t 
+\;=\;
+\bigl[\,
+\mathbf{e}^P_t,\;\mathbf{v}^P_t,\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t,\;\boldsymbol{\alpha}^i_t,\;\mathbf{a}^i_{t-1}
+\,\bigr]\;\in\;\mathbb{R}^{6 + 24 + 4}\,,
+\]
+so that each policy conditions on the payload's error and velocity, the agent's full pose and inertial measurements, and its previous action.  This restriction enforces the Dec-POMDP structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
+
+\subsection{Action Space}
+
+Each agent \(i\) outputs a four-dimensional vector \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\), representing normalized thrust commands for its rotors.  These are mapped to physical rotor forces via
+\[
+f^i_{j,t}
+\;=\;
+\frac{\tilde{a}^i_{j,t} + 1}{2}\;f_{\max}^i,
+\qquad
+j=1,\dots,4,
+\]
+where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty.  The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator, yielding continuous next-state dynamics.  
+
+By constraining \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\) and sampling \(f_{\max}^i\) within a known bound, the policy learns to produce smooth, safe thrust profiles that transfer effectively from simulation to the real Crazyflie platform.  
+\subsection{Domain Randomization}
 \subsubsection{Environment Reset}
 \begin{figure}
     \centering
-    \includegraphics[width=0.5\textwidth]{reset_config.png}
-    \caption{Example of the random reset configuration.}
+    \includegraphics[width=\textwidth]{experiments/initial_conditions.png}
+    \caption{Randomly sampled initial configurations for the payload and quadrotors. The payload is positioned at the center, while quadrotors are uniformly distributed in a spherical shell around it.}
     \label{fig:reset_config}
 \end{figure}
 At each reset, the payload center~$p$ is sampled uniformly in
@@ -83,136 +130,141 @@ This results in a even distribution of valid initial configurations, also includ
 
 
 
-
-
-\subsubsection{Quadrotor}
-% - Modeling of quadrotor with thrust based on work of https://github.com/google-deepmind/mujoco_menagerie/blob/main/bitcraze_crazyflie_2/cf2.xml
-- Describe thrust on quadrotor
-- Motor Model
-
-\subsubsection{Cable Suspended Payload}
-- Description of cable suspended payload modeling with tendons or cables
-% \subsubsection{Obstacles}
-\subsubsection{Simulation Parameters}
-- Configuration of simulation with initial position wind etc
-
-\subsection{Observation Space}
-- Description of the observation space for single quadrotor
-- Description of the team reward components
-% \subsubsection{Payload Representations}
-% \subsubsection{Obstacle Representations}
-\subsubsection{Observation Space Design}
-- Ideas used for observation space
-\subsubsection{Multi-Agent Observation Mapping}
-- How is the full state mapped to single agents in the JAXMARL env
-
-\subsection{Action Space}
-- Actions always the 4 thrusts mapped from -1 to 1
-
-\subsection{Domain Randomization}
-\subsubsection{Environment Reset}
-
 \subsubsection{Hardeware Rollout}
 
 
-\section{Training}
-a Reinforcement Learning Agent for Collaborative Transport of Cable Suspended Payloads with Multiple Multirotors
-\subsection{Observations}
-At each timestep the agent receives a vector \(\mathbf{o}\in\mathbb{R}^{3+3+N(3+9+3+3+3+3)+m}\) defined by
-\[
-\mathbf{o} \;=\; 
-\bigl[\,
-\mathbf{e}^\top,\;\mathbf{v}_p^\top,\;
-\mathbf{r}_1^\top,\;\mathrm{vec}(R_1)^\top,\;\mathbf{v}_1^\top,\;\boldsymbol\omega_1^\top,\;\mathbf{a}_1^\top,\;\boldsymbol\alpha_1^\top,\;\dots,\;
-\mathbf{r}_N^\top,\;\mathrm{vec}(R_N)^\top,\;\mathbf{v}_N^\top,\;\boldsymbol\omega_N^\top,\;\mathbf{a}_N^\top,\;\boldsymbol\alpha_N^\top,\;
-\mathbf{a}_{\mathrm{prev}}^\top
-\!\bigr].
-\]
-Here \(\mathbf{e} = (\mathbf{p}_{\mathrm{target}} - \mathbf{p}_{\mathrm{payload}})/\max\bigl(\|\mathbf{p}_{\mathrm{target}} - \mathbf{p}_{\mathrm{payload}}\|,\,1\bigr)\in\mathbb{R}^3\) is the normalized payload–goal position error, and \(\mathbf{v}_p\in\mathbb{R}^3\) is the payload’s linear velocity in the inertial frame. For each quadrotor \(i=1,\ldots,N\), \(\mathbf{r}_i = \mathbf{p}_i - \mathbf{p}_{\mathrm{payload}}\in\mathbb{R}^3\) is the relative position of quad \(i\) with respect to the payload, \(R_i\in\mathrm{SO}(3)\) its rotation matrix (vectorized as \(\mathrm{vec}(R_i)\in\mathbb{R}^9\)), \(\mathbf{v}_i\in\mathbb{R}^3\) its linear velocity, \(\boldsymbol\omega_i\in\mathbb{R}^3\) its body-frame angular velocity, \(\mathbf{a}_i\in\mathbb{R}^3\) its linear acceleration, and \(\boldsymbol\alpha_i\in\mathbb{R}^3\) its angular acceleration. The final block \(\mathbf{a}_{\mathrm{prev}}\in\mathbb{R}^m\) stores the previous thrust command. All quantities in \(\mathbf{o}\) are directly measured or computed at runtime and serve as inputs for both policy evaluation and reward calculation.
+
 
 \subsection{Reward Design}
-We define the exponential-shaping function
-\[
-\rho_s(x) \;=\; e^{-\,s\,|x|},\qquad
-\rho(x)\equiv\rho_{2}(x)\;=\;e^{-2\,|x|},
-\]
-where $s$ is the shape parameter (default $s=2$).  Since $\rho_s(x)>0$ for all $x$, each reward component remains strictly positive, preventing the agent from learning to terminate prematurely.
 
-Let 
-\[
-d \;=\; \bigl\|\mathbf{p}_{\mathrm{target}} - \mathbf{p}_{\mathrm{payload}}\bigr\|,\quad
-d_{ij} \;=\; \bigl\|\mathbf{r}_i - \mathbf{r}_j\bigr\|\quad(i\neq j),
-\]
-and let $\mathbb{1}_{\mathrm{coll}}$, $\mathbb{1}_{\mathrm{oob}}$ be Boolean indicators for collision or out-of-bounds events.  Denote by $L$ the cable length, by $m$ the dimension of the thrust action, and by $f_{\max}$ the current maximum thrust.  Finally, let $\{\alpha_t\}$ be the nonnegative reward coefficients.
+The goal of our reward is to encourage flight behaviors that bring the payload to its target at a speed of roughly $ v_{\max} = 0.7m/s$, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. Harsh penalties can induce “learning to terminate” behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function
 
-\paragraph{Safety and Stability Reward}
-These terms encourage upright posture, maintain cable tension, regulate angular rates, enforce safe separation, penalize collisions/out-of-bounds, and regularize actions.  All inputs are obtained from $\mathbf{o}$.
 \[
-\begin{aligned}
-R_{\mathrm{stable}}
-&= \underbrace{\alpha_{\mathrm{up}}\;\frac{1}{N}\sum_{i=1}^N \rho(\theta_i)}_{\text{upright posture}}
-\;+\;\underbrace{\alpha_{\mathrm{taut}}\;\frac{1}{L}\sum_{i=1}^N \bigl(\|\mathbf{r}_i\| + r_{i,z}\bigr)}_{\text{taut-string tension}}\\
-&\quad+\;\underbrace{\alpha_{\mathrm{ang}}\Bigl(0.5 + 3\,\rho_{20}(d)\Bigr)\;\frac{1}{N}\sum_{i=1}^N \rho\bigl(\|\boldsymbol\omega_i\|\bigr)}_{\text{angular-velocity regulation}},
-\end{aligned}
+\rho(x; s) \;=\;\exp\bigl(-s\,|x|\bigr)\;-\;0.1\,s\,|x|\,,\quad s>0,
 \]
+and inject a small constant \(\varepsilon>0\) wherever needed to prevent division by zero.
+
+\subsubsection{Payload Tracking and Velocity Alignment}
+Define the payload position error \(\mathbf{e}^P_t = \mathbf{p}^P_t - \mathbf{p}^P_{\mathrm{des},t}\) with norm \(d_t = \|\mathbf{e}^P_t\|\).  The payload velocity is \(\mathbf{v}^P_t\).  We scale velocity conditioned on the distance and set
 \[
-\begin{aligned}
-R_{\mathrm{safety}}
-&=
-\alpha_{\mathrm{safe}}\;\frac{1}{N(N-1)}\sum_{i\neq j}\max\!\Bigl(\tfrac{d_{ij} - 0.15}{0.02},\,0\Bigr)
-\;+\;\alpha_{\mathrm{coll}}\,\mathbb{1}_{\mathrm{coll}}
-\;+\;\alpha_{\mathrm{oob}}\,\mathbb{1}_{\mathrm{oob}}\\[4pt]
-&\quad+\;\alpha_{\mathrm{smooth}}\;\frac{1}{m}\sum_{k=1}^m \frac{\bigl|\,a_k - a_{\mathrm{prev},k}\bigr|}{f_{\max}}
-\;+\;\alpha_{\mathrm{energy}}\;\frac{1}{m}\sum_{k=1}^m \frac{\lvert a_k\rvert}{f_{\max}}.
-\end{aligned}
+v_{\mathrm{des}}(d_t)
+= v_{\max}\bigl(1 - e^{-8\,d_t}\bigr),\quad
 \]
-The combined safety-and-stability score is
+and measure the velocity error
 \[
-R_S \;=\; R_{\mathrm{stable}} + R_{\mathrm{safety}}.
+\Delta v_t
+= \Bigl\|\mathbf{v}^P_t - v_{\mathrm{des}}(d_t)\,\frac{\mathbf{e}^P_t}{d_t + \varepsilon}\Bigr\|.
+\]
+The raw tracking reward
+\[
+\tilde r_{\mathrm{track}}
+= 2
+\;+\;\rho\bigl(d_t; s_d\bigr)
+\;+\;\rho\bigl(\Delta v_t; s_v\bigr)
+\]
+is clipped at zero to yield
+\[
+r_{\mathrm{track}}=\max\{0,\tilde r_{\mathrm{track}}\},
+\]
+ensuring only positive incentive remains.
+
+\subsubsection{Inter-Agent Safe-Distance}
+For \(N>1\) quadrotors with planar positions \(\mathbf{p}^i_{t,xy}\), let
+\[
+d_{ij} = \lVert\mathbf{p}^i_{t,xy}-\mathbf{p}^j_{t,xy}\rVert,\quad i\neq j.
+\]
+We reward the normalized sum
+\[
+r_{\mathrm{safe}}
+= \frac{1}{N(N-1)}\sum_{i\neq j}\mathrm{clip}\!\Bigl(\tfrac{d_{ij}-d_{\min}}{w_d},0,1\Bigr),
+\]
+which scales naturally with \(N\). The default \(d_{\min}=0.15\) and \(w_d=0.02\) ensure a minimum safe distance of 15 cm between quadrotors, with a linear penalty for closer approaches.
+
+\subsubsection{Uprightness}
+Tilt angles \(\theta^i_t\) between each quad's body-frame “up” axis and gravity are shaped by
+\[
+r_{\mathrm{up}}
+= \frac{1}{N}\sum_{i=1}^N \rho\bigl(\theta^i_t; s_\theta\bigr),
+\]
+discouraging large roll or pitch that induce instability and payload swing.
+
+\subsubsection{Taut-String Maintenance}
+Let \(d^i_t=\lVert\mathbf{p}^i_t-\mathbf{p}^P_t\rVert\) and \(h^i_t=(\mathbf{p}^i_t)_z-(\mathbf{p}^P_t)_z\).  A taut cable of length \(L\) is encouraged by maximizing both terms via
+\[
+r_{\mathrm{taut}}
+= \frac{1}{L}\Bigl(\frac{1}{N}\sum_{i=1}^N d^i_t + \frac{1}{N}\sum_{i=1}^N h^i_t\Bigr).
 \]
 
-\paragraph{Tracking Reward}
-Let 
+\subsubsection{Rotor-Frame Velocity Regularization}
+For each quad's body-frame angular velocity \(\boldsymbol{\omega}^i_t\) and linear velocity \(\mathbf{v}^i_t\), we define
 \[
-d \;=\; \bigl\|\mathbf{p}_{\mathrm{target}} - \mathbf{p}_{\mathrm{payload}}\bigr\|,\qquad
-\mathbf{u} \;=\; \frac{\mathbf{p}_{\mathrm{target}} - \mathbf{p}_{\mathrm{payload}}}{d}.
+r_{\omega}
+= \frac{1}{N}\sum_{i=1}^N \rho\bigl(\lVert\boldsymbol{\omega}^i_t\rVert; s_\omega\bigr),
+\quad
+r_{v}
+= \frac{1}{N}\sum_{i=1}^N \Bigl[\rho\bigl(\lVert\mathbf{v}^i_t\rVert; s_v\bigr)
+- c_v\,\mathrm{clip}\bigl(\lVert\mathbf{v}^i_t\rVert - v_{\max},0,\infty\bigr)\Bigr].
 \]
-Then
-\[
-R_{\mathrm{track}}
-= \underbrace{\alpha_{\mathrm{dist}}\;\rho(d)}_{\text{distance to goal}}
-\;+\;\underbrace{\alpha_{\mathrm{lin}}\Bigl(0.5 + 6\,\rho_{20}(d)\Bigr)\;\frac{1}{N}\sum_{i=1}^N \bigl(\mathbf{v}_i \cdot \mathbf{u}\bigr)}_{\text{velocity aligned with target}},
-\]
-where $\rho(d)=e^{-2\,d}$ encourages the payload to approach its target, and the term $\frac{1}{N}\sum_{i=1}^N (\mathbf{v}_i\cdot\mathbf{u})$ rewards quadrotors for moving in the direction of the payload–goal vector.  Here $\rho_{20}(d)$ shapes the velocity alignment term so that it is emphasized when further away from the target.
 
-\paragraph{Combined Reward}
-The instantaneous reward is
+\subsubsection{Collision and Boundary Penalties}
+With indicators \(\mathbb{I}_{\mathrm{coll}}\), \(\mathbb{I}_{\mathrm{oob}}\) and a grace factor \(g(t)=\mathrm{clip}(2t,0,1)\), penalties are
 \[
-R 
-= \frac{\,R_{\mathrm{track}}\;\bigl(R_{\mathrm{stable}} + R_{\mathrm{safety}}\bigr)\,}
-{\displaystyle \sum_{t\in\{\mathrm{dist},\mathrm{lin},\mathrm{up},\mathrm{taut},\mathrm{ang},\mathrm{safe},\mathrm{coll},\mathrm{oob},\mathrm{smooth},\mathrm{energy}\}} \alpha_t}.
+r_{\mathrm{coll}} = -\,g(t)\,\mathbb{I}_{\mathrm{coll}}, 
+\quad
+r_{\mathrm{oob}} = -\,g(t)\,\mathbb{I}_{\mathrm{oob}}.
 \]
-Normalizing by $\sum_t \alpha_t$ ensures that tracking, stability, and safety contribute in balanced proportion.
-\subsubsection{Stability Reward}
-\subsubsection{Tracking Reward}
-\subsubsection{Reward Function for Multi Quadrotor Control with Payload}
 
-\subsection{Policy Training}
-\subsubsection{Network Architecture}
-\begin{itemize}
-    \item MLP
-    \item actor critic, privileged critic
-    \item Recurrent?
-    \item Taking the action mean for rollout
-\end{itemize}
-\subsubsection{Hyperparameters}
-\begin{itemize}
-    \item add list of relevant hyperparameters
-    \item maybe list 2 configs -> one for fast prototyping and one for final robust training
-    \item Explain the hyperparameters reasoning
-\end{itemize}
+\subsubsection{Smoothness and Energy Cost}
+Let \(\mathbf{a}_t,\mathbf{a}_{t-1}\) be consecutive normalized thrust vectors and \(\tilde f_{i,j}\) each rotor's thrust fraction.  We set
+\[
+r_{\mathrm{smooth}}
+= -\sum_{i,j} \bigl|a_{t,i,j}-a_{t-1,i,j}\bigr|,
+\quad
+r_{\mathrm{energy}}
+= -\frac{1}{4N}\sum_{i=1}^N\sum_{j=1}^4\bigl[\exp\bigl(-30|\tilde f_{i,j}|\bigr)+\exp\bigl(90(\tilde f_{i,j}-1)\bigr)\bigr].
+\]
+The energy cost discourages thrust to be on the limits at 0 or 1, while the smoothness term penalizes large changes in thrust between consecutive timesteps, promoting stable flight.
+\subsubsection{Aggregate Reward}
+The stability incentive is the average of its five components:
+\[
+r_{\mathrm{stab}}
+= \frac{1}{5}\bigl(r_{\mathrm{safe}} + r_{\mathrm{up}} + r_{\mathrm{taut}} + r_{\omega} + r_{v}\bigr),
+\]
+and the total penalty is
+\[
+r_{\mathrm{pen}}
+= r_{\mathrm{coll}} + r_{\mathrm{oob}} + r_{\mathrm{smooth}} + r_{\mathrm{energy}}.
+\]
+Finally, we multiply tracking and stability to enforce simultaneous performance,
+\[
+r_t
+= r_{\mathrm{track}}\;r_{\mathrm{stab}}
+\;+\;r_{\mathrm{pen}}.
+\]
+This product structure ensures the policy learns to track the payload while constantly maintaining stable formations, and the additive penalties discourage unsafe or aggressive behaviors without overwhelming the shaping incentives.
+
+\subsubsection{Integration with JAXMARL}
+
+CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
+
+
+\section{Training}
+Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework to implement decentralized policy optimization. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution.
+
+The decentralized policies are learned end-to-end via \gls{ppo} within our highly parallelized JAX/MJX simulation environment. At each iteration, a fixed number of synchronous actors collect trajectories in $M$ parallel environments over $N$ time steps, yielding $NM$ experiences per update. Collected rewards are bootstrapped with the learned critic to compute targets, and advantages are estimated using \gls{gae} with discount factor $\gamma$ and smoothing parameter $\lambda$. The overall loss combines the clipped policy objective
+\[
+L_{\mathrm{PPO}}(\theta) = \mathbb{E}\!\bigl[\min\bigl(r_t(\theta)\,\hat{A}_t,\;\mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\bigr],
+\]
+a mean-squared value-function error, and an entropy regularizer to encourage sufficient exploration. Gradient norms are clipped to enhance numerical stability.
+
+\subsection{Policy Architecture}
+Both actor and critic networks are instantiated as fully connected, feed-forward multilayer perceptrons. The actor network comprises an input layer matching the local observation dimension, three hidden layers of 64 units with tanh activations, and a linear output layer producing the action-mean vector. A learned log-standard deviation vector of the same dimensionality parameterizes a diagonal Gaussian policy. The critic network features three hidden layers of 128 tanh units each, terminating in a scalar output. All dense layers employ orthogonal weight initialization and zero biases. During training and rollouts, actions are sampled stochastically from the policy distribution, at evaluation time, the deterministic mean action is used.
+
+\subsection{Optimization and Hyperparameters}
+We run a baysian optimization sweep over the hyperparameters to find the best configuration for our task. Initially running a coarse search over a wide range of values, we then refine the search around promising regions. The final hyperparameters are selected based on the best performance.
+
 \subsubsection{Comparing Centralized PPO, IPPO, and MAPPO}
-
+We compare three variants of the \gls{ppo} algorithm: centralized \gls{ppo}, decentralized \gls{ippo}, and multi-agent \gls{mappo}. The centralized variant uses a shared critic for all agents, while \gls{ippo} and \gls{mappo} maintain decentralized policies with independent critics. 
 \begin{itemize}
     \item 3 Plots with training (episode-length over steps) with 3 different seeds each
 \end{itemize}
