@@ -215,6 +215,13 @@ r_{\mathrm{oob}} = -\,g(t)\,\mathbb{I}_{\mathrm{oob}}.
 \]
 
 \subsubsection{Smoothness and Energy Cost}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/actions_comparison.pdf}
+    \caption{Comparison of policy trained with and without the action regularization reward. The left plot shows the actions over time of the policy with regularization, while the right plot shows the actions of the policy without regularization. The regularized policy produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits.}
+    \label{fig:}
+\end{figure}
 Let \(\mathbf{a}_t,\mathbf{a}_{t-1}\) be consecutive normalized thrust vectors and \(\tilde f_{i,j}\) each rotor's thrust fraction.  We set
 \[
 r_{\mathrm{smooth}}

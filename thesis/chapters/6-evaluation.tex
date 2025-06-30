@@ -12,21 +12,43 @@ Two primary tasks were evaluated: a real-time figure-eight trajectory tracking t
 We first evaluate the learned policy on the single-vehicle case, testing both disturbance recovery and trajectory tracking on a figure-eight path. See Figure \ref{fig:single_quad_payload_subfigs}.
 The experiments demonstrate the quadrotor's ability to recover from harsh conditions and disturbances in under 2 seconds. 
 
+
 \begin{figure}[ht]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{Positional error over time across 1,000 rollouts.}
+        \centering
+        
+        \includegraphics[width=\textwidth]{experiments/one_recovery_error.pdf}
+        \caption{Recovery of one quadrotor with payload from harsh conditions. The figure shows N=20 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. At the bottom we can see successful take-off from the ground. The quadrotor successfully stabilizes the payload at the target for all initial conditions within 2 seconds.}
         \label{fig:payload_error_over_time}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{XY trajectory on a figure-eight path.}
-        \label{fig:payload_position_xy}
+     \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        
+        \includegraphics[width=\textwidth]{experiments/two_recovery_error.pdf}
+        \caption{Recovery of one quadrotor with payload from harsh conditions. The figure shows N=20 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. At the bottom we can see successful take-off from the ground. The quadrotor successfully stabilizes the payload at the target for all initial conditions within 2 seconds.}
+        \label{fig:payload_error_over_time}
     \end{subfigure}
     \caption{Performance of a single quadrotor carrying a suspended payload: disturbance recovery and trajectory tracking.}
     \label{fig:single_quad_payload_subfigs}
+\end{figure}
+
+
+
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/one_recovery.pdf}
+    \caption{Recovery of one quadrotor with payload from harsh conditions. The figure shows N=20 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds.}
+    \label{fig:payload_error_over_time}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/one_eight.pdf}
+    \caption{Figure-eight trajectory tracking for one quadrotor with payload. The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \label{fig:payload_error_over_time}
 \end{figure}
 
 \section{Multi-Quadrotor Payload Transport}
@@ -34,51 +56,16 @@ We extend the evaluation to cooperative transport tasks involving teams of two, 
 
 \begin{figure}[ht]
     \centering
-    % Two quadrotors
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{2 agents: positional error over time (1,000 rollouts).}
-        \label{fig:payload_error_2quads}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{2 agents: figure-eight tracking.}
-        \label{fig:payload_position_2quads}
-    \end{subfigure}
-
-    \vspace{1em}
-
-    % Three quadrotors
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{3 agents: positional error over time (1,000 rollouts).}
-        \label{fig:payload_error_3quads}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{3 agents: figure-eight tracking.}
-        \label{fig:payload_position_3quads}
-    \end{subfigure}
-
-    \vspace{1em}
-
-    % Five quadrotors
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_error_over_time.png}
-        \caption{5 agents: positional error over time (1,000 rollouts).}
-        \label{fig:payload_error_5quads}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{experiments/payload_position_xy.png}
-        \caption{5 agents: figure-eight tracking.}
-        \label{fig:payload_position_5quads}
-    \end{subfigure}
-
-    \caption{Cooperative payload transport with 2, 3, and 5 quadrotors: error attenuation (left) and trajectory fidelity (right).}
-    \label{fig:multi_quad_payload}
+    \includegraphics[width=\textwidth]{experiments/two_recovery.pdf}
+    \caption{Recovery of two quadrotor with payload from harsh conditions. The figure shows N=20 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds.}
+    \label{fig:payload_error_over_time}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/two_eight.pdf}
+    \caption{Figure-eight trajectory tracking for two quadrotor with payload. The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \label{fig:payload_error_over_time}
 \end{figure}
 
 % optional
