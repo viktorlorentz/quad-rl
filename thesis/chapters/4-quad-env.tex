@@ -93,6 +93,7 @@ where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at
 By constraining \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\) and sampling \(f_{\max}^i\) within a known bound, the policy learns to produce smooth, safe thrust profiles that transfer effectively from simulation to the real Crazyflie platform.  
 \subsection{Domain Randomization}
 \subsubsection{Environment Reset}
+\label{sec:reset}
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{experiments/initial_conditions.png}
