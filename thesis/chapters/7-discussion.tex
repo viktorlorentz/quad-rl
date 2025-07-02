@@ -1,5 +1,30 @@
 \chapter{Discussion}
 \section{Lessons Learned on Training a Reinforcement Learning Agent for Multirotors}
+- Action regularization is crucial for stable policies and no bangbang for sim to real
+- Parallalization is key for fast training -> many envs (16K)  gelp stabilize training
+- careful reward design is crucial for stable training 
+- Shaping reward terms with exponential decay instead of penalty helps to stabilize training and avoid learning to terminate
+- Good position domain randomization is crucial but not everything needs to be randomized (e.g. max thrust and no randomization of the payload  or quad mass)
+- action history is crucial for smooth action output
+- Position tracking can transfer to trajectory tracking
+- sim to real transfer remains a challenges
+
 \section{Implications and Limitations}
+- RL is a promising approach for agile cooperative cable suspended payload transport
+- policies still fail sometimes in harsh conditions, e.g. when the payload is swinging too much or the quadrotors are too far apart
+- no obstacle avoidance / motion planning is included, so dependent on external motion planning
+- no guarantee for safety
+- Policy needs to be trained for each payload mass and quad configuration
+- Sim to real needs to be further evaluated
+- full state information is not available in the real world, so the policy needs to be robust to state estimation errors
+- posiiton mass and cable lengths need to be known in advance, but the policy can a little bit generalize to different payload masses and cable lengths
+
 \section{Future Work}
-Future work 
+Future work could explore the following directions:
+- Including state history in the observation for better possibility of learing to estimate the hiddend state (e.g. cable length, payload mass, quad mass, other quad positions)
+- Maybe explicitly estimating the hidden state (e.g. cable length, payload mass, quad mass, other quad positions) and including it in the observation space
+- Possible without mocap (external state estimation) by using the quadrotor's IMU and position sensors to estimate the cable length and payload mass and camera or lidar
+- Investigating more complex multi-quadrotor scenarios with varying payloads and cable lengths
+- Enhancing the sim-to-real transfer process through improved domain randomization techniques
+- Developing methods for online adaptation of the policy to changing payload conditions
+- Exploring alternative reinforcement learning algorithms to improve training efficiency and robustness

@@ -10,7 +10,7 @@ Two primary tasks were evaluated:
  recovery-from-harsh-conditions task and figure-eight trajectory tracking task. The recovery task involved stabilizing the payload at a target position after being disturbed, while the trajectory tracking task required the quadrotor to follow a precomputed figure-eight path while keeping the payload stable.
 
 In the recovery task, episodes lasted 2,500 steps, the payload target remained fixed at $(0 0 1.5)$ m, and the agent began from random harsh initial states. The payload and quadrotor position aswell as the quadrotors orientation and velocity are randomized.
- metrics were gathered over 1,000 rollouts. We evaluate the specific policies for single quad with payload, teams of two, three, and five quadrotors were evaluated, each initialized as described in section X\todo{ref}. The payload was always initialized at $(0 0 1.5)$ m, and the quadrotors were positioned randomly in a half-sphere around it. Its importent to not that this includes differnt cable modes, with sometimes the cable being slack and sometimes taut. Forcing the quadrotor to stabilize the payload in all modes. These states emulate the state after a strong disturbance, like a collision with an obstacle or the quadrotors being thrown into the air.
+ metrics were gathered over 1,000 rollouts. We evaluate the specific policies for single quad with payload, teams of two, three, and six quadrotors were evaluated, each initialized as described in section X\todo{ref}. The payload was always initialized at $(0 0 1.5)$ m, and the quadrotors were positioned randomly in a half-sphere around it. Its importent to not that this includes differnt cable modes, with sometimes the cable being slack and sometimes taut. Forcing the quadrotor to stabilize the payload in all modes. These states emulate the state after a strong disturbance, like a collision with an obstacle or the quadrotors being thrown into the air.
 
 In the figure-eight tracking task, each episode ran for 5,000 steps simulating 20s, the payload has to follow a precomputed figure-eight path, and the quadrotor always initialized at the center with quads in random positions, with performance aggregated over 100 rollouts. 
 
@@ -44,7 +44,23 @@ These experiments show that the trained policy for the singel quadrotor with pay
         \caption{Recovery in the two quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error for most inital harsh states evantually converging to 0. The termination percentage shows that a high number of runs are successful and not terminated while most terminations occur right at initialization, because of very harsh initialization.}
         \label{fig:payload_error_over_time_two}
     \end{subfigure}
-    \caption{Performance of a single quadrotor carrying a suspended payload: disturbance recovery and trajectory tracking.}
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        
+        \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
+        \caption{Recovery in the three quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
+        \label{fig:payload_error_over_time_three}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        
+        \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
+        \caption{Recovery in the six quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
+        \label{fig:payload_error_over_time_six}
+    \end{subfigure}
+
+
+    \caption{TODO}
     \label{fig:single_quad_payload_subfigs}
 \end{figure}
 
@@ -89,6 +105,33 @@ To show that the position tracking capabilities generalize to a moving setpoint 
     \caption{Figure-eight trajectory tracking for two quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
     \label{fig:two_eight}
 \end{figure}
+\subsection{Three Quadrotors}
+We extend the evaluation to three quadrotors, testing both harsh condition recovery and trajectory tracking on a figure-eight path. We run each of them with the policy trained specifically for the three quadrotor with payload scenario. The results are shown in Figure \ref{fig:three_recovery} and Figure \ref{fig:three_eight}, where we show the recovery and trajectory tracking performance of the three quadrotor team. The policies are trained using the \gls{ippo} algorithm with the same hyperparameters as in the single-quadrotor case, but with a payload mass of 20g to ensure that the payload is heavy enough to require cooperation.
+
+Figure \ref{fig:three_recovery} shows some example runs of the recovery task, where the quadrotors and payload are initialized in random states and have to stabilize the payload at the target position. the payload is stabilized at the target within 2 seconds, moving at speeds of up to 1.5 m/s. The quadrotors then stabilize the payload at the target position without oscillations or overshoot.
+
+We also evaluate this in figure \ref{fig:payload_error_over_time_three}, where we statistically evaluate 1000 recovery runs from harsh conditions. The termination histogram shows that 99\% of harsh initial conditions are recovered successfully, while the remaining terminate mostly in the beginning due to very harsh initialization. The position error over time also shows that we recover from distances of up to 1m in roughly 2s. It also shows that all runs stabily hove at the target for over 5s after they reaching it. Some off the failed runs struggle to recover and get stuck in an oscillation leading to termination. This is due to very harsh initlalization, leading to the quadrotors running into each other right after initialization. This can be improved by better initialization of the quadrotors and payload, which is discussed in section \ref{sec:reset}.
+
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/three_recovery.pdf}
+    \caption{Recovery of three quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
+    The figure shows N=8 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
+    \label{fig:three_recovery}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/three_eight.pdf}
+    \caption{Figure-eight trajectory tracking for three quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \label{fig:three_eight}
+\end{figure}
+
+\subsection{Six Quadrotors}
+The last configuration we evaluate is a team of six quadrotors, testing recovery from harsh condition to evaluate the scalability of our approach. We run them with the policy trained specifically for the six quadrotor with payload scenario. The results are shown in Figure \ref{fig:payload_error_over_time_six} evaluating 1000 runs on the recovery scenario. 
+The policies are trained using the \gls{ippo} algorithm with the same hyperparameters as in the single-quadrotor case, but with a payload mass of 40g to ensure that the payload is heavy enough to require cooperation.
+We can see that the approach manages to scale to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The termination histogram shows that \todo{fix} a lot more runs are terminated early indicating limits of the approach. Future work could improve this with privileged critic approaches, better representation of the payload and quadrotors in the observation space, and more complex network architectures.
 
 % optional
 \section{Comparison with classic control}
@@ -106,4 +149,7 @@ Compare with prev paper method \autocite{Wahba2024}
 \end{itemize}
 
 \section{Generalization}
-Does it generalize to different payloads?
+Does it generalize to different payloads and cable lenghts?
+
+\section{Experimental Results Summary}
+In this chapter, we evaluated the performance of our learned policies in both single-quadrotor and multi-quadrotor scenarios. The results demonstrate that our approach effectively stabilizes payloads in harsh conditions and accurately tracks trajectories. The policies generalize well to different initial conditions and quad configurations. We also showed that the approach scales to teams of up to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The sim-to-real transfer results indicate that the policies can be successfully deployed on real quadrotors, achieving similar performance as in simulation.\todo{} Overall, our approach provides a robust solution for cooperative aerial transport tasks, demonstrating the potential of reinforcement learning in this domain.

@@ -251,7 +251,9 @@ r_t
 \]
 This product structure ensures the policy learns to track the payload while constantly maintaining stable formations, and the additive penalties discourage unsafe or aggressive behaviors without overwhelming the shaping incentives.
 
-\subsubsection{Integration with JAXMARL}
+\subsection{Reward Design Considerations}
+
+\subsection{Integration with JAXMARL}
 
 CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
 
