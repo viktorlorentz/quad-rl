@@ -256,6 +256,13 @@ CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmar
 
 
 \section{Training}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/train_metrics.pdf}
+    \caption{Average training metrics for one quadrotor with payload scenario. The top plot shows the average episode returns and the bottom plot shows the average episode lengths over environment steps and wall-clock time. The shaded area represents the standard deviation across 10 seeds. The maximum possible episode lenght here is 2048 environment steps, which corresponds to 8.2 seconds of flight time. In the end nearly all episodes are completing the episode indicating stable flight.}
+    \label{fig:train_metrics}
+\end{figure}
 Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework to implement decentralized policy optimization. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution.
 
 The decentralized policies are learned end-to-end via \gls{ppo} within our highly parallelized JAX/MJX simulation environment. At each iteration, a fixed number of synchronous actors collect trajectories in $M$ parallel environments over $N$ time steps, yielding $NM$ experiences per update. Collected rewards are bootstrapped with the learned critic to compute targets, and advantages are estimated using \gls{gae} with discount factor $\gamma$ and smoothing parameter $\lambda$. The overall loss combines the clipped policy objective
