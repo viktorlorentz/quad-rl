@@ -1,30 +1,56 @@
 \chapter{Discussion}
+
+In this chapter, we reflect on the key insights gained from training and evaluating our reinforcement learning agents for single- and multi-quadrotor payload transport. We begin by distilling practical lessons learned during development, then analyze the broader implications and remaining limitations of our approach, and finally outline promising directions for future research. By bringing these elements together, we aim to both refine our own methods and guide further advances in cooperative aerial transport.
+
 \section{Lessons Learned on Training a Reinforcement Learning Agent for Multirotors}
-- Action regularization is crucial for stable policies and no bangbang for sim to real
-- Parallalization is key for fast training -> many envs (16K)  gelp stabilize training
-- careful reward design is crucial for stable training 
-- Shaping reward terms with exponential decay instead of penalty helps to stabilize training and avoid learning to terminate
-- Good position domain randomization is crucial but not everything needs to be randomized (e.g. max thrust and no randomization of the payload  or quad mass)
-- action history is crucial for smooth action output
-- Position tracking can transfer to trajectory tracking
-- sim to real transfer remains a challenges
+
+Training an RL agent for agile multirotor control revealed several vital principles.  First, without action regularization, policies tended to exhibit bang-bang control, undermining their stability and hindering sim-to-real transfer.  By smoothing the action outputs, we obtained controllers that perform reliably on hardware.
+
+Equally important was the scale of parallelization: running tens of thousands of environment instances in parallel not only sped up convergence but also reduced gradient variance, leading to more consistent training outcomes.  In conjunction with large-scale simulation, careful reward design proved indispensable.  In particular, shaping each term with exponential decay rather than fixed penalties prevented premature termination behaviors and encouraged graceful recovery maneuvers.
+
+Domain randomization further enhanced robustness.  We found that randomizing thrust coefficients and initial poses exposed the agent to a wide range of conditions, while holding payload mass and cable length fixed kept the learning problem tractable.  This selective randomization, combined with the inclusion of a brief history of past actions in the observation vector, yielded smooth control commands and eased real-world deployment.
+
+Finally, our experiments demonstrated that a policy trained for stationary position hold can generalize zero-shot to figure-eight trajectory tracking, highlighting the flexibility of the learned representations.  Despite these successes, closing the gap between simulation and reality remains a central challenge—especially under unmodeled disturbances and imperfect state estimates.
 
 \section{Implications and Limitations}
-- RL is a promising approach for agile cooperative cable suspended payload transport
-- policies still fail sometimes in harsh conditions, e.g. when the payload is swinging too much or the quadrotors are too far apart
-- no obstacle avoidance / motion planning is included, so dependent on external motion planning
-- no guarantee for safety
-- Policy needs to be trained for each payload mass and quad configuration
-- Sim to real needs to be further evaluated
-- full state information is not available in the real world, so the policy needs to be robust to state estimation errors
-- posiiton mass and cable lengths need to be known in advance, but the policy can a little bit generalize to different payload masses and cable lengths
+
+These findings underscore the promise of RL for cooperative, cable-suspended payload transport.  Our policies recover rapidly from severe disturbances, coordinate effectively in teams, and track complex trajectories with precision.  Yet important limitations persist.  Under extreme conditions—such as large payload swings or widely dispersed vehicles—failures still occur, indicating that the policy's operating envelope does not cover all scenarios.
+
+Moreover, our approach currently relies on external motion planning and offers no obstacle avoidance or formal safety guarantees.  Each new payload mass or vehicle configuration also requires retraining, and sim-to-real validation has so far been limited to a narrow set of conditions.  In real deployments, full state information (including cable slackness and payload dynamics) is not directly observable; robust performance under sensor noise and estimation delays remains to be demonstrated.  Although our domain randomization conferred some adaptability to varying cable lengths and payload masses, systematic evaluation of these generalization limits is still needed.
 
 \section{Future Work}
-Future work could explore the following directions:
-- Including state history in the observation for better possibility of learing to estimate the hiddend state (e.g. cable length, payload mass, quad mass, other quad positions)
-- Maybe explicitly estimating the hidden state (e.g. cable length, payload mass, quad mass, other quad positions) and including it in the observation space
-- Possible without mocap (external state estimation) by using the quadrotor's IMU and position sensors to estimate the cable length and payload mass and camera or lidar
-- Investigating more complex multi-quadrotor scenarios with varying payloads and cable lengths
-- Enhancing the sim-to-real transfer process through improved domain randomization techniques
-- Developing methods for online adaptation of the policy to changing payload conditions
-- Exploring alternative reinforcement learning algorithms to improve training efficiency and robustness
+
+Building on these lessons, we see several avenues for further research.  Incorporating richer state representations—whether through longer histories of past measurements or explicit online estimation of latent variables such as cable length and payload mass—could improve both performance and robustness.  Self-supervised techniques that infer hidden parameters from onboard IMU or vision sensors may enable fully autonomous adaptation without external motion capture.
+
+Extending the framework to heterogeneous teams and cluttered environments with obstacles will test the scalability and safety of our approach.  From an algorithmic perspective, exploring off-policy actor-critic methods or meta-learning frameworks may yield gains in sample efficiency and resilience.  Finally, refining sim-to-real transfer through adaptive domain randomization schedules and curriculum learning promises to narrow the reality gap and accelerate deployment on physical platforms.
+
+
+% \section{Lessons Learned on Training a Reinforcement Learning Agent for Multirotors}
+% - Action regularization is crucial for stable policies and no bangbang for sim to real
+% - Parallalization is key for fast training -> many envs (16K)  gelp stabilize training
+% - careful reward design is crucial for stable training 
+% - Shaping reward terms with exponential decay instead of penalty helps to stabilize training and avoid learning to terminate
+% - Good position domain randomization is crucial but not everything needs to be randomized (e.g. max thrust and no randomization of the payload  or quad mass)
+% - action history is crucial for smooth action output
+% - Position tracking can transfer to trajectory tracking
+% - sim to real transfer remains a challenges
+
+% \section{Implications and Limitations}
+% - RL is a promising approach for agile cooperative cable suspended payload transport
+% - policies still fail sometimes in harsh conditions, e.g. when the payload is swinging too much or the quadrotors are too far apart
+% - no obstacle avoidance / motion planning is included, so dependent on external motion planning
+% - no guarantee for safety
+% - Policy needs to be trained for each payload mass and quad configuration
+% - Sim to real needs to be further evaluated
+% - full state information is not available in the real world, so the policy needs to be robust to state estimation errors
+% - posiiton mass and cable lengths need to be known in advance, but the policy can a little bit generalize to different payload masses and cable lengths
+
+% \section{Future Work}
+% Future work could explore the following directions:
+% - Including state history in the observation for better possibility of learing to estimate the hiddend state (e.g. cable length, payload mass, quad mass, other quad positions)
+% - Maybe explicitly estimating the hidden state (e.g. cable length, payload mass, quad mass, other quad positions) and including it in the observation space
+% - Possible without mocap (external state estimation) by using the quadrotor's IMU and position sensors to estimate the cable length and payload mass and camera or lidar
+% - Investigating more complex multi-quadrotor scenarios with varying payloads and cable lengths
+% - Enhancing the sim-to-real transfer process through improved domain randomization techniques
+% - Developing methods for online adaptation of the policy to changing payload conditions
+% - Exploring alternative reinforcement learning algorithms to improve training efficiency and robustness
