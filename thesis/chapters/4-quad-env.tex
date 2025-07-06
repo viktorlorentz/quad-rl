@@ -93,6 +93,7 @@ where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at
 By constraining \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\) and sampling \(f_{\max}^i\) within a known bound, the policy learns to produce smooth, safe thrust profiles that transfer effectively from simulation to the real Crazyflie platform.  
 \subsection{Domain Randomization}
 \subsubsection{Environment Reset}
+\todo{reset fig}
 \label{sec:reset}
 \begin{figure}
     \centering
@@ -137,7 +138,7 @@ This results in a even distribution of valid initial configurations, also includ
 
 
 \subsection{Reward Design}
-
+\todo{update reward}
 The goal of our reward is to encourage flight behaviors that bring the payload to its target at a speed of roughly $ v_{\max} = 0.7m/s$, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. Harsh penalties can induce “learning to terminate” behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function
 
 \[
@@ -252,7 +253,7 @@ r_t
 This product structure ensures the policy learns to track the payload while constantly maintaining stable formations, and the additive penalties discourage unsafe or aggressive behaviors without overwhelming the shaping incentives.
 
 \subsection{Reward Design Considerations}
-
+\todo{write reward design considerations}
 \subsection{Integration with JAXMARL}
 
 CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
@@ -280,9 +281,9 @@ Both actor and critic networks are instantiated as fully connected, feed-forward
 \subsection{Optimization and Hyperparameters}
 We run a baysian optimization sweep over the hyperparameters to find the best configuration for our task. Initially running a coarse search over a wide range of values, we then refine the search around promising regions. The final hyperparameters are selected based on the best performance.
 
-\subsubsection{Comparing Centralized PPO, IPPO, and MAPPO}
-We compare three variants of the \gls{ppo} algorithm: centralized \gls{ppo}, decentralized \gls{ippo}, and multi-agent \gls{mappo}. The centralized variant uses a shared critic for all agents, while \gls{ippo} and \gls{mappo} maintain decentralized policies with independent critics. 
-\begin{itemize}
-    \item 3 Plots with training (episode-length over steps) with 3 different seeds each
-\end{itemize}
+% \subsubsection{Comparing Centralized PPO, IPPO, and MAPPO}
+% We compare three variants of the \gls{ppo} algorithm: centralized \gls{ppo}, decentralized \gls{ippo}, and multi-agent \gls{mappo}. The centralized variant uses a shared critic for all agents, while \gls{ippo} and \gls{mappo} maintain decentralized policies with independent critics. 
+% \begin{itemize}
+%     \item 3 Plots with training (episode-length over steps) with 3 different seeds each
+% \end{itemize}
 

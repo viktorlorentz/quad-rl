@@ -5,6 +5,7 @@ The methods developed in this thesis build on foundational concepts from \gls{rl
 \gls{rl} refers to algorithms that learn to make decisions by interacting with an environment. This work focuses on model-free, on-policy, policy-optimization methods, where the policy used to collect data is the same one being updated. For a comprehensive treatment, see \cite{SuttonBarto2018}.
 
 \subsection{Markov Decision Processes}
+\todo{rl fig}
 \begin{figure}
 \centering
 \includegraphics[width=0.8\textwidth]{images/rl_diagram.png}
@@ -171,7 +172,7 @@ and \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{
 \section{Quadrotor Dynamics}
 \label{sec:quadrotor_control}
 Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generating upwards thrust. Their mechanical simplicity and agility make them popular for aerial surveillance, package delivery, and search-and-rescue. This section introduces coordinate frames, state representation, onboard sensors, and the continuous-time dynamics and common control action parameterizations for a quadrotor platform (illustrated in Figure~\ref{fig:quadrotor_frames}).
-
+\todo{quad fig}
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{quadrotor_dynamics.png}
@@ -282,6 +283,7 @@ where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full autho
 In summary, LV actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates and SRT provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
 \section{Quadrotors with Cable-Suspended Payloads}
 \label{sec:quadrotor_with_payloads}
+\todo{payload fig}
 \begin{figure}
 
   \centering
