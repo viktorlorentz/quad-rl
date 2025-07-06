@@ -21,7 +21,7 @@ We here only show recovery from up to 1.5~m. This, though, generalizes to any di
 To show that the position tracking capabilities generalize to a moving setpoint, we evaluate on a precomputed figure-eight trajectory. For each timestep we sample the policy position setpoint on the figure-eight trajectory, leading to the tracking behavior shown in Figure~\ref{fig:one_eight}. The figure shows the path of 5 runs randomly initialized around the start point of the trajectory, with the quads in suboptimal states. The figure shows how the quads very quickly manage to stabilize themselves and then continue after around 3~s to accurately follow the trajectory. Even though all quads are initialized with slightly different thrust ranges they all manage to accurately track the correct height of the trajectory. Due to the policy currently just being able to do position tracking, it always slightly lags behind the trajectory. This can be seen at the end of the trajectory where it does not fully reach the center. This could be reduced by explicitly training on trajectory following and adding multiple trajectory points or velocity states as shown in previous work.
 
 These experiments show that the trained policy for the single quadrotor with payload case exhibits great payload swing stabilization ability, while also being agile and very accurate in tracking.
-\begin{figure}[]
+\begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
@@ -53,14 +53,13 @@ These experiments show that the trained policy for the single quadrotor with pay
         \label{fig:payload_error_over_time_six}
     \end{subfigure}
 
-
-    \caption{TODO}
+    \caption{Recovery error over time for different quadrotor configurations with payload.}
     \label{fig:single_quad_payload_subfigs}
 \end{figure}
 
 
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     
     \includegraphics[width=\textwidth]{experiments/one_recovery.pdf}
@@ -68,7 +67,7 @@ These experiments show that the trained policy for the single quadrotor with pay
     The figure shows N=8 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:one_recovery}
 \end{figure}
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     
     \includegraphics[width=\textwidth]{experiments/one_eight.pdf}
@@ -86,14 +85,14 @@ Figure~\ref{fig:two_recovery} shows some example runs of the recovery task, wher
 We also evaluate this in Figure~\ref{fig:payload_error_over_time_two}, where we statistically evaluate 1,000 recovery runs from harsh conditions. The termination histogram shows that 81\% of harsh initial conditions are recovered successfully, while the remaining terminate mostly in the beginning due to very harsh initialization. The position error over time also shows that we recover from distances of up to 1~m in roughly 2~s. It also shows that all runs stably hover at the target for over 5~s after reaching it. Some of the failed runs struggle to recover and get stuck in an oscillation leading to termination. This is due to very harsh initialization, leading to the quadrotors running into each other right after initialization. This can be improved by better initialization of the quadrotors and payload, which is discussed in section~\ref{sec:reset}.
 
 To show that the position tracking capabilities generalize to a moving setpoint we evaluate on a precomputed figure-eight trajectory. We use the same setup as with the single-quad case. We show the results in Figure~\ref{fig:two_eight}. The figure shows the path of 5 runs randomly initialized around the start point of the trajectory, with the quads in suboptimal states. The figure shows how the quads very quickly manage to stabilize themselves and then continue after around 3~s to follow the trajectory. The tracking is a bit less accurate than the single-quad case, but still shows good performance. Even though all quads are initialized with slightly different thrust ranges they all manage to accurately track the correct height of the trajectory. We might further improve the tracking performance by explicitly training on trajectory following and adding multiple trajectory points or velocity states as shown in previous work and also adding the velocity state of the other quadrotors to the observation space.
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{experiments/two_recovery.pdf}
     \caption{Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
     The figure shows N=8 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:two_recovery}
 \end{figure}
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     
     \includegraphics[width=\textwidth]{experiments/two_eight.pdf}
@@ -107,7 +106,7 @@ Figure~\ref{fig:three_recovery} shows some example runs of the recovery task, wh
 
 We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where we statistically evaluate 1,000 recovery runs from harsh conditions. The termination histogram shows that 99\% of harsh initial conditions are recovered successfully, while the remaining terminate mostly in the beginning due to very harsh initialization. The position error over time also shows that we recover from distances of up to 1~m in roughly 2~s. It also shows that all runs stably hover at the target for over 5~s after reaching it. Some of the failed runs struggle to recover and get stuck in an oscillation leading to termination. This is due to very harsh initialization, leading to the quadrotors running into each other right after initialization. This can be improved by better initialization of the quadrotors and payload, which is discussed in section~\ref{sec:reset}.
 
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     
     \includegraphics[width=\textwidth]{experiments/three_recovery.pdf}
@@ -115,7 +114,7 @@ We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where w
     The figure shows N=8 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:three_recovery}
 \end{figure}
-\begin{figure}[ht]
+\begin{figure}[H]
     \centering
     
     \includegraphics[width=\textwidth]{experiments/three_eight.pdf}
@@ -126,22 +125,44 @@ We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where w
 \subsection{Six Quadrotors}
 The last configuration we evaluate is a team of six quadrotors, testing recovery from harsh conditions to evaluate the scalability of our approach. We run them with the policy trained specifically for the six quadrotor with payload scenario. The results are shown in Figure~\ref{fig:payload_error_over_time_six} evaluating 1,000 runs on the recovery scenario.  
 The policies are trained using the \gls{ippo} algorithm with the same hyperparameters as in the single-quadrotor case, but with a payload mass of 40~g to ensure that the payload is heavy enough to require cooperation.  
-We can see that the approach manages to scale to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The termination histogram shows that \todo{fix} a lot more runs are terminated early indicating limits of the approach. Future work could improve this with privileged critic approaches, better representation of the payload and quadrotors in the observation space, and more complex network architectures.
+We can see that the approach manages to scale to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The termination histogram shows that \todo{fix} a lot more runs are terminated early indicating limits of the approach. Future work could improve this with privileged critic approaches, better representation of the payload and quadrotors in the observation space, and more complex network architectures. \todo{fix 6quads}
 
-\section{Comparison with classic control}
-Compare with prev paper method \autocite{Wahba2024}
+\section{Comparison with Baseline}
+\begin{figure}[H]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/baseline_histogram_comparison.pdf}
+    \caption{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. The left plot shows the static payload position error for the baseline method. The right plot shows the static payload position error for the learned policy. Our method achieves a significantly lower error and failure rate compared to the baseline.}
+    \label{fig:baseline_histogram_comparison}
 
-- Plots Traj: Trajectory following 3d, error over time for batch  
-- Plots Disturbance: Trajectory following with disturbance, error over time for batch  
-- Plots ground start: Trajectory following with disturbance, error over time for batch  
+\end{figure}
+We compare our learned policy with the baseline method from \autocite{Wahba2024} in terms of recovery from harsh conditions performance. The baseline planner models each cable as a rigid rod and relies on centralized offline trajectory optimization with an online controller that tracks these precomputed paths, which limits its ability to capture cable swing and mode switching, adapt to unexpected disturbances or payload changes or collisions, and meet real-time computational demands. Our Method adresses these limitations by leveraging reinforcement learning for a more robust decentalized solution.
 
-\section{Sim-to-Real Transfer}
-- one and three quads  
-- Plots Traj: Trajectory following 3d, error over time  
-- Plots Disturbance: Position holding with disturbance  
+We compare our method with the baseline on the two quadrotor with payload scenario, where we evaluate the recovery from harsh conditions. We initialize the payload at $(0,0,1.5)$~m and the quadrotors in random positions around it. The baseline method is run with the same initialization and the same target position. We evaluate both methods on 1000 runs each, with the payload initialized in random states and the quadrotors in random positions around it. 
+
+The results are shown in Figure~\ref{fig:baseline_recovery} and Figure~\ref{fig:baseline_histogram_comparison}.
+Figure~\ref{fig:baseline_histogram_comparison} shows significantly higher recovery rates of 80\% with our method compared to 19\% with the baseline method. Also we can see that our method achieves a significantly lower static position error of a mean 0.5cm compared to a mean of 2.9cm with the baseline method. The baseline method fails to recover from harsh conditions in most cases, while our method is able to recover from most initial conditions and stabilize the payload at the target position.
+
+Figure~\ref{fig:baseline_recovery} also shows the qualitative difference of the trajectories in the recovery task, where the quadrotors and payload are initialized in random states and have to stabilize the payload at the target position. Most runs fail with the baseline method while our method manages to stabilize at the target. The runs labeled 0 and 1 show successful recoveries of the baseline method. Here it is also shown that our method achieves a more efficient straight line trajectory to the target position, while the baseline method goes through a more complex trajectory spiraling to the target.
+
+It is important to note that the baseline method might perform better in some specific scenarios, especially when the payload is in a very stable state and the quadrotors are in optimal positions. However, our method shows a more robust performance across a wider range of initial conditions and disturbances, making it more suitable for real-world applications where such conditions are common. Also our method currently does not take obstacles into account, which is a limitation of the current approach. Future work could extend our method or combine it with the motion planning of the baseline method to achieve obstacle avoidance capabilities. \todo{mention no simtoreal}
+
+\begin{figure}[H]
+    \centering
+    
+    \includegraphics[width=\textwidth]{experiments/baseline_recovery.pdf}
+    \caption{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
+    The figure shows N=10 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The gray lines shows the payload trajectory of our method.}
+    \label{fig:baseline_recovery}
+\end{figure}
+
+% \section{Sim-to-Real Transfer}
+% - one and three quads  
+% - Plots Traj: Trajectory following 3d, error over time  
+% - Plots Disturbance: Position holding with disturbance  
 
 \section{Generalization}
-Does it generalize to different payloads and cable lengths?
+Does it generalize to different payloads and cable lengths?\todo{Generalization section}
 
 \section{Experimental Results Summary}
-In this chapter, we evaluated the performance of our learned policies in both single-quadrotor and multi-quadrotor scenarios. The results demonstrate that our approach effectively stabilizes payloads in harsh conditions and accurately tracks trajectories. The policies generalize well to different initial conditions and quad configurations. We also showed that the approach scales to teams of up to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The sim-to-real transfer results indicate that the policies can be successfully deployed on real quadrotors, achieving similar performance as in simulation. \todo{} Overall, our approach provides a robust solution for cooperative aerial transport tasks, demonstrating the potential of reinforcement learning in this domain.
+In this chapter, we evaluated the performance of our learned policies in both single-quadrotor and multi-quadrotor scenarios. The results demonstrate that our approach effectively stabilizes payloads in harsh conditions and accurately tracks trajectories. The policies generalize well to different initial conditions and quad configurations. We also showed that the approach scales to teams of up to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. We compared our method with existing baselines and demonstrated its superiority in terms of stability and robustness. Overall, our approach provides a robust solution for cooperative aerial transport tasks, demonstrating the potential of reinforcement learning in this domain.
