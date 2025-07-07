@@ -3,13 +3,13 @@ The methods developed in this thesis build on foundational concepts from \gls{rl
 
 \section{Fundamentals of Reinforcement Learning}
 \gls{rl} refers to algorithms that learn to make decisions by interacting with an environment. This work focuses on model-free, on-policy, policy-optimization methods, where the policy used to collect data is the same one being updated. For a comprehensive treatment, see \cite{SuttonBarto2018}.
-
+\todo{rl  fig}
 \subsection{Markov Decision Processes}
-\todo{rl fig}
+
 \begin{figure}
 \centering
 \includegraphics[width=0.8\textwidth]{images/rl_diagram.png}
-\caption{TODO   Reinforcement learning framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
+\caption[Reinforcement learning framework]{TODO   Reinforcement learning framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
 \label{fig:rl_diagram}
 \end{figure}
 \gls{rl} problems are commonly framed as \gls{mdp}s, defined by the tuple \((\mathcal{S}, \mathcal{A}, P, r, \gamma)\), where \(\mathcal{S}\) is the set of states, \(\mathcal{A}\) is the set of actions, \(P(s'\!\mid\!s,a)\) is the transition probability, \(r(s,a)\) is the immediate reward, and \(\gamma \in [0,1)\) is the discount factor. At each time step \(t\), the agent observes \(s_t\), samples and executes \(a_t \sim \pi_\theta(\cdot\mid s_t)\), receives \(r_t = r(s_t,a_t)\), and transitions to \(s_{t+1} \sim P(\cdot\mid s_t,a_t)\). This procedure is visualized in figure \ref{fig:rl_diagram}. In practice, the agent often has access only to a partial observation \(o_t\). We use \(o_t\) or \(s_t\) interchangeably depending on context.
@@ -176,7 +176,7 @@ Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generatin
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{quadrotor_dynamics.png}
-  \caption{TODO}
+  \caption[Quadrotor fundamentals]{TODO}
   \label{fig:quadrotor_frames}
 \end{figure}
 
@@ -288,7 +288,7 @@ In summary, LV actions abstract away low-level thrust allocation at the cost of 
 
   \centering
   \includegraphics[width=0.6\textwidth]{cable_models.png}
-  \caption{TODO Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo}
+  \caption[Cable modeling approaches]{TODO Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo}
   \label{fig:cable_models}
 \end{figure}
 When a quadrotor carries a cable-suspended payload, its state must include cable and payload variables. Figure~\ref{fig:cable_models} illustrates three common modeling approaches. A simple pendulum model treats the cable as a massless, inextensible rigid link of length \(\ell\) with a point-mass payload \(m_L\). The payload position \(\mathbf{p}_L\) relates to the quadrotor position \(\mathbf{p}_Q\) via

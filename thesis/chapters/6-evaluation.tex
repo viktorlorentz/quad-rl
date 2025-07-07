@@ -28,7 +28,7 @@ These experiments show that the trained policy for the single quadrotor with pay
         \centering
         
         \includegraphics[width=\textwidth]{experiments/one_recovery_error.pdf}
-        \caption{Recovery in the single quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentatge shows that most runs are successful and not terminated.}
+        \caption[Single quadrotor recovery evaluation]{Recovery in the single quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentatge shows that most runs are successful and not terminated.}
         \label{fig:payload_error_over_time_single}
     \end{subfigure}
     \hfill
@@ -36,25 +36,25 @@ These experiments show that the trained policy for the single quadrotor with pay
         \centering
         
         \includegraphics[width=\textwidth]{experiments/two_recovery_error.pdf}
-        \caption{Recovery in the two quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error for most inital harsh states evantually converging to 0. The termination percentage shows that a high number of runs are successful and not terminated while most terminations occur right at initialization, because of very harsh initialization.}
+        \caption[Two quadrotor recovery evaluation]{Recovery in the two quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error for most inital harsh states evantually converging to 0. The termination percentage shows that a high number of runs are successful and not terminated while most terminations occur right at initialization, because of very harsh initialization.}
         \label{fig:payload_error_over_time_two}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
         
         \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
-        \caption{Recovery in the three quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
+        \caption[Three quadrotor recovery evaluation]{Recovery in the three quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
         \label{fig:payload_error_over_time_three}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        
+
         \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
-        \caption{Recovery in the six quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
+        \caption[Six quadrotor recovery evaluation]{Recovery in the six quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
         \label{fig:payload_error_over_time_six}
     \end{subfigure}
 
-    \caption{Recovery error over time for different quadrotor configurations with payload.}
+    \caption[Recovery error comparison]{Recovery error over time for different quadrotor configurations with payload.}
     \label{fig:single_quad_payload_subfigs}
 \end{figure}
 
@@ -64,7 +64,7 @@ These experiments show that the trained policy for the single quadrotor with pay
     \centering
     
     \includegraphics[width=\textwidth]{experiments/one_recovery.pdf}
-    \caption{Recovery of one quadrotor with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
+    \caption[Single quadrotor harsh recovery trajectory]{Recovery of one quadrotor with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
     The figure shows N=8 runs. The position is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:one_recovery}
 \end{figure}
@@ -72,7 +72,7 @@ These experiments show that the trained policy for the single quadrotor with pay
     \centering
     
     \includegraphics[width=\textwidth]{experiments/one_eight.pdf}
-    \caption{Figure-eight trajectory tracking for one quadrotor with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \caption[Single quadrotor figure-eight tracking]{Figure-eight trajectory tracking for one quadrotor with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
     \label{fig:one_eight}
 \end{figure}
 
@@ -89,7 +89,7 @@ To show that the position tracking capabilities generalize to a moving setpoint 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{experiments/two_recovery.pdf}
-    \caption{Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
+    \caption[Two quadrotor harsh recovery trajectory]{Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
     The figure shows N=8 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:two_recovery}
 \end{figure}
@@ -97,7 +97,7 @@ To show that the position tracking capabilities generalize to a moving setpoint 
     \centering
     
     \includegraphics[width=\textwidth]{experiments/two_eight.pdf}
-    \caption{Figure-eight trajectory tracking for two quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \caption[Two quadrotor figure-eight tracking]{Figure-eight trajectory tracking for two quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
     \label{fig:two_eight}
 \end{figure}
 \subsection{Three Quadrotors}
@@ -111,7 +111,7 @@ We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where w
     \centering
     
     \includegraphics[width=\textwidth]{experiments/three_recovery.pdf}
-    \caption{Recovery of three quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
+    \caption[Three quadrotor harsh recovery trajectory]{Recovery of three quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
     The figure shows N=8 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The quadrotor successfully stabilizes the payload within 2 seconds. The initial states of the quadrotor and payload are marked and labeled with their run id. The cables are drawn to represent their mode and cable lengt, slackness in the cable being shown as a curve.}
     \label{fig:three_recovery}
 \end{figure}
@@ -119,7 +119,7 @@ We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where w
     \centering
     
     \includegraphics[width=\textwidth]{experiments/three_eight.pdf}
-    \caption{Figure-eight trajectory tracking for three quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
+    \caption[Three quadrotor figure-eight tracking]{Figure-eight trajectory tracking for three quadrotors with payload.The top plot is top-down  (xy) view, while the bottom one is side view (xz). The figure shows N=5 runs. The position is initialized near the target with random quadrotor states. The quadrotor successfully follows the figure-eight path while stabilizing the payload.}
     \label{fig:three_eight}
 \end{figure}
 
@@ -133,10 +133,11 @@ We can see that the approach manages to scale to six quadrotors, with the policy
     \centering
     
     \includegraphics[width=\textwidth]{experiments/baseline_histogram_comparison.pdf}
-    \caption{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. The left plot shows the static payload position error for the baseline method. The right plot shows the static payload position error for the learned policy. Our method achieves a significantly lower error and failure rate compared to the baseline.}
+    \caption[Baseline vs learned static payload error]{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. The left plot shows the static payload position error for the baseline method. The right plot shows the static payload position error for the learned policy. Our method achieves a significantly lower error and failure rate compared to the baseline.}
     \label{fig:baseline_histogram_comparison}
 
 \end{figure}
+\todo{fix baseline comparison}
 We compare our learned policy with the baseline method from \autocite{Wahba2024} in terms of recovery from harsh conditions performance. The baseline planner models each cable as a rigid rod and relies on centralized offline trajectory optimization with an online controller that tracks these precomputed paths, which limits its ability to capture cable swing and mode switching, adapt to unexpected disturbances or payload changes or collisions, and meet real-time computational demands. Our Method adresses these limitations by leveraging reinforcement learning for a more robust decentalized solution.
 
 We compare our method with the baseline on the two quadrotor with payload scenario, where we evaluate the recovery from harsh conditions. We initialize the payload at $(0,0,1.5)$~m and the quadrotors in random positions around it. The baseline method is run with the same initialization and the same target position. We evaluate both methods on 1000 runs each, with the payload initialized in random states and the quadrotors in random positions around it. 
@@ -152,8 +153,7 @@ It is important to note that the baseline method might perform better in some sp
     \centering
     
     \includegraphics[width=\textwidth]{experiments/baseline_recovery.pdf}
-    \caption{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).
-    The figure shows N=10 runs. The position of payload and quadrotors is initialized randomly and the goal is to recover to the target and stabilize. The gray lines shows the payload trajectory of our method.}
+    \caption[Baseline vs learned two quad recovery]{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).}
     \label{fig:baseline_recovery}
 \end{figure}
 

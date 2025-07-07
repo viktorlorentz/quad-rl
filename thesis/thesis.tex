@@ -16,6 +16,11 @@
 \MSverbatimspacing
 \renewcommand{\cfttoctitlefont}{\Huge\bfseries\sffamily}
 \tableofcontents
+\newpage
+\renewcommand{\cftloftitlefont}{\Huge\bfseries\sffamily}
+\listoffigures
+
+
 \microtypesetup{protrusion=true}
 
 \MSverbatimspacing
@@ -37,11 +42,11 @@
 
 \pagestyle{fancy}
 
-\input{chapters/1-intro}
+\input{chapters/1-intro.tex}
 
-\input{chapters/2-related-work}
+\input{chapters/2-related-work.tex}
 
-\input{chapters/3-background}
+\input{chapters/3-background.tex}
 
 \input{chapters/4-quad-env.tex}
 % \addtocontents{toc}{\protect\newpage}

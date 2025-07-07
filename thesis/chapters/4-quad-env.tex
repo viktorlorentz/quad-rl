@@ -98,7 +98,7 @@ By constraining \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\) and sampling \(f_{\max}^i\
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{experiments/initial_conditions.png}
-    \caption{Randomly sampled initial configurations for the payload and quadrotors. The payload is positioned at the center, while quadrotors are uniformly distributed in a spherical shell around it.}
+    \caption[Harsh conditions generation]{Randomly sampled initial configurations for the payload and quadrotors. The payload is positioned at the center, while quadrotors are uniformly distributed in a spherical shell around it.}
     \label{fig:reset_config}
 \end{figure}
 At each reset, the payload center~$p$ is sampled uniformly in
@@ -139,6 +139,7 @@ This results in a even distribution of valid initial configurations, also includ
 
 \subsection{Reward Design}
 \todo{update reward}
+\todo{split quad reward -> payload reward}
 The goal of our reward is to encourage flight behaviors that bring the payload to its target at a speed of roughly $ v_{\max} = 0.7m/s$, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. Harsh penalties can induce “learning to terminate” behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function
 
 \[
@@ -221,7 +222,7 @@ r_{\mathrm{oob}} = -\,g(t)\,\mathbb{I}_{\mathrm{oob}}.
     \centering
     
     \includegraphics[width=\textwidth]{experiments/actions_comparison.pdf}
-    \caption{Comparison of policy trained with and without the action regularization reward. The left plot shows the actions over time of the policy with regularization, while the right plot shows the actions of the policy without regularization. The regularized policy produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits.}
+    \caption[Policy comparison with/without action regularization]{Comparison of policy trained with and without the action regularization reward. The left plot shows the actions over time of the policy with regularization, while the right plot shows the actions of the policy without regularization. The regularized policy produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits.}
     \label{fig:}
 \end{figure}
 Let \(\mathbf{a}_t,\mathbf{a}_{t-1}\) be consecutive normalized thrust vectors and \(\tilde f_{i,j}\) each rotor's thrust fraction.  We set
@@ -264,9 +265,10 @@ CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmar
     \centering
     
     \includegraphics[width=\textwidth]{experiments/train_metrics.pdf}
-    \caption{Average training metrics for one quadrotor with payload scenario. The top plot shows the average episode returns and the bottom plot shows the average episode lengths over environment steps and wall-clock time. The shaded area represents the standard deviation across 10 seeds. The maximum possible episode lenght here is 2048 environment steps, which corresponds to 8.2 seconds of flight time. In the end nearly all episodes are completing the episode indicating stable flight.}
+    \caption[Training metrics]{Average training metrics for one quadrotor with payload scenario. The top plot shows the average episode returns and the bottom plot shows the average episode lengths over environment steps and wall-clock time. The shaded area represents the standard deviation across 10 seeds. The maximum possible episode lenght here is 2048 environment steps, which corresponds to 8.2 seconds of flight time. In the end nearly all episodes are completing the episode indicating stable flight.}
     \label{fig:train_metrics}
 \end{figure}
+\todo{add training metrics comparison}
 Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework to implement decentralized policy optimization. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution.
 
 The decentralized policies are learned end-to-end via \gls{ppo} within our highly parallelized JAX/MJX simulation environment. At each iteration, a fixed number of synchronous actors collect trajectories in $M$ parallel environments over $N$ time steps, yielding $NM$ experiences per update. Collected rewards are bootstrapped with the learned critic to compute targets, and advantages are estimated using \gls{gae} with discount factor $\gamma$ and smoothing parameter $\lambda$. The overall loss combines the clipped policy objective
