@@ -21,41 +21,36 @@ We here only show recovery from up to 1.5~m. This, though, generalizes to any di
 To show that the position tracking capabilities generalize to a moving setpoint, we evaluate on a precomputed figure-eight trajectory. For each timestep we sample the policy position setpoint on the figure-eight trajectory, leading to the tracking behavior shown in Figure~\ref{fig:one_eight}. The figure shows the path of 5 runs randomly initialized around the start point of the trajectory, with the quads in suboptimal states. The figure shows how the quads very quickly manage to stabilize themselves and then continue after around 3~s to accurately follow the trajectory. Even though all quads are initialized with slightly different thrust ranges they all manage to accurately track the correct height of the trajectory. Due to the policy currently just being able to do position tracking, it always slightly lags behind the trajectory. This can be seen at the end of the trajectory where it does not fully reach the center. This could be reduced by explicitly training on trajectory following and adding multiple trajectory points or velocity states as shown in previous work.
 
 These experiments show that the trained policy for the single quadrotor with payload case exhibits great payload swing stabilization ability, while also being agile and very accurate in tracking.
-\todo{update plot six quadrotor with payload}
+
 \begin{figure}[H]
-    \centering
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        
-        \includegraphics[width=\textwidth]{experiments/one_recovery_error.pdf}
-        \caption[Single quadrotor recovery evaluation]{Recovery in the single quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentatge shows that most runs are successful and not terminated.}
-        \label{fig:payload_error_over_time_single}
-    \end{subfigure}
-    \hfill
-     \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        
-        \includegraphics[width=\textwidth]{experiments/two_recovery_error.pdf}
-        \caption[Two quadrotor recovery evaluation]{Recovery in the two quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error for most inital harsh states evantually converging to 0. The termination percentage shows that a high number of runs are successful and not terminated while most terminations occur right at initialization, because of very harsh initialization.}
-        \label{fig:payload_error_over_time_two}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        
-        \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
-        \caption[Three quadrotor recovery evaluation]{Recovery in the three quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
-        \label{fig:payload_error_over_time_three}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
+  \centering
+  % first row
+  \begin{subfigure}[t]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{experiments/one_recovery_error.pdf}
+    \caption[Single quadrotor recovery evaluation]{Recovery in the single quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentatge shows that most runs are successful and not terminated.}
+    \label{fig:payload_error_over_time_single}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{experiments/two_recovery_error.pdf}
+    \caption[Two quadrotor recovery evaluation]{Recovery in the two quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error for most inital harsh states evantually converging to 0. The termination percentage shows that a high number of runs are successful and not terminated while most terminations occur right at initialization, because of very harsh initialization.}
+    \label{fig:payload_error_over_time_two}
+  \end{subfigure}
 
-        \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
-        \caption[Six quadrotor recovery evaluation]{Recovery in the six quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
-        \label{fig:payload_error_over_time_six}
-    \end{subfigure}
+  \vspace{1em}  % optional space between rows
+  % second row
+  \begin{subfigure}[t]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{experiments/three_recovery_error.pdf}
+    \caption[Three quadrotor recovery evaluation]{Recovery in the three quadrotor with payload scenario from 1000 different initial harsh states. The Percentiles show smooth reduction of the initial high tracking error converging to 0. The termination percentage shows that nearly all runs are successful and not terminated, while most terminations occur right at initialization, because of very harsh initialization.}
+    \label{fig:payload_error_over_time_three}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{experiments/six_recovery_error.pdf}
+    \caption[Six quadrotor recovery evaluation]{Recovery in the six quadrotor with payload scenario from 1000 different initial harsh states. Most runs are terminated early, indicating limits of the approach.}
+    \label{fig:payload_error_over_time_six}
+  \end{subfigure}
 
-    \caption[Recovery error comparison]{Recovery error over time for different quadrotor configurations with payload.}
-    \label{fig:single_quad_payload_subfigs}
+  \caption[Recovery error comparison]{Recovery error over time for different quadrotor configurations with payload. The lines show the distance percentiles of the unterminated runs at each timestep. The green bar indicates the percentage of runs that were successfully recovered and stabilized at the target. The gray bars show the frequency of terminations over time.}
+  \label{fig:single_quad_payload_subfigs}
 \end{figure}
 
 
@@ -124,9 +119,13 @@ We also evaluate this in Figure~\ref{fig:payload_error_over_time_three}, where w
 \end{figure}
 
 \subsection{Six Quadrotors}
-The last configuration we evaluate is a team of six quadrotors, testing recovery from harsh conditions to evaluate the scalability of our approach. We run them with the policy trained specifically for the six quadrotor with payload scenario. The results are shown in Figure~\ref{fig:payload_error_over_time_six} evaluating 1,000 runs on the recovery scenario.  
+The last configuration we evaluate is a team of six quadrotors, testing recovery from harsh conditions to evaluate the scalability of our approach. We run them with the policy trained specifically for the six quadrotor with payload scenario. The results are shown in Figure~\ref{fig:payload_error_over_time_six} evaluating 1,000 runs on the recovery scenario.
+
 The policies are trained using the \gls{ippo} algorithm with the same hyperparameters as in the single-quadrotor case, but with a payload mass of 40~g to ensure that the payload is heavy enough to require cooperation.  
-We can see that the approach manages to scale to six quadrotors, with the policy being able to recover from harsh conditions and stabilize the payload at the target position. The termination histogram shows that \todo{fix} a lot more runs are terminated early indicating limits of the approach. Future work could improve this with privileged critic approaches, better representation of the payload and quadrotors in the observation space, and more complex network architectures. \todo{fix 6quads}
+The termination histogram in Figure~\ref{fig:payload_error_over_time_six} shows that most runs are terminated early indicating limits of our approach. These terminations mostly happen because the quadrotors struggle to coordinate their movements effectively under the increased complexity of the scenario, leading to collisions. A major limitation of our approach is that we currently do not preprocess or sort the other quadrotors' positions in the observation space, which leads to the policy not being able to effectively coordinate the movements of the quadrotors, because it needs to cover all possible combinations of relative positions. 
+
+One possible solution to this could be to sort the other quadrotors' positions by their distance to the agent in the observations, to reduce the complexity.
+Other approaches, that future work could investigate to improve on these limitations include privileged critic approaches, better representation of the payload and quadrotors in the observation space, and more complex network architectures, like for example utilizing attention architectures as in \autocite{huang_collision_2024}.
 
 \section{Comparison with Baseline}
 \begin{figure}[H]
