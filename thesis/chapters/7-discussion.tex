@@ -17,7 +17,7 @@ Finally, our experiments demonstrated that a policy trained for stationary posit
 These findings underscore the promise of RL for cooperative, cable-suspended payload transport.  Our policies recover rapidly from severe disturbances, coordinate effectively in teams, and track complex trajectories with precision.  Yet important limitations persist.  Under extreme conditions, such as large payload swings or widely dispersed vehicles, failures still occur, indicating that the policy's operating envelope does not cover all scenarios.
 
 Moreover, our approach currently relies on external motion capture and offers no obstacle avoidance or formal safety guarantees.  Each new payload mass or vehicle configuration also requires retraining, and sim-to-real validation has so far been limited to a narrow set of conditions. \todo{adjust sim-to-real}  In real deployments, full state information (including cable slackness and payload dynamics) is not directly observable, robust performance under sensor noise and estimation delays remains to be demonstrated.  Although our domain randomization conferred some adaptability to varying cable lengths and payload masses, systematic evaluation of these generalization limits is still needed.
-
+\todo{add payload shape limitations}
 \section{Future Work}
 
 Building on these lessons, we see several avenues for further research.  Incorporating richer state representations—whether through longer histories of past measurements or explicit online estimation of latent variables such as cable length and payload mass—could improve both performance and robustness.  Self-supervised techniques that infer hidden parameters from onboard IMU or vision sensors may enable fully autonomous adaptation without external motion capture.
