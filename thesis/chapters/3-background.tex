@@ -19,7 +19,7 @@ Before introducing the specific algorithm, we first define the key concepts and 
 \label{fig:rl_diagram}
 \end{figure}
 
-\gls{rl} problems are commonly framed as \gls{mdp}s, defined by the tuple \((\mathcal{S}, \mathcal{A}, P, r, \gamma)\), where \(\mathcal{S}\) is the set of states, \(\mathcal{A}\) is the set of actions, \(P(s_{t+1}\!\mid\!s_t,a_t)\) is the transition probability, \(r(s_t,a_t)\) is the immediate reward, \(\gamma \in [0,1)\) is the discount factor, and \(\rho_0\) is the initial state distribution with \(s_0 \sim \rho_0\). At each time step \(t\), the agent observes \(s_t\), samples and executes \(a_t \sim \pi_\theta(\cdot\mid s_t)\), receives \(r_t = r(s_t,a_t)\), and transitions to \(s_{t+1} \sim P(\cdot\mid s_t,a_t)\). This procedure is visualized in figure \ref{fig:rl_diagram}. In practice, the agent often has access only to a partial observation \(o_t\). We use \(o_t\) or \(s_t\) interchangeably depending on context.
+\gls{rl} problems are commonly framed as \gls{mdp}s, defined by the tuple \((\mathcal{S}, \mathcal{A}, P, r, \rho_0, \gamma)\), where \(\mathcal{S}\) is the set of states, \(\mathcal{A}\) is the set of actions, \(P(s_{t+1}\!\mid\!s_t,a_t)\) is the transition probability, \(r(s_t,a_t)\) is the immediate reward, \(\gamma \in [0,1)\) is the discount factor, and \(\rho_0\) is the initial state distribution with \(s_0 \sim \rho_0\). At each time step \(t\), the agent observes \(s_t\), samples and executes \(a_t \sim \pi_\theta(\cdot\mid s_t)\), receives \(r_t = r(s_t,a_t)\), and transitions to \(s_{t+1} \sim P(\cdot\mid s_t,a_t)\). This procedure is visualized in figure \ref{fig:rl_diagram}. In practice, the agent often has access only to a partial observation \(o_t\). We use \(o_t\) or \(s_t\) interchangeably depending on context.
 
 \paragraph{Policies}
 The agent’s behavior is defined by a policy \(\pi_{\theta}\), parameterized by \(\theta \in \mathbb{R}^{d}\). A deterministic policy outputs
@@ -34,14 +34,14 @@ We optimize \(\pi_\theta\) to maximize the expected return, typically representi
 
 \paragraph{Reward and Return}
 The agent's goal is to maximize the expected return, which is the total discounted reward over time. 
-The reward function \(r_t(s_t,a_t)\) provides immediate feedback to the agent and usually depends on the current state \(s_t\), action taken by the policy \(a_t\) and the next state \(s_{t+1}\). The return \(R_t\) at time step \(t\) is defined as the sum of discounted rewards:
+The reward function \(r_t=r(s_t,a_t)\) provides immediate feedback to the agent and usually depends on the current state \(s_t\), action taken by the policy \(a_t\) and the next state \(s_{t+1}\). The discounted return from the start is defined as
 \begin{equation}
-R_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k},
+R_0 = \sum_{t=0}^{\infty} \gamma^t r_t\,,
 \end{equation}
-where \(\gamma\) is the discount factor that determines the importance of future rewards. The expected return \(J(\pi)\) is defined as the expected value of the return:
-
+where \(\gamma\) is the discount factor that determines the importance of future rewards. The expected return \(J(\pi)\) is defined as the expected value of the discounted return
 \begin{equation}
-J(\pi) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,R_t\Bigr].
+J(\pi) = \mathbb{E}\bigl[R_0\bigr]
+= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t r_t\Bigr].
 \end{equation}
 and the goal is to find \(\pi^* = \arg\max_\pi J(\pi)\). Formally,
 \begin{equation}\label{eq:RL_opt}
@@ -78,7 +78,7 @@ A^\pi(s_t,a_t) = Q^\pi(s_t,a_t) - V^\pi(s_t).
 On-policy methods collect data under the current policy \(\pi_\theta\) and perform gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The policy gradient can be expressed using the advantage function:
 \begin{equation}
 \nabla_\theta J(\theta)
-= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,\nabla_\theta \log \pi_\theta(a_t\mid s_t)\,A_t\Bigr].
+= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t \,\nabla_\theta \log \pi_\theta(a_t\mid s_t)\,\hat A_t\Bigr].
 \end{equation}
 In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
 \subsection{Proximal Policy Optimization}
@@ -98,11 +98,11 @@ Here, \(r_t\) is the reward received at time \(t\), \(V_\phi(s_t)\) is the estim
 
 A key contribution of \gls{ppo} is the use of a clipped surrogate objective designed to restrict the size of policy updates. We can define the probability ratio between the new and the old policies
 \begin{equation}
-r_t(\theta) = \frac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_{\text{old}}}(a_t\mid s_t)},
+\rho_t(\theta) = \frac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_{\text{old}}}(a_t\mid s_t)},
 \end{equation}
 Now, the clipped surrogate objective is
 \begin{equation}
-L^{\text{CLIP}}(\theta) = \mathbb{E}_t\!\Bigl[\min\!\bigl(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\Bigr],
+L^{\text{CLIP}}(\theta) = \mathbb{E}_t\!\Bigl[\min\!\bigl(\rho_t(\theta)\,\hat{A}_t;\text{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\Bigr],
 \end{equation}
 where \(\hat{A}_t\) is an estimator of the advantage function and \(\epsilon\) is a hyperparameter defining the clipping range. This objective penalizes overly large deviations from the previous policy, ensuring that updates remain conservative while still allowing for meaningful improvements.
 
@@ -110,22 +110,22 @@ In practice, \gls{ppo} combines the policy surrogate loss with additional terms,
 \begin{equation}
 L(\theta,\phi) = \mathbb{E}_t\Bigl[L^{\text{CLIP}}(\theta)
   - c_1\,\bigl(V_\phi(s_t) - V_t^{\text{target}}\bigr)^2
-  + c_2\,S\bigl[\pi_\theta\big](s_t)\Bigr],
+  + c_2\,S\bigl[\pi_\theta(\cdot\mid s_t)\bigr]\Bigr],
 \end{equation}
 where \(c_1\) and \(c_2\) are coefficients that weight the contributions of the value function error and the entropy bonus \(S\big[\pi_\theta\big](s_t)\), respectively. The term \(\left(V_\phi(s_t) - V_t^{\text{target}}\right)^2\) is the critic's squared error against the target value \(V_t^{\text{target}}\). This final objective is optimized using stochastic gradient ascent over multiple epochs on the same batch of on-policy samples, updating both actor parameters \(\theta\) and critic parameters \(\phi\).
 
-The overall procedure of \gls{ppo} in an actor-critic setting is summarized in Algorithm~\ref{alg:ppo}. In the algorithm, \(\theta\) denotes the current policy parameters, \(\theta_{\text{old}}\) are the parameters used for generating the on-policy data, \(N\) is the number of parallel actors, \(T\) is the number of timesteps per actor rollout (with \(NT\) total timesteps per batch), \(K\) is the number of epochs over the data, and \(M \le NT\) is the minibatch size. The critic network's parameters \(\phi\) are updated alongside \(\theta\) whenever the value loss term is backpropagated.
+The overall procedure of \gls{ppo} in an actor-critic setting is summarized in Algorithm~\ref{alg:ppo}. In the algorithm, \(\theta\) denotes the current policy parameters, \(\theta_{\text{old}}\) are the parameters used for generating the on-policy data, \(U\) is the number of parallel actors (often parallel simulation environments), \(T\) is the number of timesteps per actor rollout (with \(UT\) total timesteps per batch), \(K\) is the number of epochs over the data, and \(M \le UT\) is the minibatch size. The critic network's parameters \(\phi\) are updated alongside \(\theta\) whenever the value loss term is backpropagated.
 
 \begin{algorithm}[H]
 \caption{Proximal Policy Optimization (Actor-Critic)}
 \label{alg:ppo}
 \begin{algorithmic}[1]
 \For{iteration = 1, 2, \dots}
-    \For{actor = 1, 2, \dots, N}
+    \For{actor = 1, 2, \dots, U}
         \State Run policy \(\pi_{\theta_{\text{old}}}\) (actor network) in the environment for \(T\) timesteps.
         \State Compute advantage estimates \(\hat{A}_1, \dots, \hat{A}_T\) using the critic network's value estimates.
     \EndFor
-    \State Optimize the composite loss \(L(\theta)\) with respect to \(\theta\) (for the actor) and update \(\phi\) (for the critic) using \(K\) epochs and minibatch size \(M \le NT\).
+    \State Optimize the composite loss \(L(\theta)\) with respect to \(\theta\) (for the actor) and update \(\phi\) (for the critic) using \(K\) epochs and minibatch size \(M \le UT\).
     \State Update \(\theta_{\text{old}} \leftarrow \theta\).
 \EndFor
 \end{algorithmic}
@@ -159,9 +159,9 @@ L_i(\theta_i) = \mathbb{E}_t\Bigl[L^{\mathrm{CLIP}}_i(\theta_i)
 \end{equation}
 where
 \begin{equation}
-L^{\mathrm{CLIP}}_i(\theta_i) = \mathbb{E}_t\!\Bigl[\min\bigl(r^i_t(\theta_i)\,\hat{A}^i_t,\;\text{clip}(r^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat{A}^i_t\bigr)\Bigr].
+L^{\mathrm{CLIP}}_i(\theta_i) = \mathbb{E}_t\!\Bigl[\min\bigl(\rho^i_t(\theta_i)\,\hat{A}^i_t;\text{clip}(\rho^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat{A}^i_t\bigr)\Bigr].
 \end{equation}
-Here, \(r^i_t(\theta_i)=\pi_{\theta_i}(a^i_t\mid o^i_t)/\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(o^i_t,a^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
+Here, \(\rho^i_t(\theta_i)=\pi_{\theta_i}(a^i_t\mid o^i_t)/\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(o^i_t,a^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization. \todo{maybe ippo algo?}
 
 \subsection{Multi-Agent PPO (MAPPO)}
 \gls{mappo} \cite{yu_surprising_2022} adopts a \gls{ctde} paradigm. A shared policy \(\pi_\theta(a^i\mid o^i)\) is used by all agents at execution, while training uses a centralized critic \(V_\phi(s_t)\) that has access to the full state or all agents' observations. The joint objective is
@@ -172,9 +172,9 @@ L(\theta,\phi) = \mathbb{E}_t\Bigl[L^{\mathrm{CLIP}}(\theta)
 \end{equation}
 where 
 \begin{equation}
-L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\Bigl[\min\bigl(r_t(\theta)\,\hat{A}_t,\;\text{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\Bigr],
+L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\Bigl[\min\bigl(\rho_t(\theta)\,\hat{A}_t;\text{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\Bigr],
 \end{equation}
-and \(r_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\). By conditioning the critic on the true global state, \gls{mappo} obtains lower-variance advantage estimates and improved credit assignment, while each agent remains decentralized at execution, relying only on its local observation \(o^i\). Shared policy parameters promote coordinated behaviors and efficient scaling.
+and \(\rho_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\). By conditioning the critic on the true global state, \gls{mappo} obtains lower-variance advantage estimates and improved credit assignment, while each agent remains decentralized at execution, relying only on its local observation \(o^i\). Shared policy parameters promote coordinated behaviors and efficient scaling.
 
 \section{Quadrotor Dynamics}
 \label{sec:quadrotor_control}
