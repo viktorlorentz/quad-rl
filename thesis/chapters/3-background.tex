@@ -6,16 +6,15 @@ The methods developed in this thesis build on foundational concepts from \gls{rl
 
 Model-free methods learn policies or value functions directly from observed interactions without constructing an explicit model of the environment's dynamics. This simplifies implementation and avoids model bias, but often requires more data to converge compared to model-based approaches.  
 
-This work focuses on model-free, on-policy, policy-optimization methods, where the policy used to collect data is the same one being updated. For a comprehensive treatment of \gls{rl} fundamentals, see \cite{SuttonBarto2018}.  
-\todo{rl  fig}
+This work focuses on model-free, on-policy, policy-optimization methods, where the policy used to collect data is the same one being updated. For a comprehensive treatment of \gls{rl} fundamentals, see \cite{SuttonBarto2018}.
 \subsection{Fundamentals}
 Before introducing the specific algorithm, we first define the key concepts and ideas of \gls{rl}.
 \paragraph{Markov Decision Processes}
 
 \begin{figure}
 \centering
-\includegraphics[width=0.8\textwidth]{images/rl_diagram.png}
-\caption[Reinforcement learning framework]{TODO   Reinforcement learning framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
+\includegraphics[width=0.8\textwidth]{images/figs/rl.pdf}
+\caption[Reinforcement learning framework]{Reinforcement learning framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
 \label{fig:rl_diagram}
 \end{figure}
 
