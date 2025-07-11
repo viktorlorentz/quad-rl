@@ -1,9 +1,17 @@
 \chapter*{Abstract}
 \thispagestyle{empty}
-This thesis \dots
-\todo{Abstract}
-\todo{link to github + videos}
-\chapter*{Kurzsusammenfassung}
-\thispagestyle{empty}
-Diese Arbeit \dots
+Collaborative transportation of cable-suspended payloads by teams of \glspl{uav} offers enhanced payload capacity, adaptability to irregular shapes, and built-in compliance, making it attractive for applications ranging from disaster relief to precision logistics. However, coordinating multiple \glspl{uav} under dynamic disturbances and nonlinear payload dynamics remains a challenging control problem. This thesis proposes \textit{CrazyMARL}, a decentralized \gls{rl} framework for multi-\gls{uav} cable-suspended payload transport. We formulate the task as a \gls{dec-pomdp}, in which each \gls{uav} learns a local policy based on its onboard observations and external positioning data. A high-performance GPU-parallel simulation pipeline, implemented in JAX and MuJoCo, enables scalable training across thousands of environments. We design a modular reward structure that balances trajectory tracking accuracy and payload stabilization, and we evaluate robustness for recovery from harsh conditions for varying team sizes. Experimental results in simulation demonstrate that the learned policies can outperform classical decentralized controllers in terms of disturbance rejection, recovery from harsh conditions, and tracking precision. This work paves the way for autonomous, resilient \gls{uav} teams capable of executing complex payload missions in unstructured environments.
+\paragraph{Keywords}
+\gls{uav}, multi-\gls{uav} systems, cable-suspended payload transport, reinforcement learning, multi-agent reinforcement learning, Crazyflie
+
+
+
+
+\paragraph{Code \& Videos}
+\url{https://github.com/viktorlorentz/crazyMARL}
+
+
+\chapter*{Deutsche Kurzzusammenfassung}
+Der kollaborative Transport von an Kabeln hängenden Nutzlasten durch \gls{uav}-Teams bietet erhöhte Tragfähigkeit, Flexibilität bei unregelmäßigen Lastformen und inhärente Robustheit, wodurch er besonders für Anwendungen wie Katastrophenhilfe oder Präzisionslogistik attraktiv ist. Die Koordination mehrerer \glspl{uav} unter dynamischen Bedingungen und nichtlinearen Nutzlastdynamiken bleibt jedoch eine regelungstechnische Herausforderung. Diese Arbeit stellt \textit{CrazyMARL} vor, ein dezentrales \gls{rl}-Framework für den kabelbasierten Nutzlasttransport durch kooperierende \glspl{uav}. Die Aufgabe wird dabei als \gls{dec-pomdp} formuliert, wobei jedes \gls{uav} eigenständig eine lokale Regelstrategie auf Basis lokaler Sensordaten und externer Positionsdaten erlernt. Eine GPU-parallelisierte Simulationspipeline auf Basis von JAX und MuJoCo ermöglicht skalierbares Training über tausende parallele Simulationen. Mithilfe einer modularen Belohnungsfunktion werden gleichzeitig Trajektoriengenauigkeit und Nutzlaststabilisierung berücksichtigt. Simulationsergebnisse zeigen, dass die erlernten Strategien klassischen Reglern hinsichtlich Robusthei und Präzision überlegen sind. Damit schafft diese Arbeit Grundlagen für autonome, resiliente \gls{uav}-Teams, die komplexe Transportaufgaben in herausfordernden Umgebungen bewältigen können.
+
 \pagebreak
