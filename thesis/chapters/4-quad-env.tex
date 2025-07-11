@@ -29,8 +29,19 @@ We penalize payload tracking error and include additional terms to discourage la
 
 Each agent must observe its own state as well as the payload's state and the position of the other agents to be able to avoid them. Therefore agent $i$ observes
 \begin{equation}
-o^i_t = \bigl(\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t,\mathbf{e}^P_t,\mathbf{v}^P_t\bigr),
+    \label{eq:obs}
+    o^i_t 
+    = \Bigl(
+      \hat{\mathbf{p}}^i_t,\;
+      \hat{\mathbf{v}}^i_t,\;
+      \hat{\mathbf{R}}^i_t,\;
+      \hat{\boldsymbol{\omega}}^i_t,\;
+      \mathbf{e}^P_t,\;
+      \mathbf{v}^P_t,\;
+      \{\hat{\mathbf{p}}^j_t\}_{j \in \mathcal{Q}\setminus\{i\}}
+    \Bigr),
 \end{equation}
+
 where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from motion capture. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
 Agents share a single policy conditioned on its current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
@@ -67,8 +78,8 @@ We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training \gl
 Our framework provides a configurable environment generator for simulating multi-agent cable-suspended payload transport tasks, as well as swarm control of single quadrotors. The environment is designed to be modular and extensible, allowing for easy definition of new scenarios. The environment can be initialized with a configuration, defining the number of quadrotors, the payload mass, cable length, and other parameters. The environment supports both single-agent and multi-agent scenarios, where each agent is a quadrotor with its own observations and actions.
 \begin{figure}
 \centering
-\includegraphics[width=0.8\textwidth]{figs/quad_env.png}
-\caption{Rendering of the mujoco simulation with three quadrotors carrying a cable-suspended payload.}
+\includegraphics[width=0.7\textwidth]{figs/quad_env.png}
+\caption{Rendering of the MuJoCo simulation with three quadrotors carrying a cable-suspended payload.}
 \label{fig:crazyflie_env}
 \end{figure}
 
@@ -79,6 +90,7 @@ The quadrotors are modeled as rigid bodies with four rotors, each producing thru
 We implement the JaxMARL api for multi agent environments based on Gymnax \autocite{gymnax2022github}. This wraps our environment in a standardized interface that can be used with any compatible \gls{rl} algorithm. The wrapper adds an abstraction layer to the simulation. Each timestep we call a step function with a set of actions for each quadrotor and the environment returns the updated state which is then used to compute the rewards and observations for each agent.
 
 \subsection{Observation Space}
+In practice we slightly adjust the observation structure defined in Equation~\eqref{eq:obs}. Each agent \(i\) still receives a local observation vector \(\mathbf{o}^i_t\) that contains its own state, the payload's state, and the relative positions of other agents.  This ensures that each agent can act based on its own measurements and the shared payload information, while not directly observing other agents' internal states. To define the observation space, we first define the global observation vector \(\mathbf{o}_t\) that contains all relevant information about the system state at time \(t\). This also serves as the basis for computing rewards and termination conditions and allows for a centralized training setup.
 
 At each control step \(t\), the simulation environment produces a high-dimensional state vector. We map this to a global observation vector 
 \begin{equation}
