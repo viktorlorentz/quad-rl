@@ -30,7 +30,7 @@ We penalize payload tracking error and include additional terms to discourage la
 Each agent must observe its own state as well as the payload's state and the position of the other agents to be able to avoid them. Therefore agent $i$ observes
 \begin{equation}
     \label{eq:obs}
-    o^i_t 
+    \tilde{o}^i_t 
     = \Bigl(
       \hat{\mathbf{p}}^i_t,\;
       \hat{\mathbf{v}}^i_t,\;
@@ -39,12 +39,13 @@ Each agent must observe its own state as well as the payload's state and the pos
       \mathbf{e}^P_t,\;
       \mathbf{v}^P_t,\;
       \{\hat{\mathbf{p}}^j_t\}_{j \in \mathcal{Q}\setminus\{i\}}
-    \Bigr),
+    \Bigr).
 \end{equation}
+\emph{Note that \(\tilde{o}^i_t\) is a simplified observation. The exact observation model is defined below.}
 
 where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from motion capture. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
-Agents share a single policy conditioned on its current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
+Agents share a single policy conditioned on their current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
 \begin{equation}
   a^i_t \sim \pi_{\theta}\bigl(a^i_t \mid o^i_t,\;a^i_{t-1}\bigr)
   \quad\text{for }i=1,\dots,Q.
@@ -89,38 +90,47 @@ The quadrotors are modeled as rigid bodies with four rotors, each producing thru
 
 We implement the JaxMARL api for multi agent environments based on Gymnax \autocite{gymnax2022github}. This wraps our environment in a standardized interface that can be used with any compatible \gls{rl} algorithm. The wrapper adds an abstraction layer to the simulation. Each timestep we call a step function with a set of actions for each quadrotor and the environment returns the updated state which is then used to compute the rewards and observations for each agent.
 
-\subsection{Observation Space}
+\subsection{Observation Mapping}
 In practice we slightly adjust the observation structure defined in Equation~\eqref{eq:obs}. Each agent \(i\) still receives a local observation vector \(\mathbf{o}^i_t\) that contains its own state, the payload's state, and the relative positions of other agents.  This ensures that each agent can act based on its own measurements and the shared payload information, while not directly observing other agents' internal states. To define the observation space, we first define the global observation vector \(\mathbf{o}_t\) that contains all relevant information about the system state at time \(t\). This also serves as the basis for computing rewards and termination conditions and allows for a centralized training setup.
-
+\paragraph{Global Observations}
 At each control step \(t\), the simulation environment produces a high-dimensional state vector. We map this to a global observation vector 
 \begin{equation}
-\mathbf{o}_t \;=\; \bigl[\;\underbrace{\mathbf{e}^P_t}_{3},\;\underbrace{\mathbf{v}^P_t}_{3},\;\underbrace{\{\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t,\;\boldsymbol{\alpha}^i_t\}_{i=1}^N}_{24N},\;\underbrace{\mathbf{a}_{t-1}}_{4}\bigr] \;\in\;\mathbb{R}^{6 + 24N + 4}
+\mathbf{o}_t \;=\; \bigl[\;\underbrace{\mathbf{e}^P_t}_{3},\;\underbrace{\mathbf{v}^P_t}_{3},\;\underbrace{\{\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t\}_{i=1}^Q}_{Q(3+9+3+3+4)}\bigr] \;\in\;\mathbb{R}^{6 + 22Q}
 \end{equation}
-Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error, and \(\mathbf{v}^P_t\) its velocity.  For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(R^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) and \(\boldsymbol{\omega}^i_t\) its body-frame linear and angular velocities, \(\mathbf{a}^i_t\) and \(\boldsymbol{\alpha}^i_t\) its body-frame linear and angular accelerations and \(\mathbf{a}_{t-1}\) the concatenation of all agents previous thrust commands.  By construction, this global observation vector contains all information required to compute rewards and termination conditions.
+Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error and \(\mathbf{v}^P_t\) its velocity. Giving the error as observation instead of an absolute position, allows us to give a position setpoint and track trajectories. We normalize the error to have the policy automatically generalize to a target at any distance. For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(R^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) is the linear velocity in world frame, \(\boldsymbol{\omega}^i_t\) its body-frame angular velocities and \(\mathbf{a}^i_{t-1}\) the agents previous action. By construction, this global observation vector contains all information required to compute rewards and termination conditions. It can be easily adjusted to include additional information or other mappings.
 
-During decentralized execution, each agent \(i\) receives only the subset of entries corresponding to the payload terms, its own dynamic state block, and its most recent command.  Concretely, agent \(i\) observes
+\paragraph{Local Observations}
+Since we want to train our policy in a \gls{ctde} fashion, we map the global observation vector to each agent's local observation space. During decentralized execution, each agent \(i\) receives only the subset of entries corresponding to the payload terms, its own dynamic state block, and the other quadrotors relative positions.  Concretely, agent \(i\) observes
 \begin{equation}
 \mathbf{o}^i_t 
 \;=\;
 \bigl[\,
-\mathbf{e}^P_t,\;\mathbf{v}^P_t,\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t,\;\boldsymbol{\alpha}^i_t,\;\mathbf{a}^i_{t-1}
-\,\bigr]\;\in\;\mathbb{R}^{6 + 24 + 4}\,,
+\mathbf{e}^P_t,\;\mathbf{v}^P_t,\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_{t-1},\;
+\{\mathbf{r}^j_t\}_{j \in \mathcal{Q}\setminus\{i\}}
+\,\bigr]\;\in\;\mathbb{R}^{6 + 22 + Q - 1}\,,
 \end{equation}
-so that each policy conditions on the payload's error and velocity, the agent's full pose and inertial measurements, and its previous action.  This restriction enforces the Dec-POMDP structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
+so that each policy conditions on the payload's error and velocity, the agent's full pose and velocity, and its previous action. This restriction enforces the Dec-POMDP structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
 
+The observation structure can also be used for a scenario without a payload, where the team observations containing payload position and velocity are omitted.
+\paragraph{Observation Noise}
+To account for sensor imperfections, we can inject structured Gaussian noise into the global observation vector at each timestep. Concretely, given an observation $\mathbf{o}$, we draw a standard normal vector $\bm{\eta}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ of the same dimension and compute
+\begin{equation}
+    \mathbf{o}' = \mathbf{o} + \sigma_{\mathrm{obs}}\,\bm{\Lambda}\,\bm{\eta}\,,
+\end{equation}
+where $\sigma_{\mathrm{obs}}$ is a tunable noise amplitude and $\bm{\Lambda}\in\mathbb{R}^{6+22Q}$ is a diagonal scaling vector to tune the noise level for each observation component. We chose each scale factor by examining the typical range of values for its corresponding observation component and setting the noise magnitude accordingly. This ensures that each component of the observation is corrupted by noise proportional both to its typical magnitude and the global noise level.
 \subsection{Action Space}
 
-Each agent \(i\) outputs a four-dimensional vector \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\), representing normalized thrust commands for its rotors.  These are mapped to physical rotor forces via
+The policy of each agent \(i\) outputs a four-dimensional vector \(\mathbf{a}^i_t\in[-1,1]^4\), representing normalized thrust commands for its rotors.  These are mapped to physical rotor forces via
 \begin{equation}
 f^i_{j,t}
 \;=\;
-\frac{\tilde{a}^i_{j,t} + 1}{2}\;f_{\max}^i,
+\frac{a^i_{j,t} + 1}{2}\;f_{\max}^i,
 \qquad
 j=1,\dots,4,
 \end{equation}
-where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty.  The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator, yielding continuous next-state dynamics.  
+where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty.  The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator.  
 
-By constraining \(\tilde{\mathbf{a}}^i_t\in[-1,1]^4\) and sampling \(f_{\max}^i\) within a known bound, the policy learns to produce smooth, safe thrust profiles that transfer effectively from simulation to the real Crazyflie platform.  
+We always constrain \(\mathbf{a}^i_t\in[-1,1]^4\) and sample \(f_{\max}^i\) within a known bound to produce safe thrust profiles that transfer more effectively from simulation to the real Crazyflie platform.\todo{maybe talk about the motor delay model...}
 \subsection{Domain Randomization}
 \subsubsection{Environment Reset}
 \label{sec:reset}
