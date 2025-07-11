@@ -57,26 +57,26 @@ We seek the shared parameters \(\theta\) that maximize the expected discounted r
 By maximizing \(J(\theta)\), the agents learn to jointly minimize payload tracking error \(e^P_t\) while maintaining stability throughout the cooperative transport task.
 
 We have now formalized the problem as a \gls{dec-pomdp}, which allows us to apply decentralized \gls{marl} algorithms to learn policies that can handle the complexities of multi-agent coordination in cable-suspended payload transport tasks. The next section describes the CrazyMARL framework, which provides the necessary simulation and training infrastructure to implement this efficiently.
+\todo{maybe add fig wit multiple agents and env...}
 
 \section{CrazyMARL}
-We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training multi-agent \gls{rl}(MARL) policies on teams of Crazyflie quadrotors. Our framework seamlessly handles both single-vehicle and cooperative multi-agent tasks, including scenarios with cable-suspended payloads. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms.
-\autocite{gymnax2022github} based on gymnax.
+We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training \gls{marl} policies on teams of Crazyflie quadrotors. Our extendable framework implements both learning for a single quadrotor without payload, as well as single-vehicle and cooperative multi-agent cable-suspended payload transport tasks. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms and other research algorithm implementing the JaxMARL api.
+
 \subsection{Simulation Environment}
-The simulation environment is built upon MuJoCo's XML specification and the GPU-accelerated MJX solver. We adopt a modular, extensible design in which each scenario is defined by auto-generated XML descriptors. These files specify vehicle geometries, inertial properties, cable parameters, payload characteristics, and any static or dynamic obstacles. A lightweight Python utility reads a user-defined configuration (YAML or JSON) and generates the corresponding XML, allowing researchers to rapidly prototype new dynamics or collaborative tasks. \todo{more details on configuration and generation of the XML files.}
 
+Our framework provides a configurable environment generator for simulating multi-agent cable-suspended payload transport tasks, as well as swarm control of single quadrotors. The environment is designed to be modular and extensible, allowing for easy definition of new scenarios. The environment can be initialized with a configuration, defining the number of quadrotors, the payload mass, cable length, and other parameters. The environment supports both single-agent and multi-agent scenarios, where each agent is a quadrotor with its own observations and actions.
+\begin{figure}
+\centering
+\includegraphics[width=0.8\textwidth]{figs/quad_env.png}
+\caption{Rendering of the mujoco simulation with three quadrotors carrying a cable-suspended payload.}
+\label{fig:crazyflie_env}
+\end{figure}
 
+Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment with three quadrotors carrying a cable-suspended payload. The environment is built upon the MuJoCo physics engine, which provides accurate and efficient simulation of rigid body dynamics, including contact and friction. The MJX solver is used to compute the physics updates in parallel on the GPU, allowing for high-performance training of reinforcement learning policies. We can also visualize the simulation using the rendering capabilities of MuJoCo, which provides a realistic representation of the quadrotors, payload, and cables.
 
+The quadrotors are modeled as rigid bodies with four rotors, each producing thrust and a small torque. We optionally reduce the quadrotors collision mesh to a rectangular prism in order to speed up collision detection. The payload is modeled as a rigid body sphere suspended by cables, which are represented as tendons in MuJoCo. The shape and attachment points of the payload are configurable. The cables connect the quadrotors to the payload and can be configured with different lengths and properties. The environment also supports obstacles, which were not yet further utilized in our work, but could be a good basis for future work on obstacle avoidance or dynamic interactions with the environment.
 
-\subsubsection{Quadrotor}
-% - Modeling of quadrotor with thrust based on work of https://github.com/google-deepmind/mujoco_menagerie/blob/main/bitcraze_crazyflie_2/cf2.xml
-- Describe thrust on quadrotor
-- Motor Model
-
-\subsubsection{Cable Suspended Payload}
-- Description of cable suspended payload modeling with tendons or cables
-% \subsubsection{Obstacles}
-\subsubsection{Simulation Parameters}
-- Configuration of simulation with initial position wind etc
+We implement the JaxMARL api for multi agent environments based on Gymnax \autocite{gymnax2022github}. This wraps our environment in a standardized interface that can be used with any compatible \gls{rl} algorithm. The wrapper adds an abstraction layer to the simulation. Each timestep we call a step function with a set of actions for each quadrotor and the environment returns the updated state which is then used to compute the rewards and observations for each agent.
 
 \subsection{Observation Space}
 
