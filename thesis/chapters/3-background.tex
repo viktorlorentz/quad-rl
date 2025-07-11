@@ -136,7 +136,7 @@ This section provides an overview of the theoretical background of \gls{marl} as
 \subsection{Multi-Agent Markov Decision Process}
 A cooperative multi-agent reinforcement learning problem can be formalized as a \gls{dec-pomdp}\cite{oliehoek_concise_2016}, defined by the tuple
 \begin{equation}
-  \bigl(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\gamma\bigr)
+  \bigl(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\rho_0,\,\gamma\bigr)
 \end{equation}
 where $\mathcal{N}=\{1,\dots,N\}$ is the set of agents; $\mathcal{S}$ is the set of global states (with $s_0\sim\rho(s)$ denoting the initial state distribution); $\mathcal{A}^i$ is the action space of agent $i$, and the joint action space is $\mathcal{A} = \prod_{i=1}^N \mathcal{A}^i$; $P(s_{t+1} \mid s_t, a_t)$ is the transition function, where $a_t=(a^1_t,\dots,a^N_t)\in\mathcal{A}$; $r(s_t,a_t)\in\mathbb{R}$ is the common team reward received by all agents; $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s_t)$ is the joint observation function; and $\gamma\in[0,1)$ is the discount factor.
 At each time step $t$, each agent $i$ receives a private observation $o^i_t \in \Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action 
@@ -211,7 +211,7 @@ with \(\boldsymbol{\nu}_p,\boldsymbol{\nu}_R\) small errors and \(\widehat{\cdot
 \mathbf{a}_m^\mathsf{T} & \boldsymbol{\omega}_m^\mathsf{T} & \mathbf{p}_{\mathrm{mocap}}^\mathsf{T} & \mathrm{vec}(\mathbf{R}_{\mathrm{mocap}})^\mathsf{T}
 \end{bmatrix}^\mathsf{T} = h(x) + \boldsymbol{\nu}.
 \end{equation}
-An Extended Kalman Filter (EKF) fuses these measurements to produce \(\hat{x} = (\hat{\mathbf{p}},\,\hat{\mathbf{v}},\,\hat{\mathbf{R}},\,\hat{\boldsymbol{\omega}})\) for use by the low-level controllers.
+An \gls{ekf} fuses these measurements to produce \(\hat{x} = (\hat{\mathbf{p}},\,\hat{\mathbf{v}},\,\hat{\mathbf{R}},\,\hat{\boldsymbol{\omega}})\) for use by the low-level controllers.
 \subsection{Quadrotor Dynamics}
 \label{sec:quadrotor_dynamics}
 We augment the state \(x=(\mathbf{p},\mathbf{v},\mathbf{R},\boldsymbol{\omega})\) with propeller speeds \(\boldsymbol{\Omega}=[\Omega_1,\Omega_2,\Omega_3,\Omega_4]^\mathsf{T}\), forming

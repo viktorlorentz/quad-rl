@@ -1,47 +1,65 @@
 \chapter{Training Multi-Agent Reinforcement Learning Policies for Crazyflie Quadrotors}
 
-This chapter presents our methodology for training decentralized \gls{marl} policies that enable a team of Crazyflie quadrotors to cooperatively transport a cable-suspended payload. We begin by formulating the cooperative transport task as a \gls{dec-pomdp}, defining the state, action, observation, and reward structures. We then describe our high-performance simulation and training pipeline, \todo{write method intro}
+This chapter presents our methodology for training decentralized \gls{marl} policies that enable a team of Crazyflie quadrotors to cooperatively transport a cable-suspended payload. We begin by formulating the cooperative transport task as a \gls{dec-pomdp}, defining the state, action, and observation structures. We then describe our high-performance simulation and training pipeline, and finally present the modular reward design used to train our policies.
 \section{Problem Formulation}
 
-We model a team of $N$ Crazyflie quadrotors collaboratively carrying a cable-suspended payload as the Dec-POMDP $(\mathcal{N}, \mathcal{S}, \{\mathcal{A}^i\}_{i=1}^N, P, r, \{\Omega^i\}_{i=1}^N, O, \gamma)$, where $\mathcal{N} = \{1,2,\dots,N\}$ is the set of agents. At each discrete timestep $t$, the global state 
+We model a team of $Q$ Crazyflie quadrotors collaboratively carrying a cable-suspended payload as the \gls{dec-pomdp} $(\mathcal{Q}, \mathcal{S}, \{\mathcal{A}^i\}_{i=1}^Q, P, r, \{\Omega^i\}_{i=1}^Q, O, \rho_0, \gamma)$, where $\mathcal{Q} = \{1,2,\dots,Q\}$ is the set of agents. At each discrete timestep $t$, the global state 
 \begin{equation}
-s_t = \bigl(\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\}_{i=1}^N,\; \mathbf{p}^P_t,\mathbf{v}^P_t\bigr)
+s_t = \bigl(\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\}_{i=1}^Q,\; \mathbf{p}^P_t,\mathbf{v}^P_t\bigr)
 \end{equation}
-encapsulates each quadrotor's position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload's position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(s_{t+1}\mid s_t, a_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor–payload dynamics (including cable tensions and disturbances) over the fixed interval $\Delta t$.
+encapsulates each quadrotor's position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload's position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(s_{t+1}\mid s_t, a_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor and payload dynamics (including cables) over the fixed interval $\Delta t$.
+
+The initial state is sampled from a distribution $\rho_0$. In our case $\rho_0$ defines harsh initial conditions, such that the policies must learn to recover from them.
 
 Each agent $i$ selects an action 
 \begin{equation}
 a^i_t = (f^i_{1,t},f^i_{2,t},f^i_{3,t},f^i_{4,t}) \in \mathbb{R}^4
 \end{equation}
-where $f^i_{j,t}$ is the thrust of rotor~$j$. The joint action is $a_t = (a^1_t,\dots,a^N_t)$. 
+where $f^i_{j,t}$ is the thrust of rotor~$j$. The joint action of all agents is $a_t = (a^1_t,\dots,a^Q_t)$. 
 
 We define the payload position tracking error as
 $
-\mathbf{e}^P_t \;=\; \mathbf{p}^P_t \;-\; \mathbf{p}^P_{\mathrm{des},t},
+\mathbf{e}^P_t = \mathbf{p}^P_t - \mathbf{p}^P_{\mathrm{des},t},
 $
-so that $\|\mathbf{e}^P_t\|^2$ represents the squared tracking error at time $t$. A shared reward 
+so that $e^P_t = \|\mathbf{e}^P_t\|$ represents the tracking error at time $t$. The main objective is to minimize this error while maintaining stability in the system. This gives us a rough reward structure of:
 \begin{equation}
-r(s_t,a_t) = -\,\|\mathbf{e}^P_t\|^2 \;-\; \text{(stability penalties)}
+r(s_t,a_t) \approx\; - e^P_t \;-\; \text{(stability penalties)}
 \end{equation}
-penalizes payload tracking error $\|\mathbf{e}^P_t\|^2$ and includes additional terms to discourage large payload swing or cable-tension imbalance.
+We penalize payload tracking error and include additional terms to discourage large payload swing or cable-tension imbalance.
 
-Agent $i$ observes 
+Each agent must observe its own state as well as the payload's state and the position of the other agents to be able to avoid them. Therefore agent $i$ observes
 \begin{equation}
 o^i_t = \bigl(\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t,\mathbf{e}^P_t,\mathbf{v}^P_t\bigr),
 \end{equation}
-where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are EKF estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from motion capture. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
+where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from motion capture. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
-Each agent $i$ maintains a policy $\pi^i_{\theta_i}(a^i \mid \tau^i)$ conditioned on its action-observation history $\tau^i_t = (o^i_0,a^i_0,\dots,o^i_t)$. During decentralized execution, the joint policy factorizes as
+Agents share a single policy conditioned on its current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
 \begin{equation}
-\pi_\theta(a_t \mid \tau_t) \;=\; \prod_{i=1}^N \pi^i_{\theta_i}(a^i_t \mid \tau^i_t),
+  a^i_t \sim \pi_{\theta}\bigl(a^i_t \mid o^i_t,\;a^i_{t-1}\bigr)
+  \quad\text{for }i=1,\dots,Q.
 \end{equation}
-where $\theta=(\theta_1,\dots,\theta_N)$. We seek $\theta$ that maximizes the expected discounted return
+
+
+For multiple agent scenarios we sample the actions independently for each agent, so that the joint action is given by $a_t = \bigl(a^1_t,\dots,a^Q_t\bigr)$.
+
+
+We seek the shared parameters \(\theta\) that maximize the expected discounted return
 \begin{equation}
-J(\theta) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t,a_t)\Bigr],
+\begin{aligned}
+\text{maximize}\quad & J(\theta) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t,a_t)\Bigr],\\
+\text{subject to}\quad &s_0 \sim \rho_0,\\
+&s_{t+1} \sim P\bigl(\cdot\mid s_t,a_t\bigr),\\
+&o^i_t \sim O\bigl(\cdot\mid s_t\bigr),\\
+&a^i_t \sim \pi_{\theta}\bigl(\cdot\mid o^i_t,a^i_{t-1}\bigr)
+\quad\forall i.
+\end{aligned}
 \end{equation}
-subject to $s_{t+1}\sim P(\cdot\mid s_t,a_t)$, $a^i_t\sim \pi^i_{\theta_i}(\cdot\mid \tau^i_t)$, and $o^i_t\sim O(\cdot\mid s_t)$. By maximizing $J(\theta)$, agents learn to jointly minimize payload tracking error $\|\mathbf{e}^P_t\|^2$ while maintaining stability throughout the cooperative transport task.
+By maximizing \(J(\theta)\), the agents learn to jointly minimize payload tracking error \(e^P_t\) while maintaining stability throughout the cooperative transport task.
+
+We have now formalized the problem as a \gls{dec-pomdp}, which allows us to apply decentralized \gls{marl} algorithms to learn policies that can handle the complexities of multi-agent coordination in cable-suspended payload transport tasks. The next section describes the CrazyMARL framework, which provides the necessary simulation and training infrastructure to implement this efficiently.
+
 \section{CrazyMARL}
-We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training multi-agent reinforcement learning (MARL) policies on teams of Crazyflie quadrotors. Our framework seamlessly handles both single-vehicle and cooperative multi-agent tasks, including scenarios with cable-suspended payloads. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms.
+We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training multi-agent \gls{rl}(MARL) policies on teams of Crazyflie quadrotors. Our framework seamlessly handles both single-vehicle and cooperative multi-agent tasks, including scenarios with cable-suspended payloads. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms.
 \autocite{gymnax2022github} based on gymnax.
 \subsection{Simulation Environment}
 The simulation environment is built upon MuJoCo's XML specification and the GPU-accelerated MJX solver. We adopt a modular, extensible design in which each scenario is defined by auto-generated XML descriptors. These files specify vehicle geometries, inertial properties, cable parameters, payload characteristics, and any static or dynamic obstacles. A lightweight Python utility reads a user-defined configuration (YAML or JSON) and generates the corresponding XML, allowing researchers to rapidly prototype new dynamics or collaborative tasks. \todo{more details on configuration and generation of the XML files.}
@@ -128,7 +146,7 @@ q_i = p + r_i
 \end{bmatrix},
 \end{equation}
 \todo{fix equations}
-with the $z$–coordinate clipped. 
+with the $z$-coordinate clipped. 
 This results in a even distribution of valid initial configurations, also including starting from the ground as shown in \autoref{fig:reset_config}. 
 
 
