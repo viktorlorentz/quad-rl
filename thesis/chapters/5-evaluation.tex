@@ -20,7 +20,7 @@ We here only show recovery from up to 1.5~m. This, though, generalizes to any di
 To show that the position tracking capabilities generalize to a moving setpoint, we evaluate on a precomputed figure-eight trajectory. For each timestep we sample the policy position setpoint on the figure-eight trajectory, leading to the tracking behavior shown in Figure~\ref{fig:one_eight}. The figure shows the path of 5 runs randomly initialized around the start point of the trajectory, with the quads in suboptimal states. The figure shows how the quads very quickly manage to stabilize themselves and then continue after around 3~s to accurately follow the trajectory. Even though all quads are initialized with slightly different thrust ranges they all manage to accurately track the correct height of the trajectory. Due to the policy currently just being able to do position tracking, it always slightly lags behind the trajectory. This can be seen at the end of the trajectory where it does not fully reach the center. This could be reduced by explicitly training on trajectory following and adding multiple trajectory points or velocity states as shown in previous work.
 
 These experiments show that the trained policy for the single quadrotor with payload case exhibits great payload swing stabilization ability, while also being agile and very accurate in tracking.
-
+\todo{maybe add failed runs?}
 \begin{figure}[H]
   \centering
   % first row
