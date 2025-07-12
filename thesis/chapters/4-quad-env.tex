@@ -92,14 +92,14 @@ We implement the JaxMARL api for multi agent environments based on Gymnax \autoc
 
 \subsection{Observation Mapping}
 In practice we slightly adjust the observation structure defined in Equation~\eqref{eq:obs}. Each agent \(i\) still receives a local observation vector \(\mathbf{o}^i_t\) that contains its own state, the payload's state, and the relative positions of other agents.  This ensures that each agent can act based on its own measurements and the shared payload information, while not directly observing other agents' internal states. To define the observation space, we first define the global observation vector \(\mathbf{o}_t\) that contains all relevant information about the system state at time \(t\). This also serves as the basis for computing rewards and termination conditions and allows for a centralized training setup.
-\paragraph{Global Observations}
+\subsubsection{Global Observations}
 At each control step \(t\), the simulation environment produces a high-dimensional state vector. We map this to a global observation vector 
 \begin{equation}
 \mathbf{o}_t \;=\; \bigl[\;\underbrace{\mathbf{e}^P_t}_{3},\;\underbrace{\mathbf{v}^P_t}_{3},\;\underbrace{\{\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t\}_{i=1}^Q}_{Q(3+9+3+3+4)}\bigr] \;\in\;\mathbb{R}^{6 + 22Q}
 \end{equation}
 Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error and \(\mathbf{v}^P_t\) its velocity. Giving the error as observation instead of an absolute position, allows us to give a position setpoint and track trajectories. We normalize the error to have the policy automatically generalize to a target at any distance. For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(R^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) is the linear velocity in world frame, \(\boldsymbol{\omega}^i_t\) its body-frame angular velocities and \(\mathbf{a}^i_{t-1}\) the agents previous action. By construction, this global observation vector contains all information required to compute rewards and termination conditions. It can be easily adjusted to include additional information or other mappings.
 
-\paragraph{Local Observations}
+\subsubsection{Local Observations}
 Since we want to train our policy in a \gls{ctde} fashion, we map the global observation vector to each agent's local observation space. During decentralized execution, each agent \(i\) receives only the subset of entries corresponding to the payload terms, its own dynamic state block, and the other quadrotors relative positions.  Concretely, agent \(i\) observes
 \begin{equation}
 \mathbf{o}^i_t 
@@ -112,7 +112,7 @@ Since we want to train our policy in a \gls{ctde} fashion, we map the global obs
 so that each policy conditions on the payload's error and velocity, the agent's full pose and velocity, and its previous action. This restriction enforces the Dec-POMDP structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
 
 The observation structure can also be used for a scenario without a payload, where the team observations containing payload position and velocity are omitted.
-\paragraph{Observation Noise}
+\subsubsection{Observation Noise}
 To account for sensor imperfections, we can inject structured Gaussian noise into the global observation vector at each timestep. Concretely, given an observation $\mathbf{o}$, we draw a standard normal vector $\bm{\eta}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ of the same dimension and compute
 \begin{equation}
     \mathbf{o}' = \mathbf{o} + \sigma_{\mathrm{obs}}\,\bm{\Lambda}\,\bm{\eta}\,,
@@ -131,9 +131,12 @@ j=1,\dots,4,
 where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty.  The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator.  
 
 We always constrain \(\mathbf{a}^i_t\in[-1,1]^4\) and sample \(f_{\max}^i\) within a known bound to produce safe thrust profiles that transfer more effectively from simulation to the real Crazyflie platform.\todo{maybe talk about the motor delay model...}
-\subsection{Domain Randomization}
-\subsubsection{Environment Reset}
+\subsection{Randomization}
+To train a robust policy that can handle a wide range of initial conditions and disturbances, we apply several randomization techniques during training.
+\subsubsection{Initial-State Randomization}
 \label{sec:reset}
+A key aspect of our approach is the initial-state randomization $s_0\sim\rho_0$, which generates diverse initial configurations for the payload and quadrotors. This helps the policy learn to handle a wide range of challenging scenarios, including starting from the ground, hovering, disturbance rejection, modeswitch of the payload cable and strong payload swing. The initial conditions are sampled at each reset of the environment, ensuring that the policy is exposed to a variety of situations during training. This is crucial for learning robust behaviors.
+
 \todo{reset fig}
 
 \begin{figure}
@@ -150,7 +153,7 @@ Then we use the payload position $p$ as the center point and randomly sample $N$
 \begin{equation}
 r_i = \mathrm{clip}\bigl(\mu_r+\sigma_r\varepsilon_i^{(r)},\,r_{\min},\,r_{\max}\bigr),\quad
 \theta_i = \mu_\theta+\sigma_\theta\varepsilon_i^{(\theta)},\quad
-\phi_i = \tfrac{2\pi(i-1)}{N} + \phi_{\mathrm{offset}} + \sigma_\phi\varepsilon_i^{(\phi)},
+\phi_i = \tfrac{2\pi(i-1)}{Q} + \phi_{\mathrm{offset}} + \sigma_\phi\varepsilon_i^{(\phi)},
 \end{equation}
 where $\varepsilon_i^{(\cdot)}\!\sim\mathcal{N}(0,1)$, $\phi_{\mathrm{offset}}\!\sim\mathcal{U}(-\pi,\pi)$, and
 \begin{equation}
@@ -171,7 +174,12 @@ q_i = p + r_i
 with the $z$-coordinate clipped. 
 This results in a even distribution of valid initial configurations, also including starting from the ground as shown in \autoref{fig:reset_config}. 
 
+We also randomize the quadrotor attitude. Roll and pitch angles are drawn from $\mathcal{N}(0,10^\circ)$ and clipped to $\pm90^\circ$, while yaw is sampled uniformly from $[-180^\circ,180^\circ]$.
 
+Each component of the linear velocity vector $\mathbf{v}$ is sampled from a zero-mean Gaussian with a standard deviation of $0.2\,m/s$. Each component of the angular velocity (body-rate) vector $\boldsymbol{\omega}$ is sampled similarly with a standard deviation of $20^\circ/s$.
+
+This creates a wide range of initial conditions, including starting from the ground, hovering, and various disturbances. A lot of them are very challenging to recover from. The policy must learn this recovery behavior. The gaussian shaping of the randomization parameters is chosen to ensure that there are also sufficient easier initial conditions, such that the policy can learn the basic hover behavior.
+\subsubsection{Domain Randomization}
 
 \subsubsection{Hardware Rollout}
 
