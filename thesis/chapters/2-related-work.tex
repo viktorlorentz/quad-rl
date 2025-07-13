@@ -31,27 +31,25 @@ Abstracting actions as \gls{ctbr} transfers better than low-level rotor PWM or t
 Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based approaches for Crazyflie control. The table highlights how observation spaces, action representations, and sim-to-real techniques vary across studies, and how they achieved robust flight control under real-world conditions.
 \todo{fix table.}
 \begin{table*}[!b]
-\centering
-\caption[Summary of RL approaches]{TODO fix table. Summary of recent reinforcement learning approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. Subscript $_{err}$ indicates error relative to a target state. $\mathbf{a}$ is the action vector (e.g., motor commands), and $\Delta \mathbf{a}$ its successive difference. We denote $\phi_R$ as the orientation error angle. We group PWM and motor thrust commands as \gls{srt}.}
-\label{tab:rl_comparison}
-\scriptsize
-\begin{tabular}{p{2.0cm}<{\raggedright} p{2.5cm}<{\raggedright} p{2.0cm}<{\raggedright} p{3.0cm}<{\raggedright} p{2.8cm}<{\raggedright} p{2.7cm}<{\raggedright}}
-\hline
-\textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} & \textbf{Remarks} \\
-\hline
-Molchanov et al.\ (2019) \cite{molchanov_sim--multi-real_2019} & $e_p,\ e_v,\ e_\omega,\ R,\ \boldsymbol{\Omega}$ (rotor speeds) & \gls{srt} & { $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$} & { Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference.} & { First learned low-level controller; robust hover matching PID on Crazyflie 2.0.} \\[1ex]
-\hline
-Gronauer et al.\ (2022) \cite{gronauer_using_2022} & $\mathbf{x}$ (IMU attitude, alt.), $\mathbf{p}_{err}$, $\mathbf{a}_{t-1}$ & \gls{srt} (PWM commands) & { $-\bigl(|x_{err}|+|y_{err}|+|z_{err}|\bigr)$ per step; bonus on loop complete.} & { Randomized mass, inertia, thrust-to-weight, motor latencies; IMU/actuator noise; Bayesian sim tuning; onboard inference.} & { Compared low-level PWM vs. high-level rate policies; high-level more robust; zero-shot transfer onboard.} \\[1ex]
-\hline
-Chen et al. (2024) \cite{chen_what_2024} & $\mathbf{p}_{err}, \mathbf{v}, R, \boldsymbol{\omega}$ & \gls{ctbr} & { $r_{track} - \lambda\,\|\Delta\mathbf{a}\|$} & { System ID calibration; randomized uncalibrated params; matched inner PID mixer; large-batch training.} & { \gls{ppo} controller; >50\% lower error vs. prior RL; 70\% vs. MPC; tracks aggressive maneuvers.} \\[1ex]
-\hline
-Ma et al.\ (2024) \cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v},\ \mathbf{q},\ \boldsymbol{\omega},\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr}& { $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$} & { Latent skill learning in sim; real adaptation via limited real-data finetuning.} & { 30\% improvement in real tasks through sim-to-real skill adaptation.} \\[1ex]
-\hline
-Eschmann et al.\ (2024) \cite{eschmann_learning_2024} & $\mathbf{p},\,R,\,\mathbf{v},\,\boldsymbol{\omega},\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & { $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term.\ on crash.} & { Mixer noise; observation delay; async MCU inference.} & { <20 s sim train; MCU deployment; competitive with MPC.} \\[1ex]
-\hline
-Huang et al.\ (2023) \cite{huang_quadswarm_2023} & $e_p,e_v,\,\mathbf{q},\,\boldsymbol{\omega}$ & \gls{srt}& { Position/yaw error $- \alpha\|\mathbf{v}\|^2$.} & { Disturbance observer; wind randomization; onboard inference.} & { 34–48\% lower error under wind vs. adaptive MPC.} \\
-\hline
-\end{tabular}
+  \centering
+  \caption[Summary of RL approaches]{Summary of recent reinforcement learning approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. Subscript $_{err}$ indicates error relative to a target state. $\mathbf{a}$ is the action vector (e.g., motor commands), and $\Delta \mathbf{a}$ its successive difference. We denote $\phi_R$ as the orientation error angle. We group PWM and motor thrust commands as \gls{srt}.}
+  \label{tab:rl_comparison}
+  \scriptsize
+  % full text width with flexible last column
+  \rowcolors{2}{gray!20}{white}
+  \begin{tabularx}{\textwidth}{p{2.0cm} p{3.0cm} p{1.5cm} p{3.5cm} X}
+    \toprule
+    \rowcolor{white}
+    \textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} \\
+    \midrule
+    Molchanov et al. (2019)~\cite{molchanov_sim--multi-real_2019} & $e_p,\ e_v,\ e_\omega,\ R,\ \boldsymbol{\Omega}$ (rotor speeds) & \gls{srt} & $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$ & Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference. \\
+    Gronauer et al. (2022)~\cite{gronauer_using_2022} & $\mathbf{x}$ (IMU attitude, alt.), $\mathbf{p}_{err}$, $\mathbf{a}_{t-1}$ & \gls{srt} (PWM commands) & $-\bigl(|x_{err}|+|y_{err}|+|z_{err}|\bigr)$ per step; bonus on loop complete. & Randomized mass, inertia, thrust-to-weight, motor latencies; IMU/actuator noise; Bayesian sim tuning; onboard inference. \\
+    Chen et al. (2024)~\cite{chen_what_2024} & $\mathbf{p}_{err}, \mathbf{v}, R, \boldsymbol{\omega}$ & \gls{ctbr} & $r_{track} - \lambda\,\|\Delta\mathbf{a}\|$ & System ID calibration; randomized uncalibrated params; matched inner PID mixer; large-batch training. \\
+    Ma et al. (2024)~\cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v},\ \mathbf{q},\ \boldsymbol{\omega},\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr} & $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$ & Latent skill learning in sim; real adaptation via limited real-data finetuning. \\
+    Eschmann et al. (2024)~\cite{eschmann_learning_2024} & $\mathbf{p},\,R,\,\mathbf{v},\,\boldsymbol{\omega},\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term. on crash. & Mixer noise; observation delay; async MCU inference. \\
+    Huang et al. (2023)~\cite{huang_quadswarm_2023} & $e_p,e_v,\,\mathbf{q},\,\boldsymbol{\omega}$ & \gls{srt} & Position/yaw error $- \alpha\|\mathbf{v}\|^2$. & Disturbance observer; wind randomization; onboard inference. \\
+    \bottomrule
+  \end{tabularx}
 \end{table*}
 
 \subsection{Single \gls{uav} RL for Payload Transport and Aerial Manipulation}
