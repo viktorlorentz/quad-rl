@@ -1,11 +1,21 @@
-\chapter*{Notation Remarks}
+\chapter*{Abbreviations} %Notation Remarks}
 \thispagestyle{empty}
 
 
-\printunsrtglossary[type=symbols,title={Symbols}]
+% \printunsrtglossary[type=symbols,title={Symbols}]
+% \todo{Symbols?}
+% Define a style called “noheader” that is exactly like list-style
+% but with the \glossarysection hook removed.
+\newglossarystyle{noheader}{%
+  % don't do \section*{...} or \chapter*{...}
+  \renewcommand*{\glossarysection}[2][]{%
+    % nothing
+  }%
+  % otherwise behave like the standard list style
+  \setglossarystyle{list}%
+}
 
-\nopagebreak
-\printunsrtglossary[type=abbreviations,title={Abbreviations}]
+\printunsrtglossary[type=abbreviations, style=noheader]
 \todo{verify abbreviations used everywhere}
 % \newpage
 % \pagestyle{empty}
