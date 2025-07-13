@@ -84,7 +84,7 @@ Our framework provides a configurable environment generator for simulating multi
 \label{fig:crazyflie_env}
 \end{figure}
 
-Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment with three quadrotors carrying a cable-suspended payload. The environment is built upon the MuJoCo physics engine, which provides accurate and efficient simulation of rigid body dynamics, including contact and friction. The MJX solver is used to compute the physics updates in parallel on the GPU, allowing for high-performance training of reinforcement learning policies. We can also visualize the simulation using the rendering capabilities of MuJoCo, which provides a realistic representation of the quadrotors, payload, and cables.
+Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment with three quadrotors carrying a cable-suspended payload. The environment is built upon the MuJoCo physics engine, which provides accurate and efficient simulation of rigid body dynamics, including contact and friction. The MJX solver is used to compute the physics updates in parallel on the GPU, allowing for high-performance training of reinforcement learning policies with up to 32k parallel environments. We can also visualize the simulation using the rendering capabilities of MuJoCo, which provides a realistic representation of the quadrotors, payload, and cables.
 
 The quadrotors are modeled as rigid bodies with four rotors, each producing thrust and a small torque. We optionally reduce the quadrotors collision mesh to a rectangular prism in order to speed up collision detection. The payload is modeled as a rigid body sphere suspended by cables, which are represented as tendons in MuJoCo. The shape and attachment points of the payload are configurable. The cables connect the quadrotors to the payload and can be configured with different lengths and properties. The environment also supports obstacles, which were not yet further utilized in our work, but could be a good basis for future work on obstacle avoidance or dynamic interactions with the environment.
 
@@ -326,21 +326,51 @@ CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmar
     \label{fig:train_metrics}
 \end{figure}
 \todo{add training metrics comparison}
-Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework to implement decentralized policy optimization. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution.
+Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework as a basis to our training method. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution.
 
-The decentralized policies are learned end-to-end via \gls{ppo} within our highly parallelized JAX/MJX simulation environment. At each iteration, a fixed number of synchronous actors collect trajectories in $M$ parallel environments over $N$ time steps, yielding $NM$ experiences per update. Collected rewards are bootstrapped with the learned critic to compute targets, and advantages are estimated using \gls{gae} with discount factor $\gamma$ and smoothing parameter $\lambda$. The overall loss combines the clipped policy objective
+The decentralized policies are learned end-to-end via \gls{ippo} within our highly parallelized JAX/MJX simulation environment. At each iteration, a fixed number of synchronous actors collect trajectories in $N$ parallel environments over $T$ time steps, yielding $NT$ experiences per update. Collected rewards are bootstrapped with the learned critic to compute targets, and advantages are estimated using \gls{gae} with discount factor $\gamma$ and smoothing parameter $\lambda$. The overall loss combines the clipped policy objective
 \begin{equation}
 L_{\mathrm{PPO}}(\theta) = \mathbb{E}\!\bigl[\min\bigl(r_t(\theta)\,\hat{A}_t,\;\mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\bigr],
 \end{equation}
 a mean-squared value-function error, and an entropy regularizer to encourage sufficient exploration. Gradient norms are clipped to enhance numerical stability.
 
+Since our environment has a certain level of complexity we always train on a high number of parallel environments (16384). This might not be very sampling efficient but allows us to collect a large number of experiences with sufficient variance of configurations in a short time, which is crucial for stable training of policies. A lower number of environments also usually trains a working policy, but the training progress has higher varience and it is more likely to get stuck on local minima for position tracking. On each environment we only step 32 steps per episode. Giving us 128 Minibatches of size 4096 for each episode. The training is performed on a single GPU, which allows us to leverage the high-performance capabilities of JAX and Brax for efficient training. Figure~\ref{fig:train_metrics} shows the training progess of the two quadrotor policy. \todo{maybe add comparison of few env traing to fig}
+
+The training process and hyperparameters are virtually the same for all number of quadrotors, only the policy size is slightly adjusted for more quadrotors. We train the policy on a single RTX Ada 4000 GPU with 20GB of RAM. This gives us training speeds of up to 1 Million environment steps per second, depending on the number of parallel environments and Quadrotors. We trained the policies in our experiments on one Billion environment steps, which corresponds to roughly 10 minutes of training time for the single quadrotor task and 20 minutes for the dual quadrotor task and 60 minutes for the three quadrotor tasks. We are also able to train a single quadotor policy without payload in less than 3 minutes. \todo{check numbers again.}
+
 \subsection{Policy Architecture}
 Both actor and critic networks are instantiated as fully connected, feed-forward multilayer perceptrons. The actor network comprises an input layer matching the local observation dimension, three hidden layers of 64 units with tanh activations, and a linear output layer producing the action-mean vector. A learned log-standard deviation vector of the same dimensionality parameterizes a diagonal Gaussian policy. The critic network features three hidden layers of 128 tanh units each, terminating in a scalar output. All dense layers employ orthogonal weight initialization and zero biases. During training and rollouts, actions are sampled stochastically from the policy distribution, at evaluation time, the deterministic mean action is used.
 
-\subsection{Optimization and Hyperparameters}
-We run a baysian optimization sweep over the hyperparameters to find the best configuration for our task. Initially running a coarse search over a wide range of values, we then refine the search around promising regions. The final hyperparameters are selected based on the best performance.
+\subsection{Hyperparameters}
+We run a Bayesian optimization sweep, with early termination of runs, over the hyperparameters to find the best configuration for our task. We first conduct a coarse search over a wide range of values, then refine the search around the most promising regions. The final hyperparameters are selected based on the best performing policy with the highest reward. Table~\ref{tab:hyperparams} summarizes the key hyperparameters used in our experiments.
 
-\subsubsection{Hardware Rollout}
+\begin{table}[ht]
+  \centering
+  \caption{Key hyperparameters for training.}
+  \label{tab:hyperparams}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Hyperparameter & Value \\
+    \midrule
+    Total environment timesteps & $1{,}000{,}000{,}000$ \\
+    Number of environments & 16,384 \\
+    Number of steps per update & 32 \\
+    Number of minibatches & 128 \\
+    Update epochs & 8 \\
+    Anneal learning rate & false \\
+    Learning rate & $4\times10^{-4}$ \\
+    Activation function & \texttt{tanh} \\
+    Entropy coefficient & 0.01 \\
+    Discount factor ($\gamma$) & 0.995 \\
+    GAE lambda ($\lambda$) & 0.95 \\
+
+    Actor network architecture & [64, 64, 64] \\
+    Critic network architecture & [128, 128, 128] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% \subsubsection{Hardware Rollout}
 
 % \subsubsection{Comparing Centralized PPO, IPPO, and MAPPO}
 % We compare three variants of the \gls{ppo} algorithm: centralized \gls{ppo}, decentralized \gls{ippo}, and multi-agent \gls{mappo}. The centralized variant uses a shared critic for all agents, while \gls{ippo} and \gls{mappo} maintain decentralized policies with independent critics. 
