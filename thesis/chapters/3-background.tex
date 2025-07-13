@@ -290,15 +290,30 @@ where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full autho
 In summary, LV actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates and SRT provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
 \section{Quadrotors with Cable-Suspended Payloads}
 \label{sec:quadrotor_with_payloads}
-\todo{payload fig}
 \begin{figure}
 
   \centering
-  \includegraphics[width=0.6\textwidth]{cable_models.png}
-  \caption[Cable modeling approaches]{TODO Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo}
+  \begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cable-rod.pdf}
+    \caption{Rigid Rod}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cable-links.pdf}
+    \caption{Multi-link}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cable-tendon.pdf}
+    \caption{Tendon}
+  \end{subfigure}
+  \caption[Cable modeling approaches]{Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo. We show how each of these models transfer a upwards disturbance force to the payload (marked in red) to the quadrotor (resulting force in orange). The taut state is shown translucent behind the disturbe state.}
   \label{fig:cable_models}
 \end{figure}
-When a quadrotor carries a cable-suspended payload, its state must include cable and payload variables. Figure~\ref{fig:cable_models} illustrates three common modeling approaches. A simple pendulum model treats the cable as a massless, inextensible rigid link of length \(\ell\) with a point-mass payload \(m_L\). The payload position \(\mathbf{p}_L\) relates to the quadrotor position \(\mathbf{p}_Q\) via
+We evaluate multiple approaches to modeling quadrotors with cable-suspended payloads, which are common in aerial manipulation and transport tasks. These models extend the quadrotor state to include cable and payload variables, enabling simulation and control of cooperative transport scenarios. Figure~\ref{fig:cable_models} illustrates three common modeling approaches: a simple rigid-rod pendulum, a multi-link pendulum, and a tendon approximation in MuJoCo.
+
+A simple rigid-rod pendulum model treats the cable as a massless, inextensible rigid link of length \(\ell\) with a point-mass payload \(m_L\). The payload position \(\mathbf{p}_L\) relates to the quadrotor position \(\mathbf{p}_Q\) via
 \begin{equation}
 \mathbf{p}_L = \mathbf{p}_Q - \ell\,\mathbf{q}, 
 \quad
@@ -331,3 +346,5 @@ and each quadrotor's translational dynamics include \(-\mathbf{T}_i\) alongside 
 x_{\mathrm{aug}} = \bigl(\{\mathbf{p}_i,\,\mathbf{v}_i,\,\mathbf{R}_i,\,\boldsymbol{\omega}_i\}_{i=1}^M,\,\mathbf{p}_P,\,\mathbf{v}_P\bigr),
 \end{equation}
 capturing multi-agent interactions, payload swing, tension variations, and hybrid dynamics while remaining computationally efficient for simulation and control experiments.
+
+For our work we model the cable as a tendon. The key distinction of the tendon model is that it only applies forces when the cable is taut and in tension, while the rigid rod and multi-link models forward forces even when the cable is slack as illustrated in Figure~\ref{fig:cable_models}. This difference is particularly significant in the interaction of the system with the ground and in the interplay between the quadrotors in a very dynamic movement.
