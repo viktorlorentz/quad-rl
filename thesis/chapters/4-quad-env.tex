@@ -345,6 +345,7 @@ The additive safety penalties strictly discourage unsafe or aggressive behaviors
 
 This reward formulation naturally scales with the number of quadrotors \(Q\), retaining its structure and incentives as \(Q\) varies. It even works in the simplified case of a single quadrotor without a payload. We simply set \(r_{\mathrm{taut}}=1\) and use the quadrotor position for tracking error calculation. We still obtain a coherent reward that still encourages stable, smooth flight and graceful control even in the absence of cable-tautness considerations.
 
+The reward structure can also be adapted to other tasks, by replacing the tracking reward component with other task-specific rewards. This makes the reward a good basis for a wide range of scenarios with multiple quadrotors. We can now apply our reward function to train policies for different numbers of quadrotors with and without payload.
 
 % To train a policy for the quadrotor without a payload, we  set \(r_{\mathrm{taut}}=1\).
 % % \subsection{Reward Design Considerations}
