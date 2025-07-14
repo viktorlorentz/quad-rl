@@ -203,8 +203,8 @@ We initially replicated reward structures from prior work for single quadrotors 
 Through an iterative process, experimenting with different extensions of these core terms, we found a very effective reward structure. The final reward structure is modular, allowing for easy adjustments and extensions. It consists of several components that encourage the desired behaviors in the quadrotors while maintaining a stable formation and effectively transporting the payload.
 The goal of our reward is to encourage flight behaviors that recover the cable-suspended payload to its target at a safe speed, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. 
 
-Harsh penalties can induce “learning to terminate” behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function instead of penalties
-
+Harsh penalties can induce 'learning to terminate' behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function instead of penalties
+\todo{fig for reward shaping func.}
 \begin{equation}
 \Phi_s(x) = \exp\bigl(-s\,\lvert x\rvert\bigr),
 \qquad
@@ -262,7 +262,7 @@ r_{yaw}
 \subsubsection{Inter-Agent Safe-Distance}
 For $Q>1$ quadrotors we define a reward that encourages a safe distance between quadrotors. We take the mean of the shaped pairwise distances between all quadrotors, normalized to a maximum of 1. The reward is 0 for our minimum distance of $d_{min}= 0.15 m$, which is the minimum safe distance we want to enforce between quadrotors. We then increase reward to 1 when we reach our safe distance of $d_{safe}=0.18 m$. The reward is defined as
 \begin{equation}
-r_{dist} =
+r_{\mathrm{dist}} =
 \begin{cases}
 \displaystyle
 \frac{1}{Q(Q-1)} \sum_{i \neq j}
@@ -286,23 +286,14 @@ r_{\mathrm{taut}}
 = \frac{1}{L}\Bigl(\frac{1}{Q}\sum_{i=1}^Q d^{P,i} + \frac{1}{Q}\sum_{i=1}^Q h^i\Bigr)
 \end{equation}
 
-\subsubsection{Rotor-Frame Velocity Regularization}
-For each quad's body-frame angular velocity \(\boldsymbol{\omega}^i_t\) and linear velocity \(\mathbf{v}^i_t\), we define
-\begin{equation}
-r_{\omega}
-= \frac{1}{Q}\sum_{i=1}^Q \Phi\bigl(\lVert\boldsymbol{\omega}^i_t\rVert; s_\omega\bigr),
-\quad
-r_{v}
-= \frac{1}{Q}\sum_{i=1}^Q \Bigl[\Phi\bigl(\lVert\mathbf{v}^i_t\rVert; s_v\bigr)
-- c_v\,\mathrm{clip}\bigl(\lVert\mathbf{v}^i_t\rVert - v_{\max},0,\infty\bigr)\Bigr].
-\end{equation}
 
 \subsubsection{Collision and Boundary Penalties}
-With indicators \(\mathbb{I}_{\mathrm{coll}}\), \(\mathbb{I}_{\mathrm{oob}}\) and a grace factor \(g(t)=\mathrm{clip}(2t,0,1)\), penalties are
+We penalize collisions between quadrotors and with the ground. Additionally we define some out of bound conditions for large payload error and very large qudrotor angular velocities.
+With the indicators \(\mathbb{I}_{\mathrm{coll}}\), \(\mathbb{I}_{\mathrm{oob}}\) we simply calculate a penalty for collisions and out of bounds conditions as
 \begin{equation}
-r_{\mathrm{coll}} = -\,g(t)\,\mathbb{I}_{\mathrm{coll}}, 
+r_{\mathrm{coll}} = -10,\mathbb{I}_{\mathrm{coll}}, 
 \quad
-r_{\mathrm{oob}} = -\,g(t)\,\mathbb{I}_{\mathrm{oob}}.
+r_{\mathrm{oob}} = -10\,\mathbb{I}_{\mathrm{oob}}.
 \end{equation}
 
 \subsubsection{Smoothness and Energy Cost}
@@ -312,39 +303,52 @@ r_{\mathrm{oob}} = -\,g(t)\,\mathbb{I}_{\mathrm{oob}}.
     \caption[Action regularization]{Comparison of policy trained with and without the action regularization reward. The left plot shows the actions over time of the policy with regularization, while the right plot shows the actions of the policy without regularization. The regularized policy produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits.}
     \label{fig:actions_comparison}  
 \end{figure}
-Let \(\mathbf{a}_t,\mathbf{a}_{t-1}\) be consecutive normalized thrust vectors and \(\tilde f_{i,j}\) each rotor's thrust fraction. We set
+With high frequency continuous control tasks, we often observe that the policy learns to produce very aggressive actions, saturating the action range. To encourage smoother actions and reduce energy consumption, we introduce two regularization terms. One discourages actions at the limits of the action range, while the other penalizes large changes in rotor thrust and variations between rotors. Let \(\mathbf{a}_t^i,\mathbf{a}_{t-1}^i\) be consecutive normalized thrust vectors. The action smoothness reward is calculated as difference between consecutive actions and the mean thrust of the four rotors
 \begin{equation}
-r_{\mathrm{smooth}}
-= -\sum_{i,j} \bigl|a_{t,i,j}-a_{t-1,i,j}\bigr|,
-\quad
-r_{\mathrm{energy}}
-= -\frac{1}{4Q}\sum_{i=1}^Q\sum_{j=1}^4\bigl[\exp\bigl(-30|\tilde f_{i,j}|\bigr)+\exp\bigl(90(\tilde f_{i,j}-1)\bigr)\bigr].
+r_{\rm smooth} = 20
+\Biggl(
+\frac{1}{Q}\sum_{i=1}^Q \bigl\lVert \mathbf{a}_t^i - \mathbf{a}_{t-1}^i \bigr\rVert_1
+\;+\;
+\frac{1}{Q}\sum_{i=1}^Q \bigl\lVert \mathbf{a}_t^i - \bar a_t^i\,\mathbf{1}\bigr\rVert_1
+\Biggr), \quad \bar a_t^i = \frac{1}{4}\sum_{j=1}^4 a_{t,j}^i
 \end{equation}
 
-These terms encourage smooth, low-frequency thrust commands and penalize large changes in rotor thrust. The first term discourages abrupt changes in thrust, while the second term penalizes high rotor speeds, which can lead to excessive energy consumption and instability. The exponential shaping ensures that the penalty is more pronounced for larger deviations, promoting smoother actions. Figure~\ref{fig:actions_comparison} shows the difference in actions between a policy trained with and without the action regularization reward. The policy with regularization produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits.
+This term encourages smooth, low-frequency thrust commands and penalizes large changes in rotor thrust. Additionally we penalize actions that are close to the action limits, which can lead to aggressive behavior and instability. We define the energy cost as
+\begin{equation}
+r_{\mathrm{energy}} = \frac{1}{4Q}
+\sum_{i=1}^{Q}\sum_{j=1}^{4}\exp\bigl(-50\,|a_{t,j}^i|\bigr)\;+\;\exp\bigl(50\,(a_{t,j}^i-1)\bigr)
+\end{equation}
+
+The first term discourages abrupt changes in thrust, while the second term penalizes high rotor speeds, which can lead to excessive energy consumption and instability. The exponential shaping ensures that the penalty is more pronounced for larger deviations, promoting smoother actions. 
+
+Figure~\ref{fig:actions_comparison} shows the difference in actions between a policy trained with and without these two action regularization terms. The policy with regularization produces smoother and more stable actions, while the unregularized policy exhibits large fluctuations in thrust commands jumping between the action limits. This regularization is crucial for stable training and sim-to-real transfer.
 
 \subsubsection{Aggregate Reward}
-The stability incentive is the average of its five components:
+We combine the individual reward components into a single reward signal for each agent. The reward components for stability are grouped as
 \begin{equation}
 r_{\mathrm{stab}}
-= \frac{1}{5}\bigl(r_{\mathrm{safe}} + r_{\mathrm{up}} + r_{\mathrm{taut}} + r_{\omega} + r_{v}\bigr),
+= \frac{1}{5}\bigl(r_{\mathrm{velP}} + r_{\mathrm{velQ}} + r_{\mathrm{yaw}} + r_{\mathrm{up}} + r_{\mathrm{taut}}\bigr)
 \end{equation}
-and the total penalty is
+The safety components that should always be enforced are grouped as
 \begin{equation}
-r_{\mathrm{pen}}
-= r_{\mathrm{coll}} + r_{\mathrm{oob}} + r_{\mathrm{smooth}} + r_{\mathrm{energy}}.
+r_{\mathrm{safety}}
+= \frac{1}{5}\bigl(r_{\mathrm{coll}} + r_{\mathrm{oob}} + r_{\mathrm{smooth}} + r_{\mathrm{energy}} + r_{\mathrm{dist}}\bigr)
 \end{equation}
-Finally, we multiply tracking and stability to enforce simultaneous performance,
+Finally, we combine the tracking reward with the stability and safety components to form the overall reward
 \begin{equation}
-r_t
+r
 = r_{\mathrm{track}}\;r_{\mathrm{stab}}
-\;+\;r_{\mathrm{pen}}.
+\;+\;r_{\mathrm{safety}}.
 \end{equation}
-This product structure ensures the policy learns to track the payload while constantly maintaining stable formations, and the additive penalties discourage unsafe or aggressive behaviors without overwhelming the shaping incentives.
+This product structure ensures the policy learns to track the payload while constantly maintaining stable formations. This is important because the simultaneous optimization of position error and velocities can lead to policies getting stuck in local minima, with a static payload position error remaining.
+The additive safety penalties strictly discourage unsafe or aggressive behaviors.
 
-This reward formulation naturally scales with the number of quadrotors \(Q\), retaining its structure and incentives as \(Q\) varies. It even works in the simplified case of a single quadrotor without a payload. We simply set \(r_{\mathrm{taut}}=1\) and \(r_{\mathrm{safe}}=1\) to obtain a coherent reward that still encourages stable, smooth flight and graceful control even in the absence of inter-agent or cable-tautness considerations.
-% \subsection{Reward Design Considerations}
-\todo{write further reward design considerations}
+This reward formulation naturally scales with the number of quadrotors \(Q\), retaining its structure and incentives as \(Q\) varies. It even works in the simplified case of a single quadrotor without a payload. We simply set \(r_{\mathrm{taut}}=1\) and use the quadrotor position for tracking error calculation. We still obtain a coherent reward that still encourages stable, smooth flight and graceful control even in the absence of cable-tautness considerations.
+
+
+% To train a policy for the quadrotor without a payload, we  set \(r_{\mathrm{taut}}=1\).
+% % \subsection{Reward Design Considerations}
+% \todo{write further reward design considerations}
 % \subsection{Integration with JAXMARL}
 
 % CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
