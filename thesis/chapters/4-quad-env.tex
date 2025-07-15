@@ -202,19 +202,18 @@ Through an iterative process, experimenting with different extensions of these c
 The goal of our reward is to encourage flight behaviors that recover the cable-suspended payload to its target at a safe speed, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. 
 
 Harsh penalties can induce 'learning to terminate' behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function instead of penalties
-\todo{fig for reward shaping func.}
 \begin{equation}
 \Phi_s(x) = \exp\bigl(-s\,\lvert x\rvert\bigr),
 \qquad
 \Phi(x) = \Phi_2(x) = \exp\bigl(-2\,\lvert x\rvert\bigr).
 \end{equation}
-\ref{fig:reward_details} visualizes this function. Here $s$ is a scaling factor that determines the steepness of the exponential decay. This function is bounded between $0$ and $1$, ensuring that the reward remains positive and bounded. This function has a strong peak at 1, decaying rapidly. The exponential decay ensures that the reward approaches zero as the error increases, but never becomes negative. This allows us to use the same reward structure for both positive and negative errors, without introducing instability in the learning process. A major benefit of this design is, that this reduces the need of coefficient balancing in the reward function, as common in previous methods. Our reward consists of the following components:
+\ref{fig:reward_details} visualizes this function, showing how it rewards values close to zero. Here $s$ is a scaling factor that determines the steepness of the exponential decay. This function is bounded between $0$ and $1$, ensuring that the reward remains positive and bounded. This function has a strong peak at 1, decaying rapidly. The exponential decay ensures that the reward approaches zero as the error increases, but never becomes negative. This allows us to use the same reward structure for both positive and negative errors, without introducing instability in the learning process. A major benefit of this design is, that this reduces the need of coefficient balancing in the reward function, as common in previous methods. Our reward consists of the following components:
 \begin{figure}
 
   \centering
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs/phi.pdf}
+    \includegraphics[width=0.96\textwidth]{figs/phi.pdf}
     \caption{}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
@@ -224,7 +223,7 @@ Harsh penalties can induce 'learning to terminate' behaviors or unstable gradien
   \end{subfigure}
   \caption[Reward Components]{
     (a) The reward shaping function \(\Phi_s\) used to shape reward components. The steepness factor \(s\) determines the decay rate of the function.
-    (b) A heatmap showing the interplay between payload position and velocity reward. The reward is highest when the payload is close to the target and has very low velocity. A maximum velocity of 1.5m/s is encouraged.
+    (b) Plot visualization of the product of payload position and velocity reward. The reward is highest when the payload is close to the target and has very low velocity. A maximum velocity of 1.5m/s is encouraged.
   }
   \label{fig:reward_details}
 \end{figure}
@@ -261,7 +260,6 @@ We then define multiple stability and safety rewards to ensure the quadrotors ma
 \subsubsection{Velocities}
 
 To encourage the quadrotors to maintain a stable velocity, we discurage large velocities of quadrotors and the payload. We define a maximum desired velocity $v_{\max}$ for the payload and quadrotors, allowing us to define a safe velocity range for the payload and quadrotors. We shrink this range as the payload quadrotors approach the target, to ensure they slow down as they get closer. The maximum velocity is set to $v_{\max}=2\,m/s$ in our experiments. The velocity reward for the payload is defined as
-\todo{figure for vel reward. Color map y vel x dis showing vel x dis reward}
 \begin{equation}
 r_{\mathrm{velP}}
 = \exp\!\Biggl(-\biggl(\frac{\lVert \mathbf{v}^P\rVert}{\bigl(\min(3\,d,1)+0.02\bigr)\,0.75v_{\max}}\biggr)^{8}\Biggr)
@@ -271,7 +269,7 @@ For the quadrotors velocity we apply the same shaping and calculate the mean ove
 r_{\mathrm{velQ}}
 = \frac{1}{Q}\sum_{i=1}^Q \exp\!\Biggl(-\biggl(\frac{\lVert \mathbf{v}^i\rVert}{\bigl(\min(3\,d,1)+0.02\bigr)\,v_{\max}}\biggr)^{8}\Biggr) 
 \end{equation}
-Figure~\ref{fig:reward_details} shows the interplay of the payload position and velocity reward. Building a funnel on the position with highest reward at the target position and low velocity.
+Figure~\ref{fig:reward_details} shows the interplay of the payload position and velocity reward. The product of these two rewards is essential for good tracking performance. Their combination allows the policy to learn perfect deceleration and stopping at the target, while also keeping velocities in a safe range.
 \subsubsection{Yaw Rate}
 We want to strongly discourage large yaw rates, as they can lead to unstable flight and payload swing. We define a yaw rate reward as
 \begin{equation}
