@@ -119,8 +119,8 @@ To account for sensor imperfections, we can inject structured Gaussian noise int
 \end{equation}
 where $\sigma_{\mathrm{obs}}$ is a tunable noise amplitude and $\bm{\Lambda}\in\mathbb{R}^{6+22Q}$ is a diagonal scaling vector to tune the noise level for each observation component. We chose each scale factor by examining the typical range of values for its corresponding observation component and setting the noise magnitude accordingly. This ensures that each component of the observation is corrupted by noise proportional both to its typical magnitude and the global noise level.
 \subsection{Action Space}
-
-The policy of each agent \(i\) outputs a four-dimensional vector \(\mathbf{a}^i_t\in[-1,1]^4\), representing normalized thrust commands for its rotors.  These are mapped to physical rotor forces via
+The policy of each agent \(i\) outputs a four-dimensional vector \(\mathbf{a}^i_t\in[-1,1]^4\), representing normalized thrust commands for its rotors. By adopting the \gls{srt} model, we retain the full dynamic fidelity of the quadrotor, enabling capable agile maneuvers.
+ These are mapped to physical rotor forces via
 \begin{equation}
 f^i_{j,t}
 \;=\;
@@ -128,9 +128,8 @@ f^i_{j,t}
 \qquad
 j=1,\dots,4,
 \end{equation}
-where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty.  The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator.  
-
-We always constrain \(\mathbf{a}^i_t\in[-1,1]^4\) and sample \(f_{\max}^i\) within a known bound to produce safe thrust profiles that transfer more effectively from simulation to the real Crazyflie platform.\todo{maybe talk about the motor delay model...}
+where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty. We always constrain \(\mathbf{a}^i_t\in[-1,1]^4\) and sample \(f_{\max}^i\) within a known bound to produce safe thrust profiles. The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator with the proportional torque component.
+\todo{maybe talk about the motor delay model...}
 \subsection{Randomization}
 To train a robust policy that can handle a wide range of initial conditions and disturbances, we apply several randomization techniques during training.
 \subsubsection{Initial-State Randomization}
