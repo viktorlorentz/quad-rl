@@ -148,6 +148,8 @@ induces an expected discounted return
   J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t, a_t)\Bigr]\,. 
 \end{equation}
 
+\todo{maybe bold or not bold vectors}
+
 \subsection{Independent PPO (IPPO)}
 There are two primary approaches for extending \gls{ppo} to multi-agent settings: \gls{ippo}, which employs decentralized critics, and \gls{mappo}, which uses a centralized critic.
 In \gls{ippo} \cite{witt_is_2020}, each agent \(i\) treats other agents as part of its environment and optimizes its own clipped surrogate objective:
@@ -182,7 +184,7 @@ Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generatin
 % (illustrated in Figure~\ref{fig:quadrotor_frames}).
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.7\textwidth]{figs/quad.png}
+  \includegraphics[width=0.5\textwidth]{figs/quad.png}
   \caption[Quadrotor fundamentals]{%
     Quadrotor frames and propeller numbering. The body-fixed frame \(\mathcal{B}\) is centered at the quadrotor's center of mass, with axes aligned to the forward, right, and upward directions. The world frame \(\mathcal{W}\) is a fixed global reference frame. Propellers are numbered 1-4 in a counter-clockwise direction when viewed from above. \textit{Source:} \cite{kaufmann_benchmark_2022}.
   }
