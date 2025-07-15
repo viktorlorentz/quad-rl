@@ -153,16 +153,32 @@ It is important to note that the baseline method might perform better in some sp
     \caption[Baseline vs learned two quad recovery]{Comparison of the learned policy with the baseline method from \autocite{Wahba2024}. Recovery of two quadrotors with payload from harsh conditions. The top plot is top-down  (xy) view, while the bottom one is side view (xz).}
     \label{fig:baseline_recovery}
 \end{figure}
+
+\section{Generalization}
+\begin{figure}[ht]
+    \centering
+    
+    \includegraphics[width=\textwidth]{figs/generalization.pdf}
+    \caption[Policy Generalization]{Evaluation of the learned policy's generalization capabilities in the two quadrotors with payload scenario. Each datapoint represents 1000 runs in an environment that only differs in the specific value adjusted. The policy is trained on a 0.3~m cable length and a payload mass of 0.01~kg.}
+    \label{fig:generalization}
+\end{figure}
+In order to evaluate the generalization capabilities of our learned policies, we conduct experiments in the two quadrotor with payload scenario, where we vary the cable length and payload mass observation noise level and seed. For each datapoint we run the policy for 1000 runs each for 10 seconds. We only change the one evaluated parameter in the simulation configuration. We evaluate the percentage of runs with successful recoveries in this timeframe.
+
+The results are shown in Figure~\ref{fig:generalization}. The figure shows that the policy generalizes well to different cable lengths and payload masses. The policy is trained on a 0.1~kg payload mass and a 0.3~m cable length without domain randomization on these parameters. Decreasing the cable length drastically decreases the success rate, while increasing the cable length actually increases the success rate compared to the default configuration. This follows intuition, as quadrotor collisons are way more likely with shorter cables. Only after a cable length of 1~m the success rate drops again, which is likely due to the payload being too far away from the quadrotors to be stabilized effectively. 
+
+The policy also generalizes well to different payload masses, with a slight decrease in performance for lighter payloads. Heavier payloads decrease the success rate.
+
+We also evaluate the generalization to different observation noise scaling levels and seeds. The policy generalizes well to different observation noise levels, with a drastic decrease of performance for noise levels above 1. The seed generalization shows that the policy generalizes very well across different seeds, thanks to the highly parallized training on 16k environments.
+
+The generalization capabilities of the policy show that it can adapt to different cable lengths and payload masses, even without domain randomization during training. This is a strong indicator of the robustness of the learned policy and its potential for real-world applications.
+
 \section{Sim-to-Real Transfer}
-To transfer the learned policies to real-world quadrotors, we export the trained policies a Tflite model and transform it with the STM32 Cube AI toolchain to run on the STM32F7 microcontroller. We then deploy the policies on a real quadrotors mapping the internal state estimation of the \gls{ekf} to the observation space of the policy. The policies are then run on the real quadrotors with a 250~Hz control frequency. We evaluated the policies so far only on the single quadrotor without paylaod scenario. 
+To transfer the learned policies to real-world quadrotors, we export the trained policies a Tflite model and transform it with the STM32 Cube AI toolchain to run on the STM32F7 microcontroller on the Crazyflie. We then deploy the policies on a real quadrotors mapping the internal state estimation of the \gls{ekf} to the observation space of the policy. The policies are then run on the real quadrotors with a 250~Hz control frequency. We evaluated the policies so far only on the single quadrotor without paylaod scenario. 
 
 So far we have not been able to achieve successful sim to real transfer. This might still be due to implementation issues or might require additional domain randomization during training. We plan to further investigate this in future work.
 % \section{Sim-to-Real Transfer}
 % - one and three quads  
 % - Plots Traj: Trajectory following 3d, error over time  
 % - Plots Disturbance: Position holding with disturbance  
-
-\section{Generalization}
-Does it generalize to different payloads and cable lengths?\todo{Generalization section}
 \section{Experimental Results Summary}
 In this chapter, we evaluated the performance of our learned policies in simulation in both single-quadrotor and multi-quadrotor scenarios. The results demonstrate that our approach effectively stabilizes payloads in harsh conditions and accurately tracks trajectories. The policies generalize well to different initial conditions and quad configurations. We compared our method with the existing baseline and demonstrated its superiority in terms of stability and robustness. We still need to demonstate succesful sim-to-real transfer, which is a limitation of the current work. Overall, our approach might provide a robust solution for cooperative aerial transport tasks, demonstrating the potential of reinforcement learning in this domain.
