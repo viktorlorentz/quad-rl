@@ -137,7 +137,7 @@ To train a robust policy that can handle a wide range of initial conditions and 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{experiments/initial_states.pdf}
-    \caption[Initial States]{Randomly sampled initial configurations for the payload and quadrotors. We show configurations for Q = 1, 2, 3 and 6 quadrotors. For visualization purposes we reduce the number of different runs (N) visualized. Here the payload position is sampled uniformly without target bias. The payload is positioned at the center of each configuration, while quadrotors are uniformly distributed in a spherical shell around it. A lot of configurations start with slack cables. Some configurations start on the gorunde.}
+    \caption[Initial States]{Randomly sampled initial configurations for the payload and quadrotors. We show configurations for Q = 1, 2, 3 and 6 quadrotors. For visualization purposes we reduce the number of different runs (N) visualized. Here the payload position is sampled uniformly without target bias. The payload is positioned at the center of each configuration, while quadrotors are uniformly distributed in a spherical shell around it. A lot of configurations start with slack cables. Some configurations start on the ground.}
     \label{fig:reset_config}
 \end{figure}
 A key aspect of our approach is the initial-state randomization $s_0\sim\rho_0$, which generates diverse initial configurations for the payload and quadrotors. This helps the policy learn to handle a wide range of challenging scenarios, including starting from the ground, hovering, disturbance rejection, modeswitch of the payload cable and strong payload swing. The initial conditions are sampled at each reset of the environment, ensuring that the policy is exposed to a variety of situations during training. This is crucial for learning robust behaviors. 
@@ -188,7 +188,7 @@ This creates a wide range of initial conditions, including starting from the gro
 \subsubsection{Domain Randomization}
 To further improve robustness, we apply domain randomization techniques during training. For most experiments we focus on randomizing the quadrotor's maximum thrust $f_{\max}^i$ within a range of $[0.8,1.0]$ times the nominal value, with some small Gaussian offset for each motor. This not only ensures that the policy can adapt to variations in the quadrotor's  battery level and motor performance, but also brings a certain level of generalization to payload and quadrotor mass.
 
-We also provide the option to randomize the payload mass, cable length, and other parameters, but these were not used in our experiments, since recent work \cite{eschmann_learning_2024-1} has shown that Zero-shot transfer without domain randomization is possible for the Crazyflie platform. Future work could explore the impact of these additional randomizations on policy robustness, generalization and sim-to-real transfer.
+We also provide the option to randomize the payload mass, cable length, and other parameters, but these were not used in our experiments, since recent work \cite{eschmann_learning_2024-1} has shown that zero-shot transfer without domain randomization is possible for the Crazyflie platform. Future work could explore the impact of these additional randomizations on policy robustness, generalization and sim-to-real transfer.
 
 
 
@@ -200,13 +200,13 @@ We initially replicated reward structures from prior work for single quadrotors 
 Through an iterative process, experimenting with different extensions of these core terms, we found a very effective reward structure. The final reward structure is modular, allowing for easy adjustments and extensions. It consists of several components that encourage the desired behaviors in the quadrotors while maintaining a stable formation and effectively transporting the payload.
 The goal of our reward is to encourage flight behaviors that recover the cable-suspended payload to its target at a safe speed, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. 
 
-Harsh penalties can induce 'learning to terminate' behaviors or unstable gradients. In order to prevent this, we shape all error components with the bounded exponential function instead of penalties
+Harsh penalties can induce 'learning to terminate' behaviors or unstable gradients. In order to prevent this, we shape our unbounded errors inside a smooth bounded envelope with the exponential function instead of penalties. This is a common reward shaping technique in \gls{rl}, already applied in work on single quadrotors like \cite{kaufmann_champion-level_2023}.
 \begin{equation}
 \Phi_s(x) = \exp\bigl(-s\,\lvert x\rvert\bigr),
 \qquad
-\Phi(x) = \Phi_2(x) = \exp\bigl(-2\,\lvert x\rvert\bigr).
+\Phi(x) = \Phi_2(x).
 \end{equation}
-\ref{fig:reward_details} visualizes this function, showing how it rewards values close to zero. Here $s$ is a scaling factor that determines the steepness of the exponential decay. This function is bounded between $0$ and $1$, ensuring that the reward remains positive and bounded. This function has a strong peak at 1, decaying rapidly. The exponential decay ensures that the reward approaches zero as the error increases, but never becomes negative. This allows us to use the same reward structure for both positive and negative errors, without introducing instability in the learning process. A major benefit of this design is, that this reduces the need of coefficient balancing in the reward function, as common in previous methods. Our reward consists of the following components:
+ This keeps the magnitude bounded, and makes the derivative taper off rather than spike. Figure~\ref{fig:reward_details} visualizes this function, showing how it rewards values close to zero. Here $s$ is a scaling factor that determines the steepness of the exponential decay. This function is bounded between $0$ and $1$, ensuring that the reward remains positive and bounded. This function has a strong peak at 1, decaying rapidly. The exponential decay ensures that the reward approaches zero as the error increases, but never becomes negative. This allows us to use the same reward structure for both positive and negative errors, without introducing instability in the learning process. A major benefit of this design is, that this reduces the need of coefficient balancing in the reward function, as common in previous methods. Our reward consists of the following components:
 \begin{figure}
 
   \centering
@@ -370,7 +370,7 @@ The reward structure can also be adapted to other tasks, by replacing the tracki
 
 % CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
 
-
+\todo{consider adding a few lines about reward components that you considered but discarded in the final reward function}
 \section{Training}
 \begin{figure}[ht]
     \centering
@@ -406,7 +406,7 @@ We run a Bayesian optimization sweep, with early termination of runs, over the h
     \toprule
     Hyperparameter & Value \\
     \midrule
-    Total environment timesteps & $1{,}000{,}000{,}000$ \\
+    Total environment timesteps    & $1\times10^{9}$ \\
     Number of environments & 16,384 \\
     Number of steps per update & 32 \\
     Number of minibatches & 128 \\
