@@ -43,7 +43,7 @@ Each agent must observe its own state as well as the payload's state and the pos
 \end{equation}
 \emph{Note that \(\tilde{o}^i_t\) is a simplified observation. The exact observation model is defined below.}
 
-where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from motion capture. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
+where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from \gls{mocap}. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
 Agents share a single policy conditioned on their current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
 \begin{equation}
@@ -72,7 +72,7 @@ We have now formalized the problem as a \gls{dec-pomdp}, which allows us to appl
 \todo{maybe add fig wit multiple agents and env...}
 
 \section{CrazyMARL}
-We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training \gls{marl} policies on teams of Crazyflie quadrotors. Our extendable framework implements both learning for a single quadrotor without payload, as well as single-vehicle and cooperative multi-agent cable-suspended payload transport tasks. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in API for JAX-based RL algorithms and other research algorithm implementing the JaxMARL api.
+We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training \gls{marl} policies on teams of Crazyflie quadrotors. Our extendable framework implements both learning for a single quadrotor without payload, as well as single-vehicle and cooperative multi-agent cable-suspended payload transport tasks. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov_mujoco_2012}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in \gls{api} for JAX-based RL algorithms and other research algorithm implementing the JaxMARL api.
 
 \subsection{Simulation Environment}
 
@@ -88,7 +88,7 @@ Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment w
 
 The quadrotors are modeled as rigid bodies with four rotors, each producing thrust and a small torque. We optionally reduce the quadrotors collision mesh to a rectangular prism in order to speed up collision detection. The payload is modeled as a rigid body sphere suspended by cables, which are represented as tendons in MuJoCo. The shape and attachment points of the payload are configurable. The cables connect the quadrotors to the payload and can be configured with different lengths and properties. The environment also supports obstacles, which were not yet further utilized in our work, but could be a good basis for future work on obstacle avoidance or dynamic interactions with the environment.
 
-We implement the JaxMARL api for multi agent environments based on Gymnax \autocite{gymnax2022github}. This wraps our environment in a standardized interface that can be used with any compatible \gls{rl} algorithm. The wrapper adds an abstraction layer to the simulation. Each timestep we call a step function with a set of actions for each quadrotor and the environment returns the updated state which is then used to compute the rewards and observations for each agent.
+We implement the JaxMARL \gls{api} for multi agent environments based on Gymnax \autocite{gymnax2022github}. This wraps our environment in a standardized interface that can be used with any compatible \gls{rl} algorithm. The wrapper adds an abstraction layer to the simulation. Each timestep we call a step function with a set of actions for each quadrotor and the environment returns the updated state which is then used to compute the rewards and observations for each agent.
 
 \subsection{Observation Mapping}
 In practice we slightly adjust the observation structure defined in Equation~\eqref{eq:obs}. Each agent \(i\) still receives a local observation vector \(\mathbf{o}^i_t\) that contains its own state, the payload's state, and the relative positions of other agents.  This ensures that each agent can act based on its own measurements and the shared payload information, while not directly observing other agents' internal states. To define the observation space, we first define the global observation vector \(\mathbf{o}_t\) that contains all relevant information about the system state at time \(t\). This also serves as the basis for computing rewards and termination conditions and allows for a centralized training setup.
@@ -233,7 +233,7 @@ r_{\mathrm{pos}} = \Phi\bigl(\|\mathbf{e}^P\|\bigr)
 \end{equation}
 We now add multiple auxilary reward terms to aid learing of hover and stable safe behaviors.
 \subsubsection{Payload Velocity Alignment}
-To guide the quad to the target we add an auxilary velocity alignment reward.
+To guide the quadrotor to the target we add an auxilary velocity alignment reward.
 \begin{equation}
 \mathbf{v}_{\rm dir} =
 \begin{cases}

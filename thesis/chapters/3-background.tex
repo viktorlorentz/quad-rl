@@ -200,7 +200,7 @@ x = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr).
 
 \subsection{Sensors and State Estimation}
 \label{sec:quadrotor_estimation}
-The quadrotor's state estimator fuses measurements from a 9-\gls{dof} \gls{imu} and, when available, an external motion capture system. The \gls{imu} provides accelerometer and gyroscope readings:
+The quadrotor's state estimator fuses measurements from a 6-axis \gls{imu} and, when available, an external \gls{mocap} system. The \gls{imu} provides three-axis accelerometer and three-axis gyroscope readings:
 \begin{equation}
 \mathbf{a}_m = \mathbf{R}^\mathsf{T}\bigl(\ddot{\mathbf{p}} - \mathbf{g}\bigr) + \boldsymbol{\nu}_a,\qquad
 \boldsymbol{\omega}_m = \boldsymbol{\omega} + \boldsymbol{\nu}_\omega,
