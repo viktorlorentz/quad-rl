@@ -181,17 +181,18 @@ and \(\rho_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\te
 \label{sec:quadrotor_control}
 Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generating upwards thrust. Their mechanical simplicity and agility make them popular for aerial surveillance, package delivery, and search-and-rescue. This section introduces coordinate frames, state representation, onboard sensors, and the continuous-time dynamics and common control action parameterizations for a quadrotor platform.
 % (illustrated in Figure~\ref{fig:quadrotor_frames}).
+
+
+\subsection{Coordinate Frames and State Representation}
+\label{sec:quadrotor_state}
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.5\textwidth]{figs/quad.png}
   \caption[Quadrotor Frames]{%
-    Quadrotor frames and propeller numbering. The body-fixed frame \(\mathcal{B}\) is centered at the quadrotor's center of mass, with axes aligned to the forward, right, and upward directions. The world frame \(\mathcal{W}\) is a fixed global reference frame. Propellers are numbered 1-4 in a counter-clockwise direction when viewed from above. \textit{Source:} \cite{kaufmann_benchmark_2022}.
+    Quadrotor frames and propeller numbering. The body-fixed frame \(\mathcal{B}\) is centered at the quadrotor's center of mass, with axes aligned to the forward, right, and upward directions. The world frame \(\mathcal{W}\) is a fixed global reference frame. Propellers are numbered 1-4 in a clockwise direction when viewed from above. \textit{Adapted from}~\cite{kaufmann_benchmark_2022}.
   }
   \label{fig:quadrotor_frames}
 \end{figure}
-
-\subsection{Coordinate Frames and State Representation}
-\label{sec:quadrotor_state}
 We define the world frame \(\mathcal{W}\) and the body-fixed frame \(\mathcal{B}\) as shown in Figure~\ref{fig:quadrotor_frames}. The origin of \(\mathcal{B}\) is at the quadrotor's center of mass, with its \(x\)-axis pointing forward, \(y\)-axis to the right, and \(z\)-axis upward. The quadrotor's position in \(\mathcal{W}\) is \(\mathbf{p} \in \mathbb{R}^3\), and its linear velocity is \(\mathbf{v} = \dot{\mathbf{p}}\). Its attitude is given by \(\mathbf{R} \in SO(3)\), mapping vectors from \(\mathcal{B}\) to \(\mathcal{W}\), and the angular velocity in \(\mathcal{B}\) is \(\boldsymbol{\omega} = [\omega_x,\omega_y,\omega_z]^\mathsf{T} \in \mathbb{R}^3\). We collect these into the state
 \begin{equation}
 x = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr).
