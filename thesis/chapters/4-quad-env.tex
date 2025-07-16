@@ -1,4 +1,4 @@
-\chapter{Training Multi-Agent Reinforcement Learning Policies for Crazyflie Quadrotors}
+\chapter{Training \gls{marl} Policies for Crazyflie Quadrotors}
 
 This chapter presents our methodology for training decentralized \gls{marl} policies that enable a team of Crazyflie quadrotors to cooperatively transport a cable-suspended payload. We begin by formulating the cooperative transport task as a \gls{dec-pomdp}, defining the state, action, and observation structures. We then describe our high-performance simulation and training pipeline, and finally present the modular reward design used to train our policies.
 \section{Problem Formulation}
@@ -84,7 +84,7 @@ Our framework provides a configurable environment generator for simulating multi
 \label{fig:crazyflie_env}
 \end{figure}
 
-Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment with three quadrotors carrying a cable-suspended payload. The environment is built upon the MuJoCo physics engine, which provides accurate and efficient simulation of rigid body dynamics, including contact and friction. The MJX solver is used to compute the physics updates in parallel on the GPU, allowing for high-performance training of reinforcement learning policies with up to 32k parallel environments. We can also visualize the simulation using the rendering capabilities of MuJoCo, which provides a realistic representation of the quadrotors, payload, and cables.
+Figure~\ref{fig:crazyflie_env} shows a rendering of the simulation environment with three quadrotors carrying a cable-suspended payload. The environment is built upon the MuJoCo physics engine, which provides accurate and efficient simulation of rigid body dynamics, including contact and friction. The MJX solver is used to compute the physics updates in parallel on the GPU, allowing for high-performance training of \gls{rl} policies with up to 32k parallel environments. We can also visualize the simulation using the rendering capabilities of MuJoCo, which provides a realistic representation of the quadrotors, payload, and cables.
 
 The quadrotors are modeled as rigid bodies with four rotors, each producing thrust and a small torque. We optionally reduce the quadrotors collision mesh to a rectangular prism in order to speed up collision detection. The payload is modeled as a rigid body sphere suspended by cables, which are represented as tendons in MuJoCo. The shape and attachment points of the payload are configurable. The cables connect the quadrotors to the payload and can be configured with different lengths and properties. The environment also supports obstacles, which were not yet further utilized in our work, but could be a good basis for future work on obstacle avoidance or dynamic interactions with the environment.
 
@@ -109,7 +109,7 @@ Since we want to train our policy in a \gls{ctde} fashion, we map the global obs
 \{\mathbf{r}^j_t\}_{j \in \mathcal{Q}\setminus\{i\}}
 \,\bigr]\;\in\;\mathbb{R}^{6 + 22 + Q - 1}\,,
 \end{equation}
-so that each policy conditions on the payload's error and velocity, the agent's full pose and velocity, and its previous action. This restriction enforces the Dec-POMDP structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
+so that each policy conditions on the payload's error and velocity, the agent's full pose and velocity, and its previous action. This restriction enforces the \gls{dec-pomdp} structure, by hiding other agents' internal states, coordination must emerge through the shared reward alone.
 
 The observation structure can also be used for a scenario without a payload, where the team observations containing payload position and velocity are omitted.
 \subsubsection{Observation Noise}
@@ -416,7 +416,7 @@ We run a Bayesian optimization sweep, with early termination of runs, over the h
     Activation function & \texttt{tanh} \\
     Entropy coefficient & 0.01 \\
     Discount factor ($\gamma$) & 0.995 \\
-    GAE lambda ($\lambda$) & 0.95 \\
+    \gls{gae} lambda ($\lambda$) & 0.95 \\
 
     Actor network architecture & [64, 64, 64] \\
     Critic network architecture & [128, 128, 128] \\
@@ -424,11 +424,5 @@ We run a Bayesian optimization sweep, with early termination of runs, over the h
   \end{tabular}
 \end{table}
 
-% \subsubsection{Hardware Rollout}
 
-% \subsubsection{Comparing Centralized PPO, IPPO, and MAPPO}
-% We compare three variants of the \gls{ppo} algorithm: centralized \gls{ppo}, decentralized \gls{ippo}, and multi-agent \gls{mappo}. The centralized variant uses a shared critic for all agents, while \gls{ippo} and \gls{mappo} maintain decentralized policies with independent critics. 
-% \begin{itemize}
-%     \item 3 Plots with training (episode-length over steps) with 3 different seeds each
-% \end{itemize}
 
