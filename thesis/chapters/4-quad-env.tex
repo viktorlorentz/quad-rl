@@ -184,7 +184,7 @@ We also randomize the quadrotor attitude. Roll and pitch angles are drawn from $
 
 Each component of the linear velocity vector $\mathbf{v}$ is sampled from a zero-mean Gaussian with a standard deviation of $0.2\,m/s$. Each component of the angular velocity (body-rate) vector $\boldsymbol{\omega}$ is sampled similarly with a standard deviation of $20^\circ/s$.
 
-This creates a wide range of initial conditions, including starting from the ground, hovering, and various disturbances. A lot of them are very challenging to recover from. The policy must learn this recovery behavior. The gaussian shaping of the randomization parameters is chosen to ensure that there are also sufficient easier initial conditions, such that the policy can learn the basic hover behavior.
+This creates a wide range of initial conditions, including starting from the ground, hovering, and various disturbances. A lot of them are very challenging to recover from. The policy must learn this recovery behavior. The Gaussian shaping of the randomization parameters is chosen to ensure that there are also sufficient easier initial conditions, such that the policy can learn the basic hover behavior.
 \subsubsection{Domain Randomization}
 To further improve robustness, we apply domain randomization techniques during training. For most experiments we focus on randomizing the quadrotor's maximum thrust $f_{\max}^i$ within a range of $[0.8,1.0]$ times the nominal value, with some small Gaussian offset for each motor. This not only ensures that the policy can adapt to variations in the quadrotor's  battery level and motor performance, but also brings a certain level of generalization to payload and quadrotor mass.
 
@@ -195,12 +195,12 @@ We also provide the option to randomize the payload mass, cable length, and othe
 
 \subsection{Reward Design}
 A key aspect of our approach is a modular reward design for multiple quadrotors with and without cable suspended payloads.
-We initially replicated reward structures from prior work for single quadrotors and swarms of quadrotors. The usual reward structure is a tracking reward penalizing or rewarding the distance to the target and varying terms to encourage learning of stable flight. The most common ones an attitude reward component and an angular velocity and linear velocity penalty. Depending on application this is also extended with a collision penalty and other auxilary reward terms. \cite{molchanov_sim--multi-real_2019,eschmann_learning_2024-1,kaufmann_benchmark_2022, huang_collision_2024}
+We initially replicated reward structures from prior work for single quadrotors and swarms of quadrotors. The usual reward structure is a tracking reward penalizing or rewarding the distance to the target and varying terms to encourage learning of stable flight. The most common ones an attitude reward component and an angular velocity and linear velocity penalty. Depending on application this is also extended with a collision penalty and other auxilary reward terms \cite{molchanov_sim--multi-real_2019,eschmann_learning_2024-1,kaufmann_benchmark_2022, huang_collision_2024}.
 
 Through an iterative process, experimenting with different extensions of these core terms, we found a very effective reward structure. The final reward structure is modular, allowing for easy adjustments and extensions. It consists of several components that encourage the desired behaviors in the quadrotors while maintaining a stable formation and effectively transporting the payload.
 The goal of our reward is to encourage flight behaviors that recover the cable-suspended payload to its target at a safe speed, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. 
 
-Harsh penalties can induce 'learning to terminate' behaviors or unstable gradients. In order to prevent this, we shape our unbounded errors inside a smooth bounded envelope with the exponential function instead of penalties. This is a common reward shaping technique in \gls{rl}, already applied in work on single quadrotors like \cite{kaufmann_champion-level_2023}.
+Harsh penalties can induce learning-to-terminate behaviors or unstable gradients. In order to prevent this, we shape our unbounded errors inside a smooth bounded envelope with the exponential function instead of penalties. This is a common reward shaping technique in \gls{rl}, already applied in work on single quadrotors like \cite{kaufmann_champion-level_2023}.
 \begin{equation}
 \Phi_s(x) = \exp\bigl(-s\,\lvert x\rvert\bigr),
 \qquad
@@ -273,7 +273,7 @@ Figure~\ref{fig:reward_details} shows the interplay of the payload position and 
 We want to strongly discourage large yaw rates, as they can lead to unstable flight and payload swing. We define a yaw rate reward as
 \begin{equation}
 r_{yaw}
-= \frac{1}{Q}\sum_{i=1}^{Q}\phi\bigl(\omega_z^i\bigr)
+= \frac{1}{Q}\sum_{i=1}^{Q}\phi\bigl(\omega_z^i\bigr).
 \end{equation}
 \subsubsection{Inter-Agent Safe-Distance}
 For $Q>1$ quadrotors we define a reward that encourages a safe distance between quadrotors. We take the mean of the shaped pairwise distances between all quadrotors, normalized to a maximum of 1. The reward is 0 for our minimum distance of $d_{min}= 0.15 m$, which is the minimum safe distance we want to enforce between quadrotors. We then increase reward to 1 when we reach our safe distance of $d_{safe}=0.18 m$. The reward is defined as
@@ -292,14 +292,14 @@ r_{\mathrm{dist}} =
 We calculate the tilt angle \(\theta^i\) between each quadrotors body-frame z axis and the world z axis. We take the mean over all quadrotors and apply a shaping function \(\Phi\) to discourage large roll or pitch angles that can lead to instability and payload swing. The reward is defined as
 \begin{equation}
 r_{\mathrm{up}}
-= \frac{1}{Q}\sum_{i=1}^Q \Phi\bigl(\theta^i\bigr),
+= \frac{1}{Q}\sum_{i=1}^Q \Phi\bigl(\theta^i\bigr).
 \end{equation}
 
 \subsubsection{Taut-String Maintenance}
 We want to encourage the quadrotors to keep the cables taut, to remain in control of the payload. We therefore encourage an increase of the distance of the quadrotors to the payload. Let \(d^{P,i}=\lVert\mathbf{p}^i-\mathbf{p}^P\rVert\) and \(h^i=(\mathbf{p}^i)_z-(\mathbf{p}^P)_z\). A taut cable of length \(L\) is encouraged by maximizing both terms via
 \begin{equation}
 r_{\mathrm{taut}}
-= \frac{1}{L}\Bigl(\frac{1}{Q}\sum_{i=1}^Q d^{P,i} + \frac{1}{Q}\sum_{i=1}^Q h^i\Bigr)
+= \frac{1}{L}\Bigl(\frac{1}{Q}\sum_{i=1}^Q d^{P,i} + \frac{1}{Q}\sum_{i=1}^Q h^i\Bigr).
 \end{equation}
 
 
