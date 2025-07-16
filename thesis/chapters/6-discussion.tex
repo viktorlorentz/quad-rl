@@ -1,58 +1,34 @@
 \chapter{Discussion}
-\todo{maybe resructure: Key findings, implications, limitations, future work and open questions}
+This chapter brings together the central insights from our work on training and evaluating \gls{rl} agents for decentralized multi quadrotor cable suspended payload transport. We revisit our research objectives and contributions, summarize the most important findings, consider their broader significance, acknowledge the limitations we encountered and suggest directions for future research to further advance the field.
 
-\todo{fix 6,7 writing style}
-In this chapter, we reflect on the key insights gained from training and evaluating our \gls{rl} agents for single- and multi-quadrotor payload transport. We begin by distilling practical lessons learned during development, then analyze the broader implications and remaining limitations of our approach, and finally outline promising directions for future research. By bringing these elements together, we aim to both refine our own methods and guide further advances in cooperative aerial transport.
+\section{Key Findings}
+In pursuit of our research objectives, we first formulated the decentralized multi \gls{uav} payload transport problem as a multi agent \gls{dec-pomdp} with local observation and action spaces enabling coordination through decentralized policies, then designed and implemented a high-performance GPU-parallel simulation pipeline to support scalable policy learning, investigated reward design by decomposing the overall objective into tracking and stability components, evaluated the learned policies under harsh initializations to assess resilience relative to classical baselines, and finally demonstrated that our decentralized framework maintains precise tracking and payload stability as the number of \glspl{uav} increases.
 
-\section{Lessons Learned on Training a \gls{rl} Agent for Multirotors}
+Concurrently, running training across thousands of parallel simulation environments effectively reduced, training time and gradient variance, accelerating convergence to reliable policy performance. Our proposed training pipeline, implemented in JAX and MuJoCo, enables very capable and efficient training.
 
-Training an RL agent for agile multirotor control revealed several vital principles.  First, without action regularization, policies tended to exhibit bang-bang control, undermining their stability and hindering sim-to-real transfer.  By smoothing the action outputs, we obtained controllers that perform reliably on hardware.
+Randomizing the initial positions of payloads and quadrotors during training was crucial to train a policy to recover from harsh initial conditions. We found that solely applying domain randomization on the maximum thrust parameter without randomization of parameters such as payload mass, quadrotor mass, and cable length, still leads to decent generalization in simulation. Extending each agent's observation to include the last action further enhanced stability and smoothness of control outputs.
 
-Equally important was the scale of parallelization: running tens of thousands of environment instances in parallel not only sped up convergence but also reduced gradient variance, leading to more consistent training outcomes.  In conjunction with large-scale simulation, careful reward design proved indispensable.  In particular, shaping each term with exponential decay rather than fixed penalties prevented premature termination behaviors and encouraged graceful recovery maneuvers.
+The design of the reward function emerged as another key factor. By shaping reward components with exponential decay rather than fixed penalties we prevented agents from terminating episodes prematurely and enabled them to recover gracefully from disturbances. Our experiments demonstrate that including a regularization term on the agent's actions is critical to producing smooth control signals and avoiding abrupt bang-bang behavior. This regularization also improves the ability to transfer policies from simulation to real hardware. 
 
-Domain randomization further enhanced robustness.  We found that randomizing thrust coefficients and initial poses exposed the agent to a wide range of conditions, while holding payload mass and cable length fixed kept the learning problem tractable.  This selective randomization, combined with the inclusion of a one step history of past actions in the observation vector, yielded smooth control commands and eased real-world deployment.
+Notably, policies trained exclusively on recovery and position holding transferred successfully to dynamic trajectory tracking. This result highlights the flexibility of the learned control strategies. Despite these advances, achieving reliable sim to real transfer remains an open challenge.
 
-Finally, our experiments demonstrated that a policy trained for stationary position hold can generalize zero-shot to figure-eight trajectory tracking, highlighting the flexibility of the learned representations.  Despite these successes, closing the gap between simulation and reality remains a central challenge, especially under unmodeled disturbances and imperfect state estimates.
+\section{Implications}
+Our findings underscore the potential of \gls{rl} for cooperative aerial transport tasks that are difficult to handle with traditional model based control. The decentralized \gls{marl} framework we developed is capable of stabilizing suspended payloads, following precise trajectories and rejecting external disturbances. Such capabilities are directly relevant to real world applications including aerial construction support, infrastructure inspection and rapid delivery of emergency supplies.
 
-\section{Implications and Limitations}
+At the same time, our results emphasize that accurate and robust state estimation is essential for any practical deployment. Our approach requires the position information of all quadrotors to be shared with low latency and high frequency. In many real world environments the full state information is not available and external motion capture systems are impractical and low latency communication is difficult. Ensuring that learned policies remain resilient in the face of communication issues, sensor noise and estimation errors is therefore a critical requirement for future work.
 
-These findings underscore the promise of \gls{rl} for cooperative, cable-suspended payload transport.  Our policies recover rapidly from severe disturbances, coordinate effectively in teams, and track complex trajectories with precision.  Yet important limitations persist.  Under extreme conditions, such as large payload swings or widely dispersed vehicles, failures still occur, indicating that the policy's operating envelope does not cover all scenarios.
+\section{Limitations}
+Several important limitations must be mentioned in the conclusions of this study. First, learned policies sometimes fail under extreme conditions, for example when payload oscillations grow large or quadrotor separation becomes excessive. Our current approach does not include obstacle avoidance or integrated motion planning and relies heavily on external infrastructure without providing formal safety guarantees. Each change in payload mass or quadrotor configuration presently requires retraining from scratch, which limits flexibility. Although we observed some generalization across payload masses and cable lengths in simulation, systematic validation on real platforms is still needed.
 
-Moreover, our approach currently relies on external \gls{mocap} and offers no obstacle avoidance or formal safety guarantees.  Each new payload mass or vehicle configuration also requires retraining, and sim-to-real validation has so far been limited to a narrow set of conditions. \todo{adjust sim-to-real}  In real deployments, full state information (including cable slackness and payload dynamics) is not directly observable, robust performance under sensor noise and estimation delays remains to be demonstrated.  Although our domain randomization conferred some adaptability to varying cable lengths and payload masses, systematic evaluation of these generalization limits is still needed.
-\todo{add payload shape limitations}
-\section{Future Work}
+Moreover, our methods depend on knowing quantities such as payload mass cable lengths in advance. Improving autonomy will require onboard estimation of these variables. Addressing the challenge of accurately capturing the full dynamics of cables and payload interactions remains an important barrier to fully autonomous operation.
 
-Building on these lessons, we see several avenues for further research.  Incorporating richer state representations—whether through longer histories of past measurements or explicit online estimation of latent variables such as cable length and payload mass—could improve both performance and robustness.  Self-supervised techniques that infer hidden parameters from onboard \gls{imu} or vision sensors may enable fully autonomous adaptation without external \gls{mocap}.
+As mentioned above, our method requires high frequency position updates from all quadrotors, which is not always feasible in real world scenarios. The current approach also does not account for communication delays or packet loss, which can significantly impact performance in practice. Future work should explore how to make the system more robust to these issues, for example by incorporating predictive control or state estimation techniques or estimating other quadrotor positions simply from the local observations of each quadrotor.
 
-Extending the framework to heterogeneous teams and cluttered environments with obstacles will test the scalability and safety of our approach.  From an algorithmic perspective, exploring off-policy actor-critic methods or meta-learning frameworks may yield gains in sample efficiency and resilience.  Finally, refining sim-to-real transfer through adaptive domain randomization schedules and curriculum learning promises to narrow the reality gap and accelerate deployment on physical platforms.
+Finally, while our training pipeline is highly efficient, it still requires substantial computational resources for training. Future work should explore more sample efficient algorithms and methods to reduce the reliance on extensive simulation data.
 
+\section{Future Research Directions}
+To address these challenges and enhance the real world applicability of decentralized \gls{rl} for multi quadrotor cable suspended payload transport, we propose several avenues for future research. Enriching the agent's state representation with extended histories or estimates of latent variables such as cable length payload mass quadrotor mass and relative positions could yield more robust control. Developing onboard estimation schemes that leverage \gls{imu} cameras or LiDAR sensors would remove dependence on external motion capture systems. These should be combined with motion and path planning algorithms to ensure safe operation in dynamic environments. To facilitate real world deployment, inter quadrotor communication must be investigated, including how to handle communication delays and packet loss.
 
-% \section{Lessons Learned on Training a \gls{rl} Agent for Multirotors}
-% - Action regularization is crucial for stable policies and no bangbang for sim to real
-% - Parallalization is key for fast training -> many envs (16K)  gelp stabilize training
-% - careful reward design is crucial for stable training 
-% - Shaping reward terms with exponential decay instead of penalty helps to stabilize training and avoid learning to terminate
-% - Good position domain randomization is crucial but not everything needs to be randomized (e.g. max thrust and no randomization of the payload  or quad mass)
-% - action history is crucial for smooth action output
-% - Position tracking can transfer to trajectory tracking
-% - sim to real transfer remains a challenges
+Expanding experiments to a wider range of payload shapes masses and cable configurations will help characterize the limits of scalability and generalization. Improving sim to real transfer by applying advanced domain randomization methods may reduce the remaining reality gap. Finally, incorporating online policy adaptation mechanisms and exploring alternative \gls{rl} algorithms such as off policy actor critic methods or meta learning approaches could accelerate training and improve policy flexibility under changing conditions.
 
-% \section{Implications and Limitations}
-% - RL is a promising approach for agile cooperative cable suspended payload transport
-% - policies still fail sometimes in harsh conditions, e.g. when the payload is swinging too much or the quadrotors are too far apart
-% - no obstacle avoidance / motion planning is included, so dependent on external motion planning
-% - no guarantee for safety
-% - Policy needs to be trained for each payload mass and quad configuration
-% - Sim to real needs to be further evaluated
-% - full state information is not available in the real world, so the policy needs to be robust to state estimation errors
-% - posiiton mass and cable lengths need to be known in advance, but the policy can a little bit generalize to different payload masses and cable lengths
-
-% \section{Future Work}
-% Future work could explore the following directions:
-% - Including state history in the observation for better possibility of learing to estimate the hiddend state (e.g. cable length, payload mass, quad mass, other quad positions)
-% - Maybe explicitly estimating the hidden state (e.g. cable length, payload mass, quad mass, other quad positions) and including it in the observation space
-% - Possible without mocap (external state estimation) by using the quadrotor's \gls{imu} and position sensors to estimate the cable length and payload mass and camera or lidar
-% - Investigating more complex multi-quadrotor scenarios with varying payloads and cable lengths
-% - Enhancing the sim-to-real transfer process through improved domain randomization techniques
-% - Developing methods for online adaptation of the policy to changing payload conditions
-% - Exploring alternative \gls{rl} algorithms to improve training efficiency and robustness
+Pursuing these directions will bring us closer to realizing fully autonomous, reliable and efficient multi agent cable suspended aerial transport systems based on \gls{rl}.
