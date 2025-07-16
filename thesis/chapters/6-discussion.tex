@@ -1,8 +1,8 @@
 \chapter{Discussion}
 
-In this chapter, we reflect on the key insights gained from training and evaluating our reinforcement learning agents for single- and multi-quadrotor payload transport. We begin by distilling practical lessons learned during development, then analyze the broader implications and remaining limitations of our approach, and finally outline promising directions for future research. By bringing these elements together, we aim to both refine our own methods and guide further advances in cooperative aerial transport.
+In this chapter, we reflect on the key insights gained from training and evaluating our \gls{rl} agents for single- and multi-quadrotor payload transport. We begin by distilling practical lessons learned during development, then analyze the broader implications and remaining limitations of our approach, and finally outline promising directions for future research. By bringing these elements together, we aim to both refine our own methods and guide further advances in cooperative aerial transport.
 
-\section{Lessons Learned on Training a Reinforcement Learning Agent for Multirotors}
+\section{Lessons Learned on Training a \gls{rl} Agent for Multirotors}
 
 Training an RL agent for agile multirotor control revealed several vital principles.  First, without action regularization, policies tended to exhibit bang-bang control, undermining their stability and hindering sim-to-real transfer.  By smoothing the action outputs, we obtained controllers that perform reliably on hardware.
 
@@ -14,18 +14,18 @@ Finally, our experiments demonstrated that a policy trained for stationary posit
 
 \section{Implications and Limitations}
 
-These findings underscore the promise of RL for cooperative, cable-suspended payload transport.  Our policies recover rapidly from severe disturbances, coordinate effectively in teams, and track complex trajectories with precision.  Yet important limitations persist.  Under extreme conditions, such as large payload swings or widely dispersed vehicles, failures still occur, indicating that the policy's operating envelope does not cover all scenarios.
+These findings underscore the promise of \gls{rl} for cooperative, cable-suspended payload transport.  Our policies recover rapidly from severe disturbances, coordinate effectively in teams, and track complex trajectories with precision.  Yet important limitations persist.  Under extreme conditions, such as large payload swings or widely dispersed vehicles, failures still occur, indicating that the policy's operating envelope does not cover all scenarios.
 
 Moreover, our approach currently relies on external motion capture and offers no obstacle avoidance or formal safety guarantees.  Each new payload mass or vehicle configuration also requires retraining, and sim-to-real validation has so far been limited to a narrow set of conditions. \todo{adjust sim-to-real}  In real deployments, full state information (including cable slackness and payload dynamics) is not directly observable, robust performance under sensor noise and estimation delays remains to be demonstrated.  Although our domain randomization conferred some adaptability to varying cable lengths and payload masses, systematic evaluation of these generalization limits is still needed.
 \todo{add payload shape limitations}
 \section{Future Work}
 
-Building on these lessons, we see several avenues for further research.  Incorporating richer state representations—whether through longer histories of past measurements or explicit online estimation of latent variables such as cable length and payload mass—could improve both performance and robustness.  Self-supervised techniques that infer hidden parameters from onboard IMU or vision sensors may enable fully autonomous adaptation without external motion capture.
+Building on these lessons, we see several avenues for further research.  Incorporating richer state representations—whether through longer histories of past measurements or explicit online estimation of latent variables such as cable length and payload mass—could improve both performance and robustness.  Self-supervised techniques that infer hidden parameters from onboard \gls{imu} or vision sensors may enable fully autonomous adaptation without external motion capture.
 
 Extending the framework to heterogeneous teams and cluttered environments with obstacles will test the scalability and safety of our approach.  From an algorithmic perspective, exploring off-policy actor-critic methods or meta-learning frameworks may yield gains in sample efficiency and resilience.  Finally, refining sim-to-real transfer through adaptive domain randomization schedules and curriculum learning promises to narrow the reality gap and accelerate deployment on physical platforms.
 
 
-% \section{Lessons Learned on Training a Reinforcement Learning Agent for Multirotors}
+% \section{Lessons Learned on Training a \gls{rl} Agent for Multirotors}
 % - Action regularization is crucial for stable policies and no bangbang for sim to real
 % - Parallalization is key for fast training -> many envs (16K)  gelp stabilize training
 % - careful reward design is crucial for stable training 
@@ -49,8 +49,8 @@ Extending the framework to heterogeneous teams and cluttered environments with o
 % Future work could explore the following directions:
 % - Including state history in the observation for better possibility of learing to estimate the hiddend state (e.g. cable length, payload mass, quad mass, other quad positions)
 % - Maybe explicitly estimating the hidden state (e.g. cable length, payload mass, quad mass, other quad positions) and including it in the observation space
-% - Possible without mocap (external state estimation) by using the quadrotor's IMU and position sensors to estimate the cable length and payload mass and camera or lidar
+% - Possible without mocap (external state estimation) by using the quadrotor's \gls{imu} and position sensors to estimate the cable length and payload mass and camera or lidar
 % - Investigating more complex multi-quadrotor scenarios with varying payloads and cable lengths
 % - Enhancing the sim-to-real transfer process through improved domain randomization techniques
 % - Developing methods for online adaptation of the policy to changing payload conditions
-% - Exploring alternative reinforcement learning algorithms to improve training efficiency and robustness
+% - Exploring alternative \gls{rl} algorithms to improve training efficiency and robustness
