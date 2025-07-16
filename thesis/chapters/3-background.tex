@@ -14,7 +14,7 @@ Before introducing the specific algorithm, we first define the key concepts and 
 \begin{figure}
 \centering
 \includegraphics[width=0.8\textwidth]{images/figs/rl.pdf}
-\caption[\gls{rl} framework]{\gls{rl} framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
+\caption[\glsxtrlong{rl} Framework]{\gls{rl} framework. The agent interacts with the environment by taking actions and receiving rewards, while the environment transitions to new states based on the agent's actions.}
 \label{fig:rl_diagram}
 \end{figure}
 
@@ -184,7 +184,7 @@ Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generatin
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.5\textwidth]{figs/quad.png}
-  \caption[Quadrotor fundamentals]{%
+  \caption[Quadrotor Frames]{%
     Quadrotor frames and propeller numbering. The body-fixed frame \(\mathcal{B}\) is centered at the quadrotor's center of mass, with axes aligned to the forward, right, and upward directions. The world frame \(\mathcal{W}\) is a fixed global reference frame. Propellers are numbered 1-4 in a counter-clockwise direction when viewed from above. \textit{Source:} \cite{kaufmann_benchmark_2022}.
   }
   \label{fig:quadrotor_frames}
@@ -311,7 +311,7 @@ In summary, LV actions abstract away low-level thrust allocation at the cost of 
     \includegraphics[width=0.8\textwidth]{figs/cable-tendon.pdf}
     \caption{Tendon}
   \end{subfigure}
-  \caption[Cable modeling approaches]{Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo. We show how each of these models transfer a upwards disturbance force to the payload (marked in red) to the quadrotor (resulting force in orange). The taut state is shown translucent behind the disturbe state.}
+  \caption[Cable Modeling Approaches]{Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo. We show how each of these models transfer a upwards disturbance force to the payload (marked in red) to the quadrotor (resulting force in orange). The taut state is shown translucent behind the disturbe state.}
   \label{fig:cable_models}
 \end{figure}
 We evaluate multiple approaches to modeling quadrotors with cable-suspended payloads, which are common in aerial manipulation and transport tasks. These models extend the quadrotor state to include cable and payload variables, enabling simulation and control of cooperative transport scenarios. Figure~\ref{fig:cable_models} illustrates three common modeling approaches: a simple rigid-rod pendulum, a multi-link pendulum, and a tendon approximation in MuJoCo.
