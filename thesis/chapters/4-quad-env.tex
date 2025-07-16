@@ -188,8 +188,7 @@ This creates a wide range of initial conditions, including starting from the gro
 \subsubsection{Domain Randomization}
 To further improve robustness, we apply domain randomization techniques during training. For most experiments we focus on randomizing the quadrotor's maximum thrust $f_{\max}^i$ within a range of $[0.8,1.0]$ times the nominal value, with some small Gaussian offset for each motor. This not only ensures that the policy can adapt to variations in the quadrotor's  battery level and motor performance, but also brings a certain level of generalization to payload and quadrotor mass.
 
-We also provide the option to randomize the payload mass, cable length, and other parameters, but these were not used in our experiments. Further randomization techniques should be explored in future work, to improve sim-to-real transfer and generalization.
-\todo{maybe further domain randomization}
+We also provide the option to randomize the payload mass, cable length, and other parameters, but these were not used in our experiments, since recent work \cite{eschmann_learning_2024-1} has shown that Zero-shot transfer without domain randomization is possible for the Crazyflie platform. Future work could explore the impact of these additional randomizations on policy robustness, generalization and sim-to-real transfer.
 
 
 

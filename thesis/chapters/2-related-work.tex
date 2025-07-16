@@ -32,22 +32,100 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
 \todo{fix table.}
 \begin{table*}[!b]
   \centering
-  \caption[Summary of RL approaches]{Summary of recent reinforcement learning approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. Subscript $_{err}$ indicates error relative to a target state. $\mathbf{a}$ is the action vector (e.g., motor commands), and $\Delta \mathbf{a}$ its successive difference. We denote $\phi_R$ as the orientation error angle. We group PWM and motor thrust commands as \gls{srt}.}
+  \caption[Summary of RL approaches]{Summary of recent reinforcement learning approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. We group PWM and motor thrust commands as \gls{srt}.}
   \label{tab:rl_comparison}
   \scriptsize
   % full text width with flexible last column
   \rowcolors{2}{gray!20}{white}
-  \begin{tabularx}{\textwidth}{p{2.0cm} p{3.0cm} p{1.5cm} p{3.5cm} X}
+  \begin{tabularx}{\textwidth}{p{0.7cm} p{3.0cm} p{1.3cm} p{3.5cm} X}
     \toprule
     \rowcolor{white}
     \textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} \\
     \midrule
-    Molchanov et al. (2019)~\cite{molchanov_sim--multi-real_2019} & $e_p,\ e_v,\ e_\omega,\ R,\ \boldsymbol{\Omega}$ (rotor speeds) & \gls{srt} & $-\bigl(w_p\|e_p\|^2 + w_v\|e_v\|^2 + w_\omega\|e_\omega\|^2 + w_u\|\mathbf{a}\|^2 + w_R\,\phi_R\bigr)$ & Dynamics randomization; sensor \& thrust noise injection; onboard MCU inference. \\
-    Gronauer et al. (2022)~\cite{gronauer_using_2022} & $\mathbf{x}$ (IMU attitude, alt.), $\mathbf{p}_{err}$, $\mathbf{a}_{t-1}$ & \gls{srt} (PWM commands) & $-\bigl(|x_{err}|+|y_{err}|+|z_{err}|\bigr)$ per step; bonus on loop complete. & Randomized mass, inertia, thrust-to-weight, motor latencies; IMU/actuator noise; Bayesian sim tuning; onboard inference. \\
-    Chen et al. (2024)~\cite{chen_what_2024} & $\mathbf{p}_{err}, \mathbf{v}, R, \boldsymbol{\omega}$ & \gls{ctbr} & $r_{track} - \lambda\,\|\Delta\mathbf{a}\|$ & System ID calibration; randomized uncalibrated params; matched inner PID mixer; large-batch training. \\
-    Ma et al. (2024)~\cite{ma2024skilltransfer} & $\mathbf{p},\mathbf{v},\ \mathbf{q},\ \boldsymbol{\omega},\ \mathbf{a}_{t-1},\,\int e\,dt$ & \gls{ctbr} & $-\bigl(\|\mathbf{p}_{err}\|^2+\|\mathbf{v}_{err}\|^2+\phi_R^2+\|\mathbf{a}\|^2\bigr)$ & Latent skill learning in sim; real adaptation via limited real-data finetuning. \\
-    Eschmann et al. (2024)~\cite{eschmann_learning_2024} & $\mathbf{p},\,R,\,\mathbf{v},\,\boldsymbol{\omega},\,\{\mathbf{a}_{t-k}\}$ & \gls{srt}(motor RPMs) & $-\bigl(\|e_p\|^2 + \|\mathbf{v}\|^2\bigr)$; term. on crash. & Mixer noise; observation delay; async MCU inference. \\
-    Huang et al. (2023)~\cite{huang_quadswarm_2023} & $e_p,e_v,\,\mathbf{q},\,\boldsymbol{\omega}$ & \gls{srt} & Position/yaw error $- \alpha\|\mathbf{v}\|^2$. & Disturbance observer; wind randomization; onboard inference. \\
+    \cite{molchanov_sim--multi-real_2019} & 
+    ($\mathbf e_p,\mathbf e_v,\mathrm{vec}(R),\mathbf e_\omega\,)\in\mathbb R^{18} $ & 
+    \gls{srt}  & 
+      \(\displaystyle
+    r_t=-c_t,\quad
+    c_t=\bigl(\|\mathbf e_p\|^2+\alpha_v\|\mathbf e_v\|^2+\alpha_\omega\|\mathbf e_\omega\|^2+\alpha_a\|a\|^2+\alpha_R\cos^{-1}\!\tfrac{\mathrm{tr}(R)-1}{2}\bigr)\Delta t
+    \) 
+    &
+     Domain randomization across most physical parameters\newline
+      Motor lag \& motor noise\newline
+      Sensor noise injection\newline
+      Normalized thrust input\newline
+      Sim-to-sim verification\newline
+      Real-world deployment on multiple platforms  \\
+    \cite{gronauer_using_2022} & 
+    $\bigl(x_t,\mathbf{e}_t,a_{t-1}\bigr)\!\in\!\mathbb{R}^{20}$, \newline 
+    $x_t=(\mathbf{p}_t,\mathbf{v}_t,\mathbf{q}_t,\boldsymbol{\omega}_t)\!\in\!\mathbb{R}^{13}$ \newline 
+    (history $H{=}2$) & 
+    \gls{srt} \& \gls{ctbr}\newline 
+    (PWM / AttRate / Att) & 
+    $\displaystyle r_t= -\!\Bigl(\|\mathbf{e}_t\|^{2} + 10^{-4}\|a_t\|^{2} + 10^{-3}\|a_t\!-\!a_{t-1}\|^{2} + 10^{-3}\|\boldsymbol{\omega}_t\|^{2}\Bigr) + r_f,$ \newline 
+    $r_f = -100$ if terminated &
+    Domain randomization ($\pm10\%$: $k_F$, $\Delta t$, $m$, $I$, $T_m$, $k_m$) \newline
+    Gaussian \& uniform sensor noise; OU actuator noise \newline
+    First-order motor dynamics ($T_m$) + latency model \newline
+    Bayesian optimisation of sim parameters (1 h real flight data)\\
+    \cite{chen_what_2024} & 
+    $\bigl(e_W^{1:10},\,\mathbf v,\,\mathrm{vec}(R)\bigr)\!\in\!\mathbb R^{42}$
+    ($e_W^{k}$: rel.\ pos.\ to next $10$ trajectory ref pts.) & 
+    CTBR & 
+    $r_t = r_{\text{track}} - \lambda\|a_t - a_{t-1}\|^2$, \; $\lambda=0.4$ \newline 
+    ($r_{\text{track}} \propto -\|e_W\|$) \newline
+    also evaluated other rewards
+    & 
+   
+    System identification of $m,I,k_f,T_m$ \newline
+    Selective domain randomization (only sensitive params $m, k_f$) \newline
+    Motor time-constant and firmware low-level match \newline
+    Smoothness penalty on $\Delta a$ \newline
+    Large-batch PPO training
+ \\
+    \cite{ma2024skilltransfer} & 
+    $(\mathbf e,\,\mathbf q,\,[r,p,y],\,\mathbf v,\,\boldsymbol\omega,\,
+    \mathbf a_{t-1})$  & 
+    \gls{srt} (PWM) & 
+    $\displaystyle
+    r_t=2-2.5\|\mathbf e\|
+    -1.5\|[r,p]\|-0.05\|\mathbf v\|
+    -0.05\|\boldsymbol\omega\|-0.1\|\mathbf a_t\|$ & 
+    Residual-dynamics skill discovery with orthogonality constraints\newline
+    Real-data fine-tuning\\
+    \cite{eschmann_learning_2024} & 
+  $(\mathbf p,\mathbf v,\mathrm{vec}(R),\boldsymbol{\omega}, \newline a_{t-1:t-H})\!\in\!\mathbb R^{18+4H}$ & 
+  \gls{srt} (RPM)& 
+  $\displaystyle r_t=-\!\bigl(w_p\|\mathbf p\|^{2}+w_v\|\mathbf v\|^{2}+w_R\phi(R)+w_\omega\|\boldsymbol{\omega}\|^{2}+w_a\|\mathbf a_t\|^{2}\bigr)+c_{\text{alive}}$ & 
+  Zero-shot transfer without domain randomization \newline
+  Motor delay model\newline
+  action-history observations\newline
+  asymmetric actor-critic with privileged critic\newline
+  force/torque disturbances\newline
+  Gaussian sensor noise \\
+  \cite{huang_quadswarm_2023} & 
+  $(\mathbf e_i,\mathbf v_i,\mathrm{vec}(R_i),\boldsymbol\omega_i, \newline 
+  \{\delta\tilde{\mathbf p}_{ij},\tilde{\mathbf v}_{ij}\}_{j=1}^{Q})$ & 
+  \gls{srt} & 
+  $\displaystyle r_t = r_{\text{pos}}+r_{\text{vel}}+r_{\text{ori}}+r_{\text{spin}}+r_{\text{act}}+r_{\delta\text{act}}+r_{\text{rot}}+r_{\text{yaw}} \;+\; r_{\text{collision}}$ 
+ 
+   $r_t \;=\;
+  \alpha_{\text{pos}}\|\delta\mathbf p_i\|^{2}
+  +\alpha_{\text{vel}}\|\mathbf v_i\|^{2}
+  +\alpha_{\text{ori}}\,R_{22}
+  +\alpha_{\text{spin}}\|\boldsymbol{\omega}_i\|^{2}
+  +\alpha_{\text{act}}\|\mathbf f_i\|^{2}
+  +\alpha_{\delta\text{act}}\|\mathbf f_i(t)-\mathbf f_i(t-1)\|^{2}
+  +\alpha_{\text{rot}}\frac{\operatorname{tr}(R_i)-1}{2}
+  +\alpha_{\text{yaw}}\,R_{00}
+  +\alpha_{\text{col}}\mathbf 1_{\text{collision}}$ 
+  & 
+  Swarm of quadrotors \newline
+  Domain randomization (mass, inertia, thrust, etc.) \newline
+  First-order motor-lag filter \& OU motor noise \newline
+  Uniform/Gaussian sensor noise injection \newline
+  Simplified collision \& downwash models \newline
+  Zero-shot transfer demonstrated on Crazyflie swarms \\ 
     \bottomrule
   \end{tabularx}
 \end{table*}
