@@ -51,7 +51,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     \) 
     &
      Domain randomization across most physical parameters\newline
-      Motor lag \& motor noise\newline
+      Motor delay model \& motor noise\newline
       Sensor noise injection\newline
       Normalized thrust input\newline
       Sim-to-sim verification\newline
@@ -66,7 +66,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     $r_f = -100$ if terminated &
     Domain randomization ($\pm10\%$: $k_F$, $\Delta t$, $m$, $I$, $T_m$, $k_m$) \newline
     Gaussian \& uniform sensor noise; OU actuator noise \newline
-    First-order motor dynamics ($T_m$) + latency model \newline
+    Motor delay model \newline
     Bayesian optimisation of sim parameters (1 h real flight data)\\
     \cite{chen_what_2024} & 
     $\bigl(e_W^{1:10},\,\mathbf v,\,\mathrm{vec}(R)\bigr)\!\in\!\mathbb R^{42}$
@@ -79,7 +79,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
    
     System identification of $m,I,k_f,T_m$ \newline
     Selective domain randomization (only sensitive params $m, k_f$) \newline
-    Motor time-constant and firmware low-level match \newline
+    Motor delay model \newline
     Smoothness penalty on $\Delta a$ \newline
     Large-batch PPO training
  \\
@@ -122,7 +122,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
   & 
   Swarm of quadrotors \newline
   Domain randomization (mass, inertia, thrust, etc.) \newline
-  First-order motor-lag filter \& OU motor noise \newline
+  Motor delay model \& OU motor noise \newline
   Uniform/Gaussian sensor noise injection \newline
   Simplified collision \& downwash models \newline
   Zero-shot transfer demonstrated on Crazyflie swarms \\ 
