@@ -73,7 +73,7 @@ The advantage function \(A^\pi(s_t,a_t)\) quantifies the relative value of takin
 A^\pi(s_t,a_t) = Q^\pi(s_t,a_t) - V^\pi(s_t).
 \end{equation}
 
-\paragraph{On-Policy Policy-Gradient Methods}
+\paragraph{On-Policy Gradient Methods}
 On-policy methods collect data under the current policy \(\pi_\theta\) and perform gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The policy gradient can be expressed using the advantage function:
 \begin{equation}
 \nabla_\theta J(\theta)
