@@ -79,7 +79,7 @@ On-policy methods collect data under the current policy \(\pi_\theta\) and perfo
 \nabla_\theta J(\theta)
 = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t \,\nabla_\theta \log \pi_\theta(\mathbf{a}_t\mid \mathbf{s}_t)\,\hat A_t\Bigr].
 \end{equation}
-In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
+In practice, there are different approaches to approximating the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
 \subsection{Proximal Policy Optimization}
 \gls{ppo} \cite{schulman2017proximal} alternates between sampling trajectories using the current policy and performing multiple epochs of stochastic gradient ascent on a clipped surrogate objective. For continuous control, the actor network outputs parameters of a Gaussian distribution,
 \begin{equation}
@@ -87,7 +87,7 @@ In practice, there are different approaches to approximate the policy gradient \
 \end{equation}
 Here, the actor network (parameterized by \(\theta\)) maps a state \(\mathbf{s}_t\) to a distribution over actions, thereby defining the policy \(\pi_\theta(\mathbf{a}_t \mid \mathbf{s}_t)\). This stochastic sampling is crucial as it enables the agent to explore a continuous range of actions, promoting both exploration and robustness in learning.
 
-\gls{ppo} builds on the actor-critic framework, where two neural networks, the actor network and the critic network, are optimized simultaneously. The actor network, or policy network, directly outputs the action probabilities or probability distribution. The critic network, often parameterized by \(\phi\), estimates a value function \(V_\phi(\mathbf{s}_t)\) that evaluates the quality of states, or more precisely the expected return from \(\mathbf{s}_t\) under the current policy. The critic's estimate is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
+\gls{ppo} builds on the actor-critic framework, where two neural networks, the actor network and the critic network, are optimized simultaneously. The actor network, or policy network, directly outputs the action probabilities or probability distribution. The critic network, often parameterized by \(\phi\), estimates a value function \(V_\phi(\mathbf{s}_t)\) that evaluates the quality of states, or more precisely, the expected return from \(\mathbf{s}_t\) under the current policy. The critic's estimate is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
 \begin{equation}
 \hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}, 
 \quad
@@ -161,7 +161,7 @@ where
 \begin{equation}
 L^{\mathrm{CLIP}}_i(\theta_i) = \mathbb{E}_t\!\Bigl[\min\bigl(\rho^i_t(\theta_i)\,\hat{A}^i_t;\text{clip}(\rho^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat{A}^i_t\bigr)\Bigr].
 \end{equation}
-Here, \(\rho^i_t(\theta_i)=\pi_{\theta_i}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)/\pi_{\theta_i}^{\mathrm{old}}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(\mathbf{o}^i_t,\mathbf{a}^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
+Here, \(\rho^i_t(\theta_i)=\pi_{\theta_i}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)/\pi_{\theta_i}^{\mathrm{old}}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(\mathbf{o}^i_t,\mathbf{a}^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non-stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
 
 \subsection{\glsxtrfull{mappo}}
 \gls{mappo} \cite{yu_surprising_2022} adopts a \gls{ctde} paradigm. A shared policy \(\pi_\theta(\mathbf{a}^i\mid \mathbf{o}^i)\) is used by all agents at execution, while training uses a centralized critic \(V_\phi(\mathbf{s}_t)\) that has access to the full state or all agents' observations. The joint objective is
@@ -264,7 +264,7 @@ A \gls{lv} policy outputs a desired body-frame velocity \(\mathbf{v}_{\mathrm{de
 \begin{equation}
 \mathbf{a}_{\mathrm{LV}} = \{v_x,\,v_y,\,v_z,\,\omega_z\}.
 \end{equation}
-A cascaded low-level controller converts these into collective thrust \(c=\|\mathbf{f}_{\mathrm{prop}}\|\) and attitude setpoints, then allocates individual propeller thrusts \(f_i\) to achieve the commanded \(\omega_z\). \gls{lv} reduces sample complexity and improves sim-to-real transfer but cannot leverage full force-torque dynamics for aggressive maneuvers.
+A cascaded low-level controller converts these into collective thrust \(c=\|\mathbf{f}_{\mathrm{prop}}\|\) and attitude setpoints, then allocates individual propeller thrusts \(f_i\) to achieve the commanded \(\omega_z\). \gls{lv} reduces sample complexity and improves sim-to-real transfer, but cannot leverage full force-torque dynamics for aggressive maneuvers.
 
 \paragraph{\glsxtrfull{ctbr}}  
 A \gls{ctbr} policy outputs total thrust \(c\in\mathbb{R}\) and body-rate setpoints \(\boldsymbol{\omega}_{\mathrm{des}}=[\omega_x,\omega_y,\omega_z]^\mathsf{T}\):
@@ -288,9 +288,9 @@ An \gls{srt} policy outputs the four individual propeller thrusts:
 \begin{equation}
 \mathbf{a}_{\mathrm{SRT}} = \{f_1,\,f_2,\,f_3,\,f_4\},
 \end{equation}
-where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full authority over \(\mathbf{f}_{\mathrm{prop}}\) and \(\boldsymbol{\tau}_{\mathrm{prop}}\), enabling the most aggressive maneuvers, but it is sample-inefficient and sensitive to modeling errors.
+where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full authority over \(\mathbf{f}_{\mathrm{prop}}\) and \(\boldsymbol{\tau}_{\mathrm{prop}}\), enabling the most aggressive maneuvers. Still, it is sample-inefficient and sensitive to modeling errors.
 
-In summary, \gls{lv} actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates and \gls{srt} provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
+In summary, \gls{lv} actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates, and \gls{srt} provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
 \section{Quadrotors with Cable-Suspended Payloads}
 \label{sec:quadrotor_with_payloads}
 \begin{figure}
@@ -311,7 +311,7 @@ In summary, \gls{lv} actions abstract away low-level thrust allocation at the co
     \includegraphics[width=0.8\textwidth]{figs/cable-tendon.pdf}
     \caption{Tendon}
   \end{subfigure}
-  \caption[Cable Modeling Approaches]{Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo. We show how each of these models transfer a upwards disturbance force to the payload (marked in red) to the quadrotor (resulting force in orange). The taut state is shown translucent behind the disturbe state.}
+  \caption[Cable Modeling Approaches]{Different approaches to modeling a cable-suspended payload. (a) A simple pendulum model with a rigid link and point-mass payload. (b) A multi-link pendulum model with \(N\) serial links. (c) A tendon approximation in MuJoCo. We show how each of these models transfers an upward disturbance force to the payload (marked in red) to the quadrotor (resulting force in orange). The taut state is shown translucent behind the disturbed state.}
   \label{fig:cable_models}
 \end{figure}
 We evaluate multiple approaches to modeling quadrotors with cable-suspended payloads, which are common in aerial manipulation and transport tasks. These models extend the quadrotor state to include cable and payload variables, enabling simulation and control of cooperative transport scenarios. Figure~\ref{fig:cable_models} illustrates three common modeling approaches: a simple rigid-rod pendulum, a multi-link pendulum, and a tendon approximation in MuJoCo.
@@ -350,4 +350,4 @@ and each quadrotor's translational dynamics include \(-\mathbf{T}_i\) alongside 
 \end{equation}
 capturing multi-agent interactions, payload swing, tension variations, and hybrid dynamics while remaining computationally efficient for simulation and control experiments.
 
-For our work we model the cable as a tendon. The key distinction of the tendon model is that it only applies forces when the cable is taut and in tension, while the rigid rod and multi-link models forward forces even when the cable is slack as illustrated in Figure~\ref{fig:cable_models}. This difference is particularly significant in the interaction of the system with the ground and in the interplay between the quadrotors in a very dynamic movement.
+For our work, we model the cable as a tendon. The key distinction of the tendon model is that it only applies forces when the cable is taut and in tension, while the rigid rod and multi-link models forward forces even when the cable is slack, as illustrated in Figure~\ref{fig:cable_models}. This difference is particularly significant in the interaction of the system with the ground and in the interplay between the quadrotors during very dynamic movements.
