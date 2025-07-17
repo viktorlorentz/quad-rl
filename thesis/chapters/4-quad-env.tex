@@ -44,7 +44,7 @@ Each agent must observe its own state as well as the payload's state and the pos
 \end{equation}
 \emph{Note that \(\tilde{\mathbf{o}}^i_t\) is a simplified observation. The exact observation model is defined below.}
 
-where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from \gls{mocap}. To reduce notational complexity, we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(\mathbf{o}^i_t \mid \mathbf{s}_t)$ models sensor noise and maps the global state $\mathbf{s}_t$ to each $\mathbf{o}^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
+Here $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from \gls{mocap}. To reduce notational complexity, we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(\mathbf{o}^i_t \mid \mathbf{s}_t)$ models sensor noise and maps the global state $\mathbf{s}_t$ to each $\mathbf{o}^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
 Agents share a single policy conditioned on their current observation \(\mathbf{o}^i_t\) and the previous action \(\mathbf{a}^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
 \begin{equation}
@@ -144,7 +144,7 @@ To train a robust policy that can handle a wide range of initial conditions and 
 A key aspect of our approach is the initial-state randomization $s_0\sim\rho_0$, which generates diverse initial configurations for the payload and quadrotors. This helps the policy learn to handle a wide range of challenging scenarios, including starting from the ground, hovering, disturbance rejection, modeswitch of the payload cable, and strong payload swing. The initial conditions are sampled at each reset of the environment, ensuring that the policy is exposed to a variety of situations during training. This is crucial for learning robust behaviors. 
 At each reset, the payload center~$\mathbf{p}^P$ is sampled uniformly around the target at $[0,0,1.5]$ in
 \begin{equation}
-    \mathbf{p}^P_{xy}\sim\mathcal{U}([-1.5,1.5]),\quad \mathbf{p}^P_z\sim\mathcal{U}([-1,3]),
+    \mathbf{p}^P_{xy}\sim\mathcal{U}([-1.5,1.5]),\quad p^P_z\sim\mathcal{U}([-1,3]),
 \end{equation}
 where the $z$-coordinate is clipped to ensure the payload is above the ground, allowing us to adjust the ratio of ground-takeoff starting positions. We additionally add a subset initializations near the payload with $\mathbf{p}^P\sim\mathcal{N}(\mathbf{0},0.02\mathbf{I})$. This ratio of target initializations is usually set to 20\% in training to help with learning accurate tracking.
 
@@ -196,7 +196,7 @@ We also provide the option to randomize the payload mass, cable length, and othe
 
 \subsection{Reward Design}
 A key aspect of our approach is a modular reward design for multiple quadrotors with and without cable-suspended payloads.
-We initially replicated reward structures from prior work for single quadrotors and swarms of quadrotors. The usual reward structure is a tracking reward, penalizing or rewarding the distance to the target, and varying terms to encourage learning of stable flight. The most common ones are an attitude reward component, an angular velocity, and a linear velocity penalty. Depending on the application, this is also extended with a collision penalty and other auxiliary reward terms \cite{molchanov_sim--multi-real_2019,Eschmann2024,kaufmann_benchmark_2022, huang_collision_2024}.
+We initially replicated reward structures from prior work for single quadrotors and swarms of quadrotors. The usual reward structure is a tracking reward, penalizing or rewarding the distance to the target, and varying terms to encourage learning of stable flight. The most common ones are an attitude reward component, an angular velocity, and a linear velocity penalty. Depending on the application, this is also extended with a collision penalty and other auxiliary reward terms \autocite{molchanov_sim--multi-real_2019,Eschmann2024,kaufmann_benchmark_2022, huang_collision_2024}.
 
 Through an iterative process, experimenting with different extensions of these core terms, we found a very effective reward structure. The final reward structure is modular, allowing for easy adjustments and extensions. It consists of several components that encourage the desired behaviors in the quadrotors while maintaining a stable formation and effectively transporting the payload.
 The goal of our reward is to encourage flight behaviors that recover the cable-suspended payload to its target at a safe speed, while simultaneously minimizing payload swing and vehicle tilt, maintaining a taut suspension cable, enforcing safe spacing between quadrotors, and promoting gentle, low-frequency thrust commands for robust sim-to-real transfer. 
@@ -344,12 +344,12 @@ Figure~\ref{fig:actions_comparison} shows the difference in actions between a po
 We combine the individual reward components into a single reward signal for each agent. The reward components for stability are grouped as
 \begin{equation}
 r_{\mathrm{stab}}
-= \frac{1}{5}\bigl(r_{\mathrm{velP}} + r_{\mathrm{velQ}} + r_{\mathrm{yaw}} + r_{\mathrm{up}} + r_{\mathrm{taut}}\bigr)
+= \frac{1}{5}\bigl(r_{\mathrm{velP}} + r_{\mathrm{velQ}} + r_{\mathrm{yaw}} + r_{\mathrm{up}} + r_{\mathrm{taut}}\bigr).
 \end{equation}
 The safety components that should always be enforced are grouped as
 \begin{equation}
 r_{\mathrm{safety}}
-= \frac{1}{5}\bigl(r_{\mathrm{coll}} + r_{\mathrm{oob}} + r_{\mathrm{smooth}} + r_{\mathrm{energy}} + r_{\mathrm{dist}}\bigr)
+= \frac{1}{5}\bigl(r_{\mathrm{coll}} + r_{\mathrm{oob}} + r_{\mathrm{smooth}} + r_{\mathrm{energy}} + r_{\mathrm{dist}}\bigr).
 \end{equation}
 Finally, we combine the tracking reward with the stability and safety components to form the overall reward
 \begin{equation}
@@ -377,7 +377,7 @@ The reward structure can also be adapted to other tasks by replacing the trackin
     \centering
     
     \includegraphics[width=\textwidth]{experiments/train_metrics.pdf}
-    \caption[Training Metrics]{Average training metrics for one quadrotor with payload scenario. The top plot shows the average episode returns, and the bottom plot shows the average episode lengths over environment steps and wall-clock time. The shaded area represents the standard deviation across 10 seeds. The maximum possible episode length here is 2048 environment steps, which corresponds to 8.2 seconds of flight time. In the end, nearly all episodes are completed, indicating stable flight.}
+    \caption[Training Metrics]{Average training metrics for one quadrotor with payload scenario. The top plot shows the average episode returns, and the bottom plot shows the average episode lengths over environment steps and wall-clock time. The shaded area represents the standard deviation across 10 seeds. The maximum possible episode length here is 2048 environment steps, which corresponds to 8.2 s of flight time. In the end, nearly all episodes are completed, indicating stable flight.}
     \label{fig:train_metrics}
 \end{figure}
 Our training pipeline follows the approach of \autocite{flair2023jaxmarl}, leveraging the JaxMARL framework as a basis for our training method. We use the \gls{ippo} algorithm, which extends \gls{ppo} to multi-agent settings by optimizing a joint policy across all agents while maintaining decentralized execution. We also investigated the use of \gls{mappo} with a centralized critic, but found that \gls{ippo} performs sufficiently for few quadrotor scenarios.
@@ -388,7 +388,7 @@ L_{\mathrm{PPO}}(\theta) = \mathbb{E}\!\bigl[\min\bigl(r_t(\theta)\,\hat{A}_t,\;
 \end{equation}
 a mean-squared value-function error, and an entropy regularizer to encourage sufficient exploration. Gradient norms are clipped to enhance numerical stability.
 
-Since our environment has a certain level of complexity, we always train on a high number of parallel environments (16384). This might not be very sampling efficient, but it allows us to collect a large number of experiences with sufficient variance of configurations in a short time, which is crucial for stable training of policies. A lower number of environments also usually trains a working policy, but the training progress has higher variance, and it is more likely to get stuck in local minima for position tracking. In each environment, we only take 32 steps per episode. Giving us 128 Minibatches of size 4096 for each episode. The training is performed on a single GPU, which allows us to leverage the high-performance capabilities of JAX and Brax for efficient training. Figure~\ref{fig:train_metrics} shows the training progress of the two quadrotor policies.%\todo{maybe add comparison of few env training to fig}
+Since our environment has a certain level of complexity, we always train on a high number of parallel environments (16384). This might not be very sampling efficient, but it allows us to collect a large number of experiences with sufficient variance of configurations in a short time, which is crucial for stable training of policies. A lower number of environments also usually trains a working policy, but the training progress has higher variance, and it is more likely to get stuck in local minima for position tracking. In each environment, we only take 32 steps per episode. Giving us 128 minibatches of size 4096 for each episode. The training is performed on a single GPU, which allows us to leverage the high-performance capabilities of JAX and Brax for efficient training. Figure~\ref{fig:train_metrics} shows the training progress of the two quadrotor policies.%\todo{maybe add comparison of few env training to fig}
 
 The training process and hyperparameters are virtually the same for all numbers of quadrotors, only the policy size is slightly adjusted for more quadrotors. We train the policy on a single RTX Ada 4000 GPU with 20GB of RAM. This gives us training speeds of up to 1 million environment steps per second, depending on the number of parallel environments and Quadrotors. We trained the policies in our experiments on one billion environment steps, which corresponds to roughly 10 minutes of training time for the single quadrotor task, 20 minutes for the dual quadrotor task, and 60 minutes for the three quadrotor tasks. We are also able to train a single quadrotor policy without a payload in less than 3 minutes.
 
