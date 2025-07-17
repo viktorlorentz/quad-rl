@@ -69,7 +69,7 @@ We seek the shared parameters \(\theta\) that maximize the expected discounted r
 By maximizing \(J(\theta)\), the agents learn to jointly minimize payload tracking error \(e^P_t\) while maintaining stability throughout the cooperative transport task.
 
 We have now formalized the problem as a \gls{dec-pomdp}, which allows us to apply decentralized \gls{marl} algorithms to learn policies that can handle the complexities of multi-agent coordination in cable-suspended payload transport tasks. The next section describes the CrazyMARL framework, which provides the necessary simulation and training infrastructure to implement this efficiently.
-\todo{maybe add fig wit multiple agents and env...}
+%\todo{maybe add fig wit multiple agents and env...}
 
 \section{CrazyMARL}
 We present \textbf{CrazyMARL}, an end-to-end JAX-based pipeline for training \gls{marl} policies on teams of Crazyflie quadrotors. Our extendable framework implements both learning for a single quadrotor without payload, as well as single-vehicle and cooperative multi-agent cable-suspended payload transport tasks. At its core, the simulation leverages the high-performance MJX backend of the MuJoCo physics engine \cite{todorov2012mujoco}, interfaced through the Brax library for highly parallelized training. Our environments and algorithms are based on JaxMARL introduced by \autocite{flair2023jaxmarl}. We expose the simulator as a \texttt{JAXMARL.Mabrax} environment, providing a drop-in \gls{api} for JAX-based RL algorithms and other research algorithm implementing the JaxMARL \gls{api}.
@@ -129,7 +129,7 @@ f^i_{j,t}
 j=1,\dots,4,
 \end{equation}
 where \(f_{\max}^i\) is the agent-specific maximum thrust, randomly perturbed at the start of each episode to improve robustness.  Optionally, zero-mean Gaussian noise proportional to \(f_{\max}^i\) may be added to each \(f^i_{j,t}\) to model actuator uncertainty. We always constrain \(\mathbf{a}^i_t\in[-1,1]^4\) and sample \(f_{\max}^i\) within a known bound to produce safe thrust profiles. The resulting thrust vector \(\mathbf{f}^i_t\) is then applied in the physics simulator with the proportional torque component.
-\todo{maybe talk about the motor delay model...}
+%\todo{maybe talk about the motor delay model...}
 \subsection{Randomization}
 To train a robust policy that can handle a wide range of initial conditions and disturbances, we apply several randomization techniques during training.
 \subsubsection{Initial-State Randomization}
@@ -370,7 +370,7 @@ The reward structure can also be adapted to other tasks, by replacing the tracki
 
 % CrazyMARL integrates seamlessly with the JaxMARL ecosystem \cite{flair2023jaxmarl}.  We wrap each Brax environment in a \texttt{JAXMARL.Mabrax} adapter, exposing standard methods for rollout collection, batching, and replay buffer storage.  The same RL algorithms (e.g., PPO, QMIX) can be applied unchanged to single-agent or decentralized multi-agent tasks, enabling rapid experimentation across a broad class of cooperative aerial transport problems.
 
-\todo{maybe consider adding a few lines about reward components that you considered but discarded in the final reward function}
+%\todo{maybe consider adding a few lines about reward components that you considered but discarded in the final reward function}
 \section{Training}
 \begin{figure}[ht]
     \centering
@@ -387,7 +387,7 @@ L_{\mathrm{PPO}}(\theta) = \mathbb{E}\!\bigl[\min\bigl(r_t(\theta)\,\hat{A}_t,\;
 \end{equation}
 a mean-squared value-function error, and an entropy regularizer to encourage sufficient exploration. Gradient norms are clipped to enhance numerical stability.
 
-Since our environment has a certain level of complexity we always train on a high number of parallel environments (16384). This might not be very sampling efficient but allows us to collect a large number of experiences with sufficient variance of configurations in a short time, which is crucial for stable training of policies. A lower number of environments also usually trains a working policy, but the training progress has higher varience and it is more likely to get stuck on local minima for position tracking. On each environment we only step 32 steps per episode. Giving us 128 Minibatches of size 4096 for each episode. The training is performed on a single GPU, which allows us to leverage the high-performance capabilities of JAX and Brax for efficient training. Figure~\ref{fig:train_metrics} shows the training progess of the two quadrotor policy. \todo{maybe add comparison of few env traing to fig}
+Since our environment has a certain level of complexity we always train on a high number of parallel environments (16384). This might not be very sampling efficient but allows us to collect a large number of experiences with sufficient variance of configurations in a short time, which is crucial for stable training of policies. A lower number of environments also usually trains a working policy, but the training progress has higher varience and it is more likely to get stuck on local minima for position tracking. On each environment we only step 32 steps per episode. Giving us 128 Minibatches of size 4096 for each episode. The training is performed on a single GPU, which allows us to leverage the high-performance capabilities of JAX and Brax for efficient training. Figure~\ref{fig:train_metrics} shows the training progess of the two quadrotor policy.%\todo{maybe add comparison of few env traing to fig}
 
 The training process and hyperparameters are virtually the same for all number of quadrotors, only the policy size is slightly adjusted for more quadrotors. We train the policy on a single RTX Ada 4000 GPU with 20GB of RAM. This gives us training speeds of up to 1 Million environment steps per second, depending on the number of parallel environments and Quadrotors. We trained the policies in our experiments on one Billion environment steps, which corresponds to roughly 10 minutes of training time for the single quadrotor task and 20 minutes for the dual quadrotor task and 60 minutes for the three quadrotor tasks. We are also able to train a single quadrotor policy without payload in less than 3 minutes.
 
