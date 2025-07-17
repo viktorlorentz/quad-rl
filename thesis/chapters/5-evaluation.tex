@@ -172,7 +172,7 @@ We also evaluate the generalization to different observation noise scaling level
 The generalization capabilities of the policy show that it can adapt to different cable lengths and payload masses, even without domain randomization during training. This is a strong indicator of the robustness of the learned policy and its potential for real-world applications.
 
 \section{Sim-to-Real Transfer}
-To transfer the learned policies to real-world quadrotors, we export the trained policies a Tflite model and transform it with the STM32 Cube AI toolchain to run on the STM32F7 microcontroller on the Crazyflie. We then deploy the policies on a real quadrotors mapping the internal state estimation of the \gls{ekf} to the observation space of the policy. The policies are then run on the real quadrotors with a 250~Hz control frequency. We evaluated the policies so far only on the single quadrotor without paylaod scenario. 
+To transfer the learned policies to real-world quadrotors, we export the trained policies a Tflite model and transform it with the STM32 Cube AI toolchain to run on the STM32F7 microcontroller on the Crazyflie. We then deploy the policies on a real quadrotors mapping the internal state estimation of the \gls{ekf} to the observation space of the policy. The policies are then run on the real quadrotors with a 250~Hz control frequency. We evaluated the policies so far only on the single quadrotor without payload scenario. 
 
 So far we have not been able to achieve successful sim to real transfer. This might still be due to implementation issues or might require additional domain randomization during training. We plan to further investigate this in future work.
 % \section{Sim-to-Real Transfer}
