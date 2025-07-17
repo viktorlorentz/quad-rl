@@ -26,12 +26,12 @@ These single-agent studies set the stage for extending \gls{rl} methods to paylo
 \subsection{Sim-to-Real \gls{rl} for Micro-\gls{uav} Control}
 Sim-to-real transfer remains a challenge in \gls{rl} for \gls{uav} platforms. In \cite{molchanov_sim--multi-real_2019} it is demonstrated, that domain randomization over physical parameters enables a single policy trained in simulation to generalize zero-shot to quadrotors of varying sizes. Despite these advances, sim-to-real discrepancies under real-world conditions still pose significant challenges in practice, especially for micro-\glspl{uav} like the Crazyflie 2.1, which have low inertia and constrained onboard computation. These limitations have led to the development of specialized \gls{rl} strategies designed to bridge the sim-to-real gap on micro-\glspl{uav}.
 
-Abstracting actions as \gls{ctbr} transfers better than low-level rotor PWM or thrust commands \cite{kaufmann_benchmark_2022}. Leveraging such insights, \cite{Eschmann2024} used an asymmetric actor-critic framework, where the training process has access to privileged simulator information, while the deployed policy uses only realistic observations. This approach yielded zero-shot transfer to Crazyflie hardware within seconds of simulated learning. \cite{chen_what_2024} also managed to transfer by combining careful reward shaping and curriculum schedules, stabilizing training and ensuring safe initial flights on the real quadrotor.
+Abstracting actions as \gls{ctbr} transfers better than low-level rotor \gls{pwm} or thrust commands \cite{kaufmann_benchmark_2022}. Leveraging such insights, \cite{Eschmann2024} used an asymmetric actor-critic framework, where the training process has access to privileged simulator information, while the deployed policy uses only realistic observations. This approach yielded zero-shot transfer to Crazyflie hardware within seconds of simulated learning. \cite{chen_what_2024} also managed to transfer by combining careful reward shaping and curriculum schedules, stabilizing training and ensuring safe initial flights on the real quadrotor.
 
 Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based approaches for Crazyflie control. The table highlights how observation spaces, action representations, and sim-to-real techniques vary across studies, and how they achieved robust flight control under real-world conditions.
 \begin{table*}[!b]
   \centering
-  \caption[Summary of \gls{rl} approaches]{Summary of recent \gls{rl} approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{e}$ the position errors, $\mathbf{v}$ velocity, $\mathbf{R}$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. For details refer to the original paper. We group PWM and motor thrust commands as \gls{srt}.}
+  \caption[Summary of \gls{rl} approaches]{Summary of recent \gls{rl} approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{e}$ the position errors, $\mathbf{v}$ velocity, $\mathbf{R}$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. For details refer to the original paper. We group \gls{pwm} and motor thrust commands as \gls{srt}.}
   \label{tab:rl_comparison}
   \scriptsize
   % full text width with flexible last column
@@ -60,7 +60,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     $x_t=(\mathbf{p}_t,\mathbf{v}_t,\mathbf{q}_t,\boldsymbol{\omega}_t)\!\in\!\mathbb{R}^{13}$ \newline 
     (history $H{=}2$) & 
     \gls{srt} \& \gls{ctbr}\newline 
-    (PWM / AttRate / Att) & 
+    (\gls{pwm} / AttRate / Att) & 
     $\displaystyle r_t= -\!\Bigl(\|\mathbf{e}_t\|^{2} + 10^{-4}\|a_t\|^{2} + 10^{-3}\|a_t\!-\!a_{t-1}\|^{2} + 10^{-3}\|\boldsymbol{\omega}_t\|^{2}\Bigr) + r_f,$ \newline 
     $r_f = -100$ if terminated &
     Domain randomization ($k_F$, $\Delta t$, $m$, $I$, $T_m$, $k_m$) \newline
@@ -85,7 +85,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     \cite{ma2024skilltransfer} & 
     $(\mathbf e,\mathbf q,[r,p,y],\mathbf v,\boldsymbol\omega,
     \mathbf a_{t-1})$  & 
-    \gls{srt} (PWM) & 
+    \gls{srt} (\gls{pwm}) & 
     $\displaystyle
     r_t=2-2.5\|\mathbf e\|
     -1.5\|[r,p]\|-0.05\|\mathbf v\|
