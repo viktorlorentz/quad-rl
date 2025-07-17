@@ -5,17 +5,17 @@ This chapter presents our methodology for training decentralized \gls{marl} poli
 
 We model a team of $Q$ Crazyflie quadrotors collaboratively carrying a cable-suspended payload as the \gls{dec-pomdp} $(\mathcal{Q}, \mathcal{S}, \{\mathcal{A}^i\}_{i=1}^Q, P, r, \{\Omega^i\}_{i=1}^Q, O, \rho_0, \gamma)$, where $\mathcal{Q} = \{1,2,\dots,Q\}$ is the set of agents. At each discrete timestep $t$, the global state 
 \begin{equation}
-s_t = \bigl(\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\}_{i=1}^Q,\; \mathbf{p}^P_t,\mathbf{v}^P_t\bigr)
+\mathbf{s}_t = \bigl(\{\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t\}_{i=1}^Q,\; \mathbf{p}^P_t,\mathbf{v}^P_t\bigr)
 \end{equation}
-encapsulates each quadrotor's position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload's position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(s_{t+1}\mid s_t, a_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor and payload dynamics (including cables) over the fixed interval $\Delta t$.
+encapsulates each quadrotor's position $\mathbf{p}^i_t \in \mathbb{R}^3$, velocity $\mathbf{v}^i_t \in \mathbb{R}^3$, attitude $\mathbf{R}^i_t \in SO(3)$, angular velocity $\boldsymbol{\omega}^i_t \in \mathbb{R}^3$, and the payload's position $\mathbf{p}^P_t \in \mathbb{R}^3$ and velocity $\mathbf{v}^P_t \in \mathbb{R}^3$. The transition model $P(\mathbf{s}_{t+1}\mid \mathbf{s}_t, \mathbf{a}_t)$ corresponds to a single simulation step in MuJoCo MJX, which approximates the continuous quadrotor and payload dynamics (including cables) over the fixed interval $\Delta t$.
 
 The initial state is sampled from a distribution $\rho_0$. In our case $\rho_0$ defines harsh initial conditions, such that the policies must learn to recover from them.
 
 Each agent $i$ selects an action 
 \begin{equation}
-a^i_t = (f^i_{1,t},f^i_{2,t},f^i_{3,t},f^i_{4,t}) \in \mathbb{R}^4
+  \mathbf{a}^i_t = (f^i_{1,t},f^i_{2,t},f^i_{3,t},f^i_{4,t}) \in \mathbb{R}^4
 \end{equation}
-where $f^i_{j,t}$ is the thrust of rotor~$j$. The joint action of all agents is $a_t = (a^1_t,\dots,a^Q_t)$. 
+where $f^i_{j,t}$ is the thrust of rotor~$j$. The joint action of all agents is $\mathbf{a}_t = (\mathbf{a}^1_t,\dots,\mathbf{a}^Q_t)$. 
 
 We define the payload position tracking error as
 $
@@ -23,14 +23,14 @@ $
 $
 so that $e^P_t = \|\mathbf{e}^P_t\|$ represents the tracking error at time $t$. The main objective is to minimize this error while maintaining stability in the system. This gives us a rough reward structure of:
 \begin{equation}
-r(s_t,a_t) \approx\; - e^P_t \;-\; \text{(stability penalties)}
+ r(\mathbf{s}_t,\mathbf{a}_t) \approx\; - e^P_t \;-\; \text{(stability penalties)}
 \end{equation}
 We penalize payload tracking error and include additional terms to discourage large payload swing or cable-tension imbalance.
 
 Each agent must observe its own state as well as the payload's state and the position of the other agents to be able to avoid them. Therefore agent $i$ observes
 \begin{equation}
     \label{eq:obs}
-    \tilde{o}^i_t 
+    \tilde{\mathbf{o}}^i_t 
     = \Bigl(
       \hat{\mathbf{p}}^i_t,\;
       \hat{\mathbf{v}}^i_t,\;
@@ -41,28 +41,28 @@ Each agent must observe its own state as well as the payload's state and the pos
       \{\hat{\mathbf{p}}^j_t\}_{j \in \mathcal{Q}\setminus\{i\}}
     \Bigr).
 \end{equation}
-\emph{Note that \(\tilde{o}^i_t\) is a simplified observation. The exact observation model is defined below.}
+\emph{Note that \(\tilde{\mathbf{o}}^i_t\) is a simplified observation. The exact observation model is defined below.}
 
-where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from \gls{mocap}. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(o^i_t \mid s_t)$ models sensor noise and maps the global state $s_t$ to each $o^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
+where $\hat{\mathbf{p}}^i_t,\hat{\mathbf{v}}^i_t,\hat{\mathbf{R}}^i_t,\hat{\boldsymbol{\omega}}^i_t$ are \gls{ekf} estimates of its own state and $\mathbf{e}^P_t,\mathbf{v}^P_t$ are the payload state from \gls{mocap}. To reduce notational complexity we will denote the observation component without $\hat{\cdot}$ as $\mathbf{p}^i_t,\mathbf{v}^i_t,\mathbf{R}^i_t,\boldsymbol{\omega}^i_t$. The observation function $O(\mathbf{o}^i_t \mid \mathbf{s}_t)$ models sensor noise and maps the global state $\mathbf{s}_t$ to each $\mathbf{o}^i_t$. Finally, $\gamma \in [0,1)$ is the discount factor.
 
-Agents share a single policy conditioned on their current observation \(o^i_t\) and the previous action \(a^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
+Agents share a single policy conditioned on their current observation \(\mathbf{o}^i_t\) and the previous action \(\mathbf{a}^i_{t-1}\) and parameterized by \(\theta\). The actions are sampled as
 \begin{equation}
-  a^i_t \sim \pi_{\theta}\bigl(a^i_t \mid o^i_t,\;a^i_{t-1}\bigr)
+  \mathbf{a}^i_t \sim \pi_{\theta}\bigl(\mathbf{a}^i_t \mid \mathbf{o}^i_t,\;\mathbf{a}^i_{t-1}\bigr)
   \quad\text{for }i=1,\dots,Q.
 \end{equation}
 
 
-For multiple agent scenarios we sample the actions independently for each agent, so that the joint action is given by $a_t = \bigl(a^1_t,\dots,a^Q_t\bigr)$.
+For multiple agent scenarios we sample the actions independently for each agent, so that the joint action is given by $\mathbf{a}_t = (\mathbf{a}^1_t,\dots,\mathbf{a}^Q_t)$.
 
 
 We seek the shared parameters \(\theta\) that maximize the expected discounted return
 \begin{equation}
 \begin{aligned}
-\text{maximize}\quad & J(\theta) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t,a_t)\Bigr],\\
-\text{subject to}\quad &s_0 \sim \rho_0,\\
-&s_{t+1} \sim P\bigl(\cdot\mid s_t,a_t\bigr),\\
-&o^i_t \sim O\bigl(\cdot\mid s_t\bigr),\\
-&a^i_t \sim \pi_{\theta}\bigl(\cdot\mid o^i_t,a^i_{t-1}\bigr)
+\text{maximize}\quad & J(\theta) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(\mathbf{s}_t,\mathbf{a}_t)\Bigr],\\
+\text{subject to}\quad &\mathbf{s}_0 \sim \rho_0,\\
+&\mathbf{s}_{t+1} \sim P\bigl(\cdot\mid \mathbf{s}_t,\mathbf{a}_t\bigr),\\
+&\mathbf{o}^i_t \sim O\bigl(\cdot\mid \mathbf{s}_t\bigr),\\
+&\mathbf{a}^i_t \sim \pi_{\theta}\bigl(\cdot\mid \mathbf{o}^i_t,\mathbf{a}^i_{t-1}\bigr)
 \quad\forall i.
 \end{aligned}
 \end{equation}
@@ -97,7 +97,7 @@ At each control step \(t\), the simulation environment produces a high-dimension
 \begin{equation}
 \mathbf{o}_t \;=\; \bigl[\;\underbrace{\mathbf{e}^P_t}_{3},\;\underbrace{\mathbf{v}^P_t}_{3},\;\underbrace{\{\;\mathbf{r}^i_t,\;\mathrm{vec}(\mathbf{R}^i_t),\;\mathbf{v}^i_t,\;\boldsymbol{\omega}^i_t,\;\mathbf{a}^i_t\}_{i=1}^Q}_{Q(3+9+3+3+4)}\bigr] \;\in\;\mathbb{R}^{6 + 22Q}
 \end{equation}
-Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error and \(\mathbf{v}^P_t\) its velocity. Giving the error as observation instead of an absolute position, allows us to give a position setpoint and track trajectories. We normalize the error to have the policy automatically generalize to a target at any distance. For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(R^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) is the linear velocity in world frame, \(\boldsymbol{\omega}^i_t\) its body-frame angular velocities and \(\mathbf{a}^i_{t-1}\) the agents previous action. By construction, this global observation vector contains all information required to compute rewards and termination conditions. It can be easily adjusted to include additional information or other mappings.
+Here \(\mathbf{e}^P_t = (\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t)/\max(\|\mathbf{p}^P_{\mathrm{des},t}-\mathbf{p}^P_t\|,1)\) is the normalized payload tracking error and \(\mathbf{v}^P_t\) its velocity. Giving the error as observation instead of an absolute position, allows us to give a position setpoint and track trajectories. We normalize the error to have the policy automatically generalize to a target at any distance. For each quadrotor \(i\), \(\mathbf{r}^i_t=\mathbf{p}^i_t-\mathbf{p}^P_t\) denotes its position relative to the payload, \(\mathrm{vec}(\mathbf{R}^i_t)\in\mathbb{R}^9\) the row-major flattening of its rotation matrix, \(\mathbf{v}^i_t\) is the linear velocity in world frame, \(\boldsymbol{\omega}^i_t\) its body-frame angular velocities and \(\mathbf{a}^i_{t-1}\) the agents previous action. By construction, this global observation vector contains all information required to compute rewards and termination conditions. It can be easily adjusted to include additional information or other mappings.
 
 \subsubsection{Local Observations}
 Since we want to train our policy in a \gls{ctde} fashion, we map the global observation vector to each agent's local observation space. During decentralized execution, each agent \(i\) receives only the subset of entries corresponding to the payload terms, its own dynamic state block, and the other quadrotors relative positions.  Concretely, agent \(i\) observes
@@ -141,13 +141,13 @@ To train a robust policy that can handle a wide range of initial conditions and 
     \label{fig:reset_config}
 \end{figure}
 A key aspect of our approach is the initial-state randomization $s_0\sim\rho_0$, which generates diverse initial configurations for the payload and quadrotors. This helps the policy learn to handle a wide range of challenging scenarios, including starting from the ground, hovering, disturbance rejection, modeswitch of the payload cable and strong payload swing. The initial conditions are sampled at each reset of the environment, ensuring that the policy is exposed to a variety of situations during training. This is crucial for learning robust behaviors. 
-At each reset, the payload center~$p$ is sampled uniformly around the target at $[0,0,1.5]$ in
+At each reset, the payload center~$\mathbf{p}^P$ is sampled uniformly around the target at $[0,0,1.5]$ in
 \begin{equation}
-p^P_{xy}\sim\mathcal{U}([-1.5,1.5]),\quad p^P_z\sim\mathcal{U}([-1,3]),
+    \mathbf{p}^P_{xy}\sim\mathcal{U}([-1.5,1.5]),\quad \mathbf{p}^P_z\sim\mathcal{U}([-1,3]),
 \end{equation}
-where the $z$-coordinate is clipped to ensure the payload is above the ground, allowing us to adjust the ratio of ground-takeoff starting positions. We additionally add a subset initializations near the payload with $p^P\sim\mathcal{N}(\mathbf{0},0.02\mathbf{I})$. This ratio of target initializations is usually set to 20\% in training to help with learning accurate tracking.
+where the $z$-coordinate is clipped to ensure the payload is above the ground, allowing us to adjust the ratio of ground-takeoff starting positions. We additionally add a subset initializations near the payload with $\mathbf{p}^P\sim\mathcal{N}(\mathbf{0},0.02\mathbf{I})$. This ratio of target initializations is usually set to 20\% in training to help with learning accurate tracking.
 
-We can then use the payload position $p^P$ as the center point and randomly sample $N$ quadrotors in a spherical shell around the payload. The radius $r_i$ of each quadrotor is sampled from a normal distribution with mean $\mu_r$ and standard deviation $\sigma_r$, and then clipped to cable length. The angles $\theta_i$ and $\phi_i$ are sampled from normal distributions with means $\mu_\theta$ and $\phi_{\mathrm{offset}}$ respectively, and standard deviations $\sigma_\theta$ and $\sigma_\phi$. The angles are then adjusted to ensure they are within the range $[0, 2\pi]$. The equations for sampling the quadrotor positions are as follows:
+We can then use the payload position $\mathbf{p}^P$ as the center point and randomly sample $Q$ quadrotors in a spherical shell around the payload. The radius $r_i$ of each quadrotor is sampled from a normal distribution with mean $\mu_r$ and standard deviation $\sigma_r$, and then clipped to cable length. The angles $\theta_i$ and $\phi_i$ are sampled from normal distributions with means $\mu_\theta$ and $\phi_{\mathrm{offset}}$ respectively, and standard deviations $\sigma_\theta$ and $\sigma_\phi$. The angles are then adjusted to ensure they are within the range $[0, 2\pi]$. The equations for sampling the quadrotor positions are as follows:
 \begin{equation}
 r_i = \mathrm{clip}\bigl(\mu_r+\sigma_r\varepsilon_i^{(r)},\,r_{\min},\,r_{\max}\bigr),\quad
 \theta_i = \mu_\theta+\sigma_\theta\varepsilon_i^{(\theta)},\quad
@@ -171,7 +171,7 @@ r_{\max} = c,\\
 
 These are converted to Cartesian positions with the $z$-coordinate clipped.
 \begin{equation}
-q_i = p + r_i
+\mathbf{q}_i = \mathbf{p}^P + r_i
 \begin{bmatrix}
 \sin\theta_i\cos\phi_i\\
 \sin\theta_i\sin\phi_i\\

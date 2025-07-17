@@ -18,22 +18,22 @@ Before introducing the specific algorithm, we first define the key concepts and 
 \label{fig:rl_diagram}
 \end{figure}
 
-\gls{rl} problems are commonly framed as \gls{mdp}s, defined by the tuple \((\mathcal{S}, \mathcal{A}, P, r, \rho_0, \gamma)\), where \(\mathcal{S}\) is the set of states, \(\mathcal{A}\) is the set of actions, \(P(s_{t+1}\!\mid\!s_t,a_t)\) is the transition probability, \(r(s_t,a_t)\) is the immediate reward, \(\gamma \in [0,1)\) is the discount factor, and \(\rho_0\) is the initial state distribution with \(s_0 \sim \rho_0\). At each time step \(t\), the agent observes \(s_t\), samples and executes \(a_t \sim \pi_\theta(\cdot\mid s_t)\), receives \(r_t = r(s_t,a_t)\), and transitions to \(s_{t+1} \sim P(\cdot\mid s_t,a_t)\). This procedure is visualized in figure \ref{fig:rl_diagram}. In practice, the agent often has access only to a partial observation \(o_t\). We use \(o_t\) or \(s_t\) interchangeably depending on context.
+\gls{rl} problems are commonly framed as \gls{mdp}s, defined by the tuple \((\mathcal{S}, \mathcal{A}, P, r, \rho_0, \gamma)\), where \(\mathcal{S}\) is the set of states, \(\mathcal{A}\) is the set of actions, \(P(\mathbf{s}_{t+1}\!\mid\!\mathbf{s}_t,\mathbf{a}_t)\) is the transition probability, \(r(\mathbf{s}_t,\mathbf{a}_t)\) is the immediate reward, \(\gamma \in [0,1)\) is the discount factor, and \(\rho_0\) is the initial state distribution with \(\mathbf{s}_0 \sim \rho_0\). At each time step \(t\), the agent observes \(\mathbf{s}_t\), samples and executes \(\mathbf{a}_t \sim \pi_\theta(\cdot\mid \mathbf{s}_t)\), receives \(r_t = r(\mathbf{s}_t,\mathbf{a}_t)\), and transitions to \(\mathbf{s}_{t+1} \sim P(\cdot\mid \mathbf{s}_t,\mathbf{a}_t)\). This procedure is visualized in figure \ref{fig:rl_diagram}. In practice, the agent often has access only to a partial observation \(\mathbf{o}_t\). We use \(\mathbf{o}_t\) or \(\mathbf{s}_t\) interchangeably depending on context.
 
 \paragraph{Policies}
 The agent's behavior is defined by a policy \(\pi_{\theta}\), parameterized by \(\theta \in \mathbb{R}^{d}\). A deterministic policy outputs
 $ 
-a_t = \pi_{\theta}(s_t),
+\mathbf{a}_t = \pi_{\theta}(\mathbf{s}_t),
 $
 while a stochastic policy samples
 $
-a_t \sim \pi_{\theta}(\,\cdot\mid s_t).
+\mathbf{a}_t \sim \pi_{\theta}(\,\cdot\mid \mathbf{s}_t).
 $
 We optimize \(\pi_\theta\) to maximize the expected return, typically representing it as a neural network mapping states to action distributions.
 
 \paragraph{Reward and Return}
 The agent's goal is to maximize the expected return, which is the total discounted reward over time. 
-The reward function \(r_t=r(s_t,a_t)\) provides immediate feedback to the agent and usually depends on the current state \(s_t\), action taken by the policy \(a_t\) and the next state \(s_{t+1}\). The discounted return from the start is defined as
+The reward function \(r_t=r(\mathbf{s}_t,\mathbf{a}_t)\) provides immediate feedback to the agent and usually depends on the current state \(\mathbf{s}_t\), action taken by the policy \(\mathbf{a}_t\) and the next state \(\mathbf{s}_{t+1}\). The discounted return from the start is defined as
 \begin{equation}
 R_0 = \sum_{t=0}^{\infty} \gamma^t r_t\,,
 \end{equation}
@@ -45,59 +45,59 @@ J(\pi) = \mathbb{E}\bigl[R_0\bigr]
 and the goal is to find \(\pi^* = \arg\max_\pi J(\pi)\). Formally,
 \begin{equation}\label{eq:RL_opt}
 \begin{aligned}
-\text{maximize} \quad & \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t,a_t)\Bigr] \\
-\text{subject to} \quad & s_0 \sim \rho_0, \quad a_t \sim \pi(\cdot\mid s_t), \quad s_{t+1} \sim P(\cdot\mid s_t,a_t).
+\text{maximize} \quad & \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(\mathbf{s}_t,\mathbf{a}_t)\Bigr] \\
+\text{subject to} \quad & \mathbf{s}_0 \sim \rho_0, \quad \mathbf{a}_t \sim \pi(\cdot\mid \mathbf{s}_t), \quad \mathbf{s}_{t+1} \sim P(\cdot\mid \mathbf{s}_t,\mathbf{a}_t).
 \end{aligned}
 \end{equation}
 
 \paragraph{Value and Action-Value Functions}
-Under a fixed policy \(\pi_\theta\), the state-value function \(V^\pi(s_t)\) and the action-value function \(Q^\pi(s_t,a_t)\) measure the expected discounted return:
+Under a fixed policy \(\pi_\theta\), the state-value function \(V^\pi(\mathbf{s}_t)\) and the action-value function \(Q^\pi(\mathbf{s}_t,\mathbf{a}_t)\) measure the expected discounted return:
 \begin{equation}
-V^\pi(s_t) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t r_t \;\big|\; s_0 = s_t\Bigr], 
+V^\pi(\mathbf{s}_t) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t r_t \;\big|\; \mathbf{s}_0 = \mathbf{s}_t\Bigr], 
 \qquad
-Q^\pi(s_t,a_t) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t r_t \;\big|\; s_0 = s_t,\,a_0 = a_t\Bigr].
+Q^\pi(\mathbf{s}_t,\mathbf{a}_t) = \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t r_t \;\big|\; \mathbf{s}_0 = \mathbf{s}_t,\,\mathbf{a}_0 = \mathbf{a}_t\Bigr].
 \end{equation}
 
-Here, \(V^\pi(s_t)\) is the expected discounted return starting from state \(s_t\) under \(\pi_\theta\), and \(Q^\pi(s_t,a_t)\) is the expected discounted return starting from \(s_t\), taking action \(a_t\), then following \(\pi_\theta\).
+Here, \(V^\pi(\mathbf{s}_t)\) is the expected discounted return starting from state \(\mathbf{s}_t\) under \(\pi_\theta\), and \(Q^\pi(\mathbf{s}_t,\mathbf{a}_t)\) is the expected discounted return starting from \(\mathbf{s}_t\), taking action \(\mathbf{a}_t\), then following \(\pi_\theta\).
 The Bellman equations decompose these functions into immediate reward plus the discounted value of the subsequent state:
 \begin{align}
-V^\pi(s_t)
-&= \mathbb{E}_{a_t\sim\pi(\cdot\mid s_t)}\bigl[r(s_t,a_t)\bigr]
-  + \gamma\,\mathbb{E}_{s_{t+1}\sim P(\cdot\mid s_t,a_t)}\bigl[V^\pi(s_{t+1})\bigr],\\
-Q^\pi(s_t,a_t)
-&= \mathbb{E}_{s_{t+1}\sim P(\cdot\mid s_t,a_t)}\bigl[r(s_t,a_t)\bigr]
-  + \gamma\,\mathbb{E}_{a_{t+1}\sim\pi(\cdot\mid s_{t+1})}\bigl[Q^\pi(s_{t+1},a_{t+1})\bigr].
+V^\pi(\mathbf{s}_t)
+&= \mathbb{E}_{\mathbf{a}_t\sim\pi(\cdot\mid \mathbf{s}_t)}\bigl[r(\mathbf{s}_t,\mathbf{a}_t)\bigr]
+  + \gamma\,\mathbb{E}_{\mathbf{s}_{t+1}\sim P(\cdot\mid \mathbf{s}_t,\mathbf{a}_t)}\bigl[V^\pi(\mathbf{s}_{t+1})\bigr],\\
+Q^\pi(\mathbf{s}_t,\mathbf{a}_t)
+&= \mathbb{E}_{\mathbf{s}_{t+1}\sim P(\cdot\mid \mathbf{s}_t,\mathbf{a}_t)}\bigl[r(\mathbf{s}_t,\mathbf{a}_t)\bigr]
+  + \gamma\,\mathbb{E}_{\mathbf{a}_{t+1}\sim\pi(\cdot\mid \mathbf{s}_{t+1})}\bigl[Q^\pi(\mathbf{s}_{t+1},\mathbf{a}_{t+1})\bigr].
 \end{align}
-The advantage function \(A^\pi(s_t,a_t)\) quantifies the relative value of taking action \(a_t\) in state \(s_t\) compared to the average value of \(s_t\):
+The advantage function \(A^\pi(\mathbf{s}_t,\mathbf{a}_t)\) quantifies the relative value of taking action \(\mathbf{a}_t\) in state \(\mathbf{s}_t\) compared to the average value of \(\mathbf{s}_t\):
 \begin{equation}
-A^\pi(s_t,a_t) = Q^\pi(s_t,a_t) - V^\pi(s_t).
+A^\pi(\mathbf{s}_t,\mathbf{a}_t) = Q^\pi(\mathbf{s}_t,\mathbf{a}_t) - V^\pi(\mathbf{s}_t).
 \end{equation}
 
 \paragraph{On-Policy Gradient Methods}
 On-policy methods collect data under the current policy \(\pi_\theta\) and perform gradient ascent on \(J(\theta)\) to ultimately improve the policy towards \(\pi^*\). The policy gradient can be expressed using the advantage function:
 \begin{equation}
 \nabla_\theta J(\theta)
-= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t \,\nabla_\theta \log \pi_\theta(a_t\mid s_t)\,\hat A_t\Bigr].
+= \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t \,\nabla_\theta \log \pi_\theta(\mathbf{a}_t\mid \mathbf{s}_t)\,\hat A_t\Bigr].
 \end{equation}
 In practice, there are different approaches to approximate the policy gradient \(\nabla_{\theta}J(\theta)\). In the next section, we will focus on the \gls{ppo} algorithm, which is a popular on-policy method, using a surrogate objective function to optimize the policy.
 \subsection{Proximal Policy Optimization}
 \gls{ppo} \cite{schulman2017proximal} alternates between sampling trajectories using the current policy and performing multiple epochs of stochastic gradient ascent on a clipped surrogate objective. For continuous control, the actor network outputs parameters of a Gaussian distribution,
 \begin{equation}
-a_t \sim \mathcal{N}\bigl(\mu_\theta(s_t),\,\sigma_\theta(s_t)\bigr),
+\mathbf{a}_t \sim \mathcal{N}\bigl(\mu_\theta(\mathbf{s}_t),\,\sigma_\theta(\mathbf{s}_t)\bigr),
 \end{equation}
-Here, the actor network (parameterized by \(\theta\)) maps a state \(s_t\) to a distribution over actions, thereby defining the policy \(\pi_\theta(a_t \mid s_t)\). This stochastic sampling is crucial as it enables the agent to explore a continuous range of actions, promoting both exploration and robustness in learning.
+Here, the actor network (parameterized by \(\theta\)) maps a state \(\mathbf{s}_t\) to a distribution over actions, thereby defining the policy \(\pi_\theta(\mathbf{a}_t \mid \mathbf{s}_t)\). This stochastic sampling is crucial as it enables the agent to explore a continuous range of actions, promoting both exploration and robustness in learning.
 
-\gls{ppo} builds on the actor-critic framework, where two neural networks, the actor network and the critic network, are optimized simultaneously. The actor network, or policy network, directly outputs the action probabilities or probability distribution. The critic network, often parameterized by \(\phi\), estimates a value function \(V_\phi(s_t)\) that evaluates the quality of states, or more precisely the expected return from \(s_t\) under the current policy. The critic's estimate is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
+\gls{ppo} builds on the actor-critic framework, where two neural networks, the actor network and the critic network, are optimized simultaneously. The actor network, or policy network, directly outputs the action probabilities or probability distribution. The critic network, often parameterized by \(\phi\), estimates a value function \(V_\phi(\mathbf{s}_t)\) that evaluates the quality of states, or more precisely the expected return from \(\mathbf{s}_t\) under the current policy. The critic's estimate is used to compute an advantage function that quantifies the relative benefit of taking a specific action in a given state. A commonly used method for estimating advantages is \gls{gae}, which effectively reduces variance while introducing a manageable bias that aids learning stability. \gls{gae} computes the advantage as
 \begin{equation}
 \hat{A}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}, 
 \quad
-\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t).
+\delta_t = r_t + \gamma V_\phi(\mathbf{s}_{t+1}) - V_\phi(\mathbf{s}_t).
 \end{equation}
-Here, \(r_t\) is the reward received at time \(t\), \(V_\phi(s_t)\) is the estimated value of state \(s_t\) from the critic network under the current policy, \(\gamma \in [0,1]\) is the discount factor that weighs future rewards, and \(\lambda \in [0,1]\) is a parameter that adjusts the trade-off between bias and variance in the advantage estimates.
+Here, \(r_t\) is the reward received at time \(t\), \(V_\phi(\mathbf{s}_t)\) is the estimated value of state \(\mathbf{s}_t\) from the critic network under the current policy, \(\gamma \in [0,1]\) is the discount factor that weighs future rewards, and \(\lambda \in [0,1]\) is a parameter that adjusts the trade-off between bias and variance in the advantage estimates.
 
 A key contribution of \gls{ppo} is the use of a clipped surrogate objective designed to restrict the size of policy updates. We can define the probability ratio between the new and the old policies
 \begin{equation}
-\rho_t(\theta) = \frac{\pi_\theta(a_t\mid s_t)}{\pi_{\theta_{\text{old}}}(a_t\mid s_t)},
+\rho_t(\theta) = \frac{\pi_\theta(\mathbf{a}_t\mid \mathbf{s}_t)}{\pi_{\theta_{\text{old}}}(\mathbf{a}_t\mid \mathbf{s}_t)},
 \end{equation}
 Now, the clipped surrogate objective is
 \begin{equation}
@@ -108,10 +108,10 @@ where \(\hat{A}_t\) is an estimator of the advantage function and \(\epsilon\) i
 In practice, \gls{ppo} combines the policy surrogate loss with additional terms, such as a value function loss, which is computed by the critic network, and an entropy bonus, yielding a composite objective:
 \begin{equation}
 L(\theta,\phi) = \mathbb{E}_t\Bigl[L^{\text{CLIP}}(\theta)
-  - c_1\,\bigl(V_\phi(s_t) - V_t^{\text{target}}\bigr)^2
-  + c_2\,S\bigl[\pi_\theta(\cdot\mid s_t)\bigr]\Bigr],
+  - c_1\,\bigl(V_\phi(\mathbf{s}_t) - V_t^{\text{target}}\bigr)^2
+  + c_2\,S\bigl[\pi_\theta(\cdot\mid \mathbf{s}_t)\bigr]\Bigr],
 \end{equation}
-where \(c_1\) and \(c_2\) are coefficients that weight the contributions of the value function error and the entropy bonus \(S\big[\pi_\theta\big](s_t)\), respectively. The term \(\left(V_\phi(s_t) - V_t^{\text{target}}\right)^2\) is the critic's squared error against the target value \(V_t^{\text{target}}\). This final objective is optimized using stochastic gradient ascent over multiple epochs on the same batch of on-policy samples, updating both actor parameters \(\theta\) and critic parameters \(\phi\).
+where \(c_1\) and \(c_2\) are coefficients that weight the contributions of the value function error and the entropy bonus \(S\big[\pi_\theta\big](\mathbf{s}_t)\), respectively. The term \(\left(V_\phi(\mathbf{s}_t) - V_t^{\text{target}}\right)^2\) is the critic's squared error against the target value \(V_t^{\text{target}}\). This final objective is optimized using stochastic gradient ascent over multiple epochs on the same batch of on-policy samples, updating both actor parameters \(\theta\) and critic parameters \(\phi\).
 
 The overall procedure of \gls{ppo} in an actor-critic setting is summarized in Algorithm~\ref{alg:ppo}. In the algorithm, \(\theta\) denotes the current policy parameters, \(\theta_{\text{old}}\) are the parameters used for generating the on-policy data, \(U\) is the number of parallel actors (often parallel simulation environments), \(T\) is the number of timesteps per actor rollout (with \(UT\) total timesteps per batch), \(K\) is the number of epochs over the data, and \(M \le UT\) is the minibatch size. The critic network's parameters \(\phi\) are updated alongside \(\theta\) whenever the value loss term is backpropagated.
 
@@ -138,44 +138,43 @@ A cooperative multi-agent \gls{rl} problem can be formalized as a \gls{dec-pomdp
 \begin{equation}
   \bigl(\mathcal{N},\,\mathcal{S},\,\{\mathcal{A}^i\}_{i=1}^N,\,P,\,r,\,\{\Omega^i\}_{i=1}^N,\,O,\,\rho_0,\,\gamma\bigr)
 \end{equation}
-where $\mathcal{N}=\{1,\dots,N\}$ is the set of agents; $\mathcal{S}$ is the set of global states (with $s_0\sim\rho(s)$ denoting the initial state distribution); $\mathcal{A}^i$ is the action space of agent $i$, and the joint action space is $\mathcal{A} = \prod_{i=1}^N \mathcal{A}^i$; $P(s_{t+1} \mid s_t, a_t)$ is the transition function, where $a_t=(a^1_t,\dots,a^N_t)\in\mathcal{A}$; $r(s_t,a_t)\in\mathbb{R}$ is the common team reward received by all agents; $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid s_t)$ is the joint observation function; and $\gamma\in[0,1)$ is the discount factor.
-At each time step $t$, each agent $i$ receives a private observation $o^i_t \in \Omega^i$ sampled from $O(\cdot\mid s_t)$ and selects an action 
-$a^i_t \sim \pi^i\bigl(a^i \mid \tau^i_t\bigr)$
-conditioned on its action-observation history $\tau^i_t$. The joint policy 
-$\pi(a\mid \tau) \;=\; \prod_{i=1}^N \pi^i\bigl(a^i\mid \tau^i\bigr)$
+where $\mathcal{N}=\{1,\dots,N\}$ is the set of agents; $\mathcal{S}$ is the set of global states (with $\mathbf{s}_0\sim\rho_0$ denoting the initial state distribution); $\mathcal{A}^i$ is the action space of agent $i$, and the joint action space is $\mathcal{A} = \prod_{i=1}^N \mathcal{A}^i$; $P(\mathbf{s}_{t+1} \mid \mathbf{s}_t, \mathbf{a}_t)$ is the transition function, where $\mathbf{a}_t=(\mathbf{a}^1_t,\dots,\mathbf{a}^N_t)\in\mathcal{A}$; $r(\mathbf{s}_t,\mathbf{a}_t)\in\mathbb{R}$ is the common team reward received by all agents; $\Omega^i$ is the observation space of agent $i$, and $O(o^1,\dots,o^N\mid \mathbf{s}_t)$ is the joint observation function; and $\gamma\in[0,1)$ is the discount factor.
+At each time step $t$, each agent $i$ receives a private observation $\mathbf{o}^i_t \in \Omega^i$ sampled from $O(\cdot\mid \mathbf{s}_t)$ and selects an action 
+$\mathbf{a}^i_t \sim \pi^i\bigl(\mathbf{a}^i\mid \tau^i_t\bigr)$
+conditioned on its action-observation history \(\tau^i_t\). The joint policy 
+\(\pi(\mathbf{a}\mid \tau) \;=\; \prod_{i=1}^N \pi^i\bigl(\mathbf{a}^i\mid \tau^i\bigr)\)
 induces an expected discounted return
 \begin{equation}
-  J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(s_t, a_t)\Bigr]\,. 
+  J(\pi) \;=\; \mathbb{E}\Bigl[\sum_{t=0}^\infty \gamma^t\,r(\mathbf{s}_t,\mathbf{a}_t)\Bigr]\,. 
 \end{equation}
 
-\todo{maybe bold or not bold vectors}
 
 \subsection{\glsxtrfull{ippo}}
 There are two primary approaches for extending \gls{ppo} to multi-agent settings: \gls{ippo}, which employs decentralized critics, and \gls{mappo}, which uses a centralized critic.
 In \gls{ippo} \cite{witt_is_2020}, each agent \(i\) treats other agents as part of its environment and optimizes its own clipped surrogate objective:
 \begin{equation}
 L_i(\theta_i) = \mathbb{E}_t\Bigl[L^{\mathrm{CLIP}}_i(\theta_i) 
-  - c_1\,\bigl(V_{\phi_i}(o^i_t)-V^{\text{target},i}_t\bigr)^2 
-  + c_2\,S[\pi_{\theta_i}](o^i_t)\Bigr],
+  - c_1\,\bigl(V_{\phi_i}(\mathbf{o}^i_t)-V^{\text{target},i}_t\bigr)^2 
+  + c_2\,S[\pi_{\theta_i}](\mathbf{o}^i_t)\Bigr],
 \end{equation}
 where
 \begin{equation}
 L^{\mathrm{CLIP}}_i(\theta_i) = \mathbb{E}_t\!\Bigl[\min\bigl(\rho^i_t(\theta_i)\,\hat{A}^i_t;\text{clip}(\rho^i_t(\theta_i),1-\epsilon,1+\epsilon)\,\hat{A}^i_t\bigr)\Bigr].
 \end{equation}
-Here, \(\rho^i_t(\theta_i)=\pi_{\theta_i}(a^i_t\mid o^i_t)/\pi_{\theta_i}^{\mathrm{old}}(a^i_t\mid o^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(o^i_t,a^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
+Here, \(\rho^i_t(\theta_i)=\pi_{\theta_i}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)/\pi_{\theta_i}^{\mathrm{old}}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)\), and \(\hat{A}^i_t\) is estimated with \gls{gae} using agent \(i\)'s local critic \(V_{\phi_i}\). Each agent collects its own on-policy rollouts \(\{(\mathbf{o}^i_t,\mathbf{a}^i_t,r_t)\}\) and performs \(K\) epochs of minibatch \gls{sgd} exactly as in single agent \gls{ppo}.  While this simplicity enables straightforward scaling to many agents, it does not explicitly address the non stationarity introduced by concurrent learning: all stability and performance gains must emerge implicitly from \gls{ppo} conservative updates and entropy regularization.
 
 \subsection{\glsxtrfull{mappo}}
-\gls{mappo} \cite{yu_surprising_2022} adopts a \gls{ctde} paradigm. A shared policy \(\pi_\theta(a^i\mid o^i)\) is used by all agents at execution, while training uses a centralized critic \(V_\phi(s_t)\) that has access to the full state or all agents' observations. The joint objective is
+\gls{mappo} \cite{yu_surprising_2022} adopts a \gls{ctde} paradigm. A shared policy \(\pi_\theta(\mathbf{a}^i\mid \mathbf{o}^i)\) is used by all agents at execution, while training uses a centralized critic \(V_\phi(\mathbf{s}_t)\) that has access to the full state or all agents' observations. The joint objective is
 \begin{equation}
 L(\theta,\phi) = \mathbb{E}_t\Bigl[L^{\mathrm{CLIP}}(\theta)
-  - c_1\,\bigl(V_\phi(s_t)-V^{\text{target}}_t\bigr)^2
-  + c_2 \sum_{i=1}^N S[\pi_\theta(\cdot\mid o^i_t)]\Bigr],
+  - c_1\,\bigl(V_\phi(\mathbf{s}_t)-V^{\text{target}}_t\bigr)^2
+  + c_2 \sum_{i=1}^N S[\pi_\theta(\cdot\mid \mathbf{o}^i_t)]\Bigr],
 \end{equation}
 where 
 \begin{equation}
 L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\Bigl[\min\bigl(\rho_t(\theta)\,\hat{A}_t;\text{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\bigr)\Bigr],
 \end{equation}
-and \(\rho_t(\theta)=\prod_i \frac{\pi_\theta(a^i_t\mid o^i_t)}{\pi_{\theta_{\text{old}}}(a^i_t\mid o^i_t)}\). By conditioning the critic on the true global state, \gls{mappo} obtains lower-variance advantage estimates and improved credit assignment, while each agent remains decentralized at execution, relying only on its local observation \(o^i\). Shared policy parameters promote coordinated behaviors and efficient scaling.
+and \(\rho_t(\theta)=\prod_i \frac{\pi_\theta(\mathbf{a}^i_t\mid \mathbf{o}^i_t)}{\pi_{\theta_{\text{old}}}(\mathbf{a}^i_t\mid \mathbf{o}^i_t)}\). By conditioning the critic on the true global state, \gls{mappo} obtains lower-variance advantage estimates and improved credit assignment, while each agent remains decentralized at execution, relying only on its local observation \(\mathbf{o}^i\). Shared policy parameters promote coordinated behaviors and efficient scaling.
 
 \section{Quadrotor Dynamics}
 \label{sec:quadrotor_control}
@@ -195,7 +194,7 @@ Quadrotors are rotorcraft \glspl{uav} with four fixed-pitch propellers generatin
 \end{figure}
 We define the world frame \(\mathcal{W}\) and the body-fixed frame \(\mathcal{B}\) as shown in Figure~\ref{fig:quadrotor_frames}. The origin of \(\mathcal{B}\) is at the quadrotor's center of mass, with its \(x\)-axis pointing forward, \(y\)-axis to the right, and \(z\)-axis upward. The quadrotor's position in \(\mathcal{W}\) is \(\mathbf{p} \in \mathbb{R}^3\), and its linear velocity is \(\mathbf{v} = \dot{\mathbf{p}}\). Its attitude is given by \(\mathbf{R} \in SO(3)\), mapping vectors from \(\mathcal{B}\) to \(\mathcal{W}\), and the angular velocity in \(\mathcal{B}\) is \(\boldsymbol{\omega} = [\omega_x,\omega_y,\omega_z]^\mathsf{T} \in \mathbb{R}^3\). We collect these into the state
 \begin{equation}
-x = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr).
+\mathbf{x} = \bigl(\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega}\bigr).
 \end{equation}
 
 \subsection{Sensors and State Estimation}
@@ -214,14 +213,14 @@ with \(\boldsymbol{\nu}_p,\boldsymbol{\nu}_R\) small errors and \(\widehat{\cdot
 \begin{equation}
 \mathbf{y} = \begin{bmatrix}
 \mathbf{a}_m^\mathsf{T} & \boldsymbol{\omega}_m^\mathsf{T} & \mathbf{p}_{\mathrm{mocap}}^\mathsf{T} & \mathrm{vec}(\mathbf{R}_{\mathrm{mocap}})^\mathsf{T}
-\end{bmatrix}^\mathsf{T} = h(x) + \boldsymbol{\nu}.
+\end{bmatrix}^\mathsf{T} = h(\mathbf{x}) + \boldsymbol{\nu}.
 \end{equation}
-An \gls{ekf} fuses these measurements to produce \(\hat{x} = (\hat{\mathbf{p}},\,\hat{\mathbf{v}},\,\hat{\mathbf{R}},\,\hat{\boldsymbol{\omega}})\) for use by the low-level controllers.
+An \gls{ekf} fuses these measurements to produce \(\hat{\mathbf{x}} = (\hat{\mathbf{p}},\,\hat{\mathbf{v}},\,\hat{\mathbf{R}},\,\hat{\boldsymbol{\omega}})\) for use by the low-level controllers.
 \subsection{Quadrotor Dynamics}
 \label{sec:quadrotor_dynamics}
-We augment the state \(x=(\mathbf{p},\mathbf{v},\mathbf{R},\boldsymbol{\omega})\) with propeller speeds \(\boldsymbol{\Omega}=[\Omega_1,\Omega_2,\Omega_3,\Omega_4]^\mathsf{T}\), forming
+We augment the state \(\mathbf{x}=(\mathbf{p},\mathbf{v},\mathbf{R},\boldsymbol{\omega})\) with propeller speeds \(\boldsymbol{\Omega}=[\Omega_1,\Omega_2,\Omega_3,\Omega_4]^\mathsf{T}\), forming
 \begin{equation}
-x_{\mathrm{full}} = (\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega},\,\boldsymbol{\Omega}).
+\mathbf{x}_{\mathrm{full}} = (\mathbf{p},\,\mathbf{v},\,\mathbf{R},\,\boldsymbol{\omega},\,\boldsymbol{\Omega}).
 \end{equation}
 Let \(m\) be the mass of the quadrotor, and let \(\mathbf{I} = \mathrm{diag}(J_{x},\,J_{y},\,J_{z})\) be its moment-of-inertia matrix expressed in \(\mathcal{B}\). Gravity in \(\mathcal{W}\) is \(g\,\mathbf{e}_{3}\) with \(\mathbf{e}_{3} = [0,\,0,\,1]^{\mathsf{T}}\). Each propeller \(i\) (numbered 1-4 as in Figure~\ref{fig:quadrotor_frames}) produces an upward thrust \(f_{i} \in \mathbb{R}\) along the body-fixed \(z\)-axis and a reactive torque \(\tau_{i}\in \mathbb{R}\) about that same axis. We assume the thrust and drag torque of each propeller scale quadratically with the motor speed:
 \begin{equation}
@@ -263,14 +262,14 @@ Following \cite{kaufmann_benchmark_2022}, we describe three common action-space 
 \paragraph{Linear Velocity \& Yaw Rate (LV)}  
 An LV policy outputs a desired body-frame velocity \(\mathbf{v}_{\mathrm{des}}=[v_x,v_y,v_z]^\mathsf{T}\) and a yaw rate \(\omega_z\):
 \begin{equation}
-u_{\mathrm{LV}} = \{v_x,\,v_y,\,v_z,\,\omega_z\}.
+\mathbf{a}_{\mathrm{LV}} = \{v_x,\,v_y,\,v_z,\,\omega_z\}.
 \end{equation}
 A cascaded low-level controller converts these into collective thrust \(c=\|\mathbf{f}_{\mathrm{prop}}\|\) and attitude setpoints, then allocates individual propeller thrusts \(f_i\) to achieve the commanded \(\omega_z\). LV reduces sample complexity and improves sim-to-real transfer but cannot leverage full force-torque dynamics for aggressive maneuvers.
 
 \paragraph{\glsxtrfull{ctbr}}  
 A \gls{ctbr} policy outputs total thrust \(c\in\mathbb{R}\) and body-rate setpoints \(\boldsymbol{\omega}_{\mathrm{des}}=[\omega_x,\omega_y,\omega_z]^\mathsf{T}\):
 \begin{equation}
-u_{\mathrm{CTBR}} = \{c,\,\omega_x,\,\omega_y,\,\omega_z\}.
+\mathbf{a}_{\mathrm{CTBR}} = \{c,\,\omega_x,\,\omega_y,\,\omega_z\}.
 \end{equation}
 An inner-loop rate controller computes moments \(\mathbf{M}=[M_x,M_y,M_z]^\mathsf{T}\) to track \(\boldsymbol{\omega}_{\mathrm{des}}\), and the mixer solves
 \begin{equation}
@@ -287,7 +286,7 @@ for individual thrusts \(f_i\). \gls{ctbr} achieves higher agility than LV while
 \paragraph{\glsxtrfull{srt}}
 An \gls{srt} policy outputs the four individual propeller thrusts:
 \begin{equation}
-u_{\mathrm{SRT}} = \{f_1,\,f_2,\,f_3,\,f_4\},
+\mathbf{a}_{\mathrm{SRT}} = \{f_1,\,f_2,\,f_3,\,f_4\},
 \end{equation}
 where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full authority over \(\mathbf{f}_{\mathrm{prop}}\) and \(\boldsymbol{\tau}_{\mathrm{prop}}\), enabling the most aggressive maneuvers, but it is sample-inefficient and sensitive to modeling errors.
 
@@ -325,7 +324,7 @@ A simple rigid-rod pendulum model treats the cable as a massless, inextensible r
 \end{equation}
 where \(\mathbf{q}\in S^2\) is the unit vector along the cable \cite{estevez_review_2024}. The augmented state is
 \begin{equation}
-x_{\mathrm{aug}} = (\mathbf{p}_Q,\,\mathbf{v}_Q,\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{q},\,\dot{\mathbf{q}}),
+\mathbf{x}_{\mathrm{aug}} = (\mathbf{p}_Q,\,\mathbf{v}_Q,\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{q},\,\dot{\mathbf{q}}),
 \end{equation}
 with \(\mathbf{v}_Q = \dot{\mathbf{p}}_Q\) and \(\dot{\mathbf{q}}\) capturing payload swing \cite{wahba_kinodynamic_2024}.
 
@@ -337,7 +336,7 @@ and the state is augmented by \(\{\mathbf{q}_i,\,\dot{\mathbf{q}}_i\}_{i=1}^N\).
 
 In MuJoCo, cables are approximated as tendon elements—massless, inelastic, high-stiffness springs enforcing \(\|\mathbf{p}_Q - \mathbf{p}_L\| = \ell\) when taut and acting as slack otherwise. The augmented state is
 \begin{equation}
-x_{\mathrm{aug}} = (\mathbf{p}_Q,\,\mathbf{v}_Q,\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{p}_L,\,\mathbf{v}_L),
+\mathbf{x}_{\mathrm{aug}} = (\mathbf{p}_Q,\,\mathbf{v}_Q,\,\mathbf{R},\,\boldsymbol{\omega},\,\mathbf{p}_L,\,\mathbf{v}_L),
 \end{equation}
 where \(\mathbf{v}_L = \dot{\mathbf{p}}_L\). Tendon tension \(\mathbf{T}\) applies \(-\mathbf{T}\) on the quadrotor and \(+\mathbf{T}\) on the payload.
 
@@ -347,7 +346,7 @@ m_P \,\ddot{\mathbf{p}}_P = -m_P\,\mathbf{g} + \sum_{i=1}^M \mathbf{T}_i,
 \end{equation}
 and each quadrotor's translational dynamics include \(-\mathbf{T}_i\) alongside its thrust. The joint state is
 \begin{equation}
-x_{\mathrm{aug}} = \bigl(\{\mathbf{p}_i,\,\mathbf{v}_i,\,\mathbf{R}_i,\,\boldsymbol{\omega}_i\}_{i=1}^M,\,\mathbf{p}_P,\,\mathbf{v}_P\bigr),
+\mathbf{x}_{\mathrm{aug}} = \bigl(\{\mathbf{p}_i,\,\mathbf{v}_i,\,\mathbf{R}_i,\,\boldsymbol{\omega}_i\}_{i=1}^M,\,\mathbf{p}_P,\,\mathbf{v}_P\bigr),
 \end{equation}
 capturing multi-agent interactions, payload swing, tension variations, and hybrid dynamics while remaining computationally efficient for simulation and control experiments.
 
