@@ -259,12 +259,12 @@ where \(\widehat{\boldsymbol{\omega}}\) is the skew-symmetric matrix of \(\bolds
 \label{sec:quadrotor_actions}
 Following \cite{kaufmann_benchmark_2022}, we describe three common action-space definitions for quadrotor control:
 
-\paragraph{Linear Velocity \& Yaw Rate (LV)}  
-An LV policy outputs a desired body-frame velocity \(\mathbf{v}_{\mathrm{des}}=[v_x,v_y,v_z]^\mathsf{T}\) and a yaw rate \(\omega_z\):
+\paragraph{\gls{lv}}  
+A \gls{lv} policy outputs a desired body-frame velocity \(\mathbf{v}_{\mathrm{des}}=[v_x,v_y,v_z]^\mathsf{T}\) and a yaw rate \(\omega_z\):
 \begin{equation}
 \mathbf{a}_{\mathrm{LV}} = \{v_x,\,v_y,\,v_z,\,\omega_z\}.
 \end{equation}
-A cascaded low-level controller converts these into collective thrust \(c=\|\mathbf{f}_{\mathrm{prop}}\|\) and attitude setpoints, then allocates individual propeller thrusts \(f_i\) to achieve the commanded \(\omega_z\). LV reduces sample complexity and improves sim-to-real transfer but cannot leverage full force-torque dynamics for aggressive maneuvers.
+A cascaded low-level controller converts these into collective thrust \(c=\|\mathbf{f}_{\mathrm{prop}}\|\) and attitude setpoints, then allocates individual propeller thrusts \(f_i\) to achieve the commanded \(\omega_z\). \gls{lv} reduces sample complexity and improves sim-to-real transfer but cannot leverage full force-torque dynamics for aggressive maneuvers.
 
 \paragraph{\glsxtrfull{ctbr}}  
 A \gls{ctbr} policy outputs total thrust \(c\in\mathbb{R}\) and body-rate setpoints \(\boldsymbol{\omega}_{\mathrm{des}}=[\omega_x,\omega_y,\omega_z]^\mathsf{T}\):
@@ -281,7 +281,7 @@ An inner-loop rate controller computes moments \(\mathbf{M}=[M_x,M_y,M_z]^\maths
 \quad
 \tau_1 - \tau_2 + \tau_3 - \tau_4 = M_z
 \end{equation}
-for individual thrusts \(f_i\). \gls{ctbr} achieves higher agility than LV while remaining more robust than end-to-end approaches.
+for individual thrusts \(f_i\). \gls{ctbr} achieves higher agility than \gls{lv} while remaining more robust than end-to-end approaches.
 
 \paragraph{\glsxtrfull{srt}}
 An \gls{srt} policy outputs the four individual propeller thrusts:
@@ -290,7 +290,7 @@ An \gls{srt} policy outputs the four individual propeller thrusts:
 \end{equation}
 where \(f_i = c_\ell \Omega_i^2\). This end-to-end formulation grants full authority over \(\mathbf{f}_{\mathrm{prop}}\) and \(\boldsymbol{\tau}_{\mathrm{prop}}\), enabling the most aggressive maneuvers, but it is sample-inefficient and sensitive to modeling errors.
 
-In summary, LV actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates and \gls{srt} provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
+In summary, \gls{lv} actions abstract away low-level thrust allocation at the cost of dynamic expressiveness, \gls{ctbr} retains medium-level control over thrust and attitude rates and \gls{srt} provides full end-to-end control at the cost of higher learning complexity and sensitivity to modeling errors.
 \section{Quadrotors with Cable-Suspended Payloads}
 \label{sec:quadrotor_with_payloads}
 \begin{figure}
