@@ -31,7 +31,7 @@ Abstracting actions as \gls{ctbr} transfers better than low-level rotor PWM or t
 Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based approaches for Crazyflie control. The table highlights how observation spaces, action representations, and sim-to-real techniques vary across studies, and how they achieved robust flight control under real-world conditions.
 \begin{table*}[!b]
   \centering
-  \caption[Summary of \gls{rl} approaches]{Summary of recent \gls{rl} approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{e}$ the position errors, $\mathbf{v}$ velocity, $R$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. For details refer to the original paper. We group PWM and motor thrust commands as \gls{srt}.}
+  \caption[Summary of \gls{rl} approaches]{Summary of recent \gls{rl} approaches for Crazyflie control. In the table, $\mathbf{p}$ denotes position, $\mathbf{e}$ the position errors, $\mathbf{v}$ velocity, $\mathbf{R}$ a rotation matrix (orientation), and $\boldsymbol{\omega}$ angular velocity. For details refer to the original paper. We group PWM and motor thrust commands as \gls{srt}.}
   \label{tab:rl_comparison}
   \scriptsize
   % full text width with flexible last column
@@ -42,11 +42,11 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     \textbf{Paper} & \textbf{Observation $\mathcal{O}$} & \textbf{Action $\mathcal{A}$} & \textbf{Reward $r$} & \textbf{Sim-to-Real} \\
     \midrule
     \cite{molchanov_sim--multi-real_2019} & 
-    ($\mathbf e_p,\mathbf e_v,\mathrm{vec}(R),\mathbf e_\omega\,)\in\mathbb R^{18} $ & 
+    ($\mathbf e_p,\mathbf e_v,\mathrm{vec}(\mathbf{R}),\mathbf e_\omega\,)\in\mathbb R^{18} $ & 
     \gls{srt}  & 
       \(\displaystyle
     r_t=-c_t,\quad
-    c_t=\bigl(\|\mathbf e_p\|^2+\alpha_v\|\mathbf e_v\|^2+\alpha_\omega\|\mathbf e_\omega\|^2+\alpha_a\|a\|^2+\alpha_R\cos^{-1}\!\tfrac{\mathrm{tr}(R)-1}{2}\bigr)\Delta t
+    c_t=\bigl(\|\mathbf e_p\|^2+\alpha_v\|\mathbf e_v\|^2+\alpha_\omega\|\mathbf e_\omega\|^2+\alpha_a\|a\|^2+\alpha_R\cos^{-1}\!\tfrac{\mathrm{tr}(\mathbf{R})-1}{2}\bigr)\Delta t
     \) 
     &
      Domain randomization across most physical parameters\newline
@@ -63,12 +63,12 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     (PWM / AttRate / Att) & 
     $\displaystyle r_t= -\!\Bigl(\|\mathbf{e}_t\|^{2} + 10^{-4}\|a_t\|^{2} + 10^{-3}\|a_t\!-\!a_{t-1}\|^{2} + 10^{-3}\|\boldsymbol{\omega}_t\|^{2}\Bigr) + r_f,$ \newline 
     $r_f = -100$ if terminated &
-    Domain randomization ($\pm10\%$: $k_F$, $\Delta t$, $m$, $I$, $T_m$, $k_m$) \newline
+    Domain randomization ($k_F$, $\Delta t$, $m$, $I$, $T_m$, $k_m$) \newline
     Gaussian \& uniform sensor noise; OU actuator noise \newline
     Motor delay model \newline
     Bayesian optimisation of sim parameters (1 h real flight data)\\
     \cite{chen_what_2024} & 
-    $\bigl(e_W^{1:10},\,\mathbf v,\,\mathrm{vec}(R)\bigr)\!\in\!\mathbb R^{42}$
+    $\bigl(e_W^{1:10},\,\mathbf v,\,\mathrm{vec}(\mathbf{R})\bigr)\!\in\!\mathbb R^{42}$
     ($e_W^{k}$: rel.\ pos.\ to next $10$ trajectory ref pts.) & 
     gls{ctbr} & 
     $r_t = r_{\text{track}} - \lambda\|a_t - a_{t-1}\|^2$, \; $\lambda=0.4$ \newline 
@@ -93,9 +93,9 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
     Residual-dynamics skill discovery with orthogonality constraints\newline
     Real-data fine-tuning\\
     \cite{Eschmann2024} & 
-  $(\mathbf p,\mathbf v,\mathrm{vec}(R),\boldsymbol{\omega}, \newline a_{t-1:t-H})\!\in\!\mathbb R^{18+4H}$ & 
+  $(\mathbf p,\mathbf v,\mathrm{vec}(\mathbf{R}),\boldsymbol{\omega}, \newline a_{t-1:t-H})\!\in\!\mathbb R^{18+4H}$ & 
   \gls{srt} (RPM)& 
-  $\displaystyle r_t=-\!\bigl(w_p\|\mathbf p\|^{2}+w_v\|\mathbf v\|^{2}+w_R\phi(R)+w_\omega\|\boldsymbol{\omega}\|^{2}+w_a\|\mathbf a_t\|^{2}\bigr)+c_{\text{alive}}$ & 
+  $\displaystyle r_t=-\!\bigl(w_p\|\mathbf p\|^{2}+w_v\|\mathbf v\|^{2}+w_R\phi(\mathbf{R})+w_\omega\|\boldsymbol{\omega}\|^{2}+w_a\|\mathbf a_t\|^{2}\bigr)+c_{\text{alive}}$ & 
   Zero-shot transfer without domain randomization \newline
   Motor delay model\newline
   action-history observations\newline
@@ -103,7 +103,7 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
   force/torque disturbances\newline
   Gaussian sensor noise \\
   \cite{huang_quadswarm_2023} & 
-  $(\mathbf e_i,\mathbf v_i,\mathrm{vec}(R_i),\boldsymbol\omega_i, \newline 
+  $(\mathbf e_i,\mathbf v_i,\mathrm{vec}(\mathbf{R}_i),\boldsymbol\omega_i, \newline 
   \{\delta\tilde{\mathbf p}_{ij},\tilde{\mathbf v}_{ij}\}_{j=1}^{Q})$ & 
   \gls{srt} & 
   $\displaystyle r_t = r_{\text{pos}}+r_{\text{vel}}+r_{\text{ori}}+r_{\text{spin}}+r_{\text{act}}+r_{\delta\text{act}}+r_{\text{rot}}+r_{\text{yaw}} \;+\; r_{\text{collision}}$ 
@@ -111,12 +111,12 @@ Table~\ref{tab:rl_comparison} summarizes these and other recent \gls{rl}-based a
    $r_t \;=\;
   \alpha_{\text{pos}}\|\delta\mathbf p_i\|^{2}
   +\alpha_{\text{vel}}\|\mathbf v_i\|^{2}
-  +\alpha_{\text{ori}}\,R_{22}
+  +\alpha_{\text{ori}}\,\mathbf{R}_{22}
   +\alpha_{\text{spin}}\|\boldsymbol{\omega}_i\|^{2}
   +\alpha_{\text{act}}\|\mathbf f_i\|^{2}
   +\alpha_{\delta\text{act}}\|\mathbf f_i(t)-\mathbf f_i(t-1)\|^{2}
-  +\alpha_{\text{rot}}\frac{\operatorname{tr}(R_i)-1}{2}
-  +\alpha_{\text{yaw}}\,R_{00}
+  +\alpha_{\text{rot}}\frac{\operatorname{tr}(\mathbf{R}_i)-1}{2}
+  +\alpha_{\text{yaw}}\,\mathbf{R}_{00}
   +\alpha_{\text{col}}\mathbf 1_{\text{collision}}$ 
   & 
   Swarm of quadrotors \newline
